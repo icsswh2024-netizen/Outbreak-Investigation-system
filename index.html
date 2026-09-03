@@ -166,55 +166,275 @@
                 <i data-feather="user-plus" class="drop-shadow-md"></i>
                 <h2 class="text-2xl font-bold drop-shadow-sm">แบบสอบสวนโรค - สำหรับเจ้าหน้าที่</h2>
             </div>
-            <form id="form-staff" class="p-8 space-y-6">
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                    <div class="space-y-2">
-                        <label class="text-base font-medium text-slate-700">ชื่อ-นามสกุล <span class="text-rose-500">*</span></label>
-                        <input type="text" id="staff-name" required class="w-full text-lg rounded-lg border border-slate-300 bg-slate-50 text-slate-900 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all placeholder-slate-400" placeholder="ระบุชื่อเต็ม">
-                    </div>
-                    <div class="space-y-2">
-                        <label class="text-base font-medium text-slate-700">HN / รหัสพนักงาน</label>
-                        <input type="text" id="staff-hn" class="w-full text-lg rounded-lg border border-slate-300 bg-slate-50 text-slate-900 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all placeholder-slate-400" placeholder="ระบุ HN (ถ้ามี)">
+            <form id="form-staff" class="p-8 space-y-8">
+
+                <!-- ===== ส่วนที่ 1: ข้อมูลส่วนบุคคล ===== -->
+                <div class="space-y-5">
+                    <h3 class="text-lg font-semibold text-slate-800 flex items-center"><i data-feather="user" class="w-5 h-5 mr-2 text-teal-500"></i> ส่วนที่ 1: ข้อมูลส่วนบุคคล</h3>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        <div class="space-y-2">
+                            <label class="text-base font-medium text-slate-700">ชื่อ-สกุล <span class="text-rose-500">*</span></label>
+                            <input type="text" id="staff-name" required class="w-full text-lg rounded-lg border border-slate-300 bg-slate-50 text-slate-900 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all placeholder-slate-400" placeholder="ระบุชื่อเต็ม">
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-base font-medium text-slate-700">เบอร์โทรศัพท์</label>
+                            <input type="tel" id="staff-phone" class="w-full text-lg rounded-lg border border-slate-300 bg-slate-50 text-slate-900 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all placeholder-slate-400" placeholder="เช่น 08x-xxx-xxxx">
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-base font-medium text-slate-700">HN (รพ.ศรีสังวร)</label>
+                            <input type="text" id="staff-hn" class="w-full text-lg rounded-lg border border-slate-300 bg-slate-50 text-slate-900 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all placeholder-slate-400" placeholder="ระบุ HN (ถ้ามี)">
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-base font-medium text-slate-700">อายุ (ปี)</label>
+                            <input type="number" id="staff-age" min="0" max="120" class="w-full text-lg rounded-lg border border-slate-300 bg-slate-50 text-slate-900 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all placeholder-slate-400" placeholder="ระบุอายุ">
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-base font-medium text-slate-700">เพศ</label>
+                            <select id="staff-gender" class="w-full text-lg rounded-lg border border-slate-300 bg-slate-50 text-slate-900 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all appearance-none cursor-pointer">
+                                <option value="หญิง">หญิง</option>
+                                <option value="ชาย">ชาย</option>
+                                <option value="อื่นๆ">อื่นๆ</option>
+                            </select>
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-base font-medium text-slate-700">สัญชาติ</label>
+                            <input type="text" id="staff-nationality" value="ไทย" class="w-full text-lg rounded-lg border border-slate-300 bg-slate-50 text-slate-900 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all placeholder-slate-400" placeholder="ระบุสัญชาติ">
+                        </div>
+                        <div class="space-y-2 sm:col-span-2">
+                            <label class="text-base font-medium text-slate-700">อาชีพ</label>
+                            <input type="text" id="staff-occupation" class="w-full text-lg rounded-lg border border-slate-300 bg-slate-50 text-slate-900 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all placeholder-slate-400" placeholder="เช่น บุคลากรทางการแพทย์">
+                        </div>
                     </div>
                 </div>
 
-                <div class="space-y-2">
-                    <label class="text-base font-medium text-slate-700">ตำแหน่ง/วิชาชีพ <span class="text-rose-500">*</span></label>
-                    <select id="staff-role" class="w-full text-lg rounded-lg border border-slate-300 bg-slate-50 text-slate-900 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all appearance-none cursor-pointer">
-                        <option value="พยาบาลวิชาชีพ">พยาบาลวิชาชีพ</option>
-                        <option value="พนักงานช่วยเหลือคนไข้">พนักงานช่วยเหลือคนไข้</option>
-                        <option value="แพทย์">แพทย์</option>
-                        <option value="นักกายภาพบำบัด">นักกายภาพบำบัด</option>
-                        <option value="พนักงานทำความสะอาด">พนักงานทำความสะอาด</option>
-                        <option value="อื่นๆ">อื่นๆ</option>
-                    </select>
+                <!-- ===== ส่วนที่ 2: ที่อยู่ปัจจุบัน ===== -->
+                <div class="space-y-5 pt-6 border-t border-slate-200">
+                    <h3 class="text-lg font-semibold text-slate-800 flex items-center"><i data-feather="map-pin" class="w-5 h-5 mr-2 text-teal-500"></i> ที่อยู่ปัจจุบัน</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        <div class="space-y-2">
+                            <label class="text-base font-medium text-slate-700">บ้านเลขที่</label>
+                            <input type="text" id="staff-addr-no" class="w-full text-lg rounded-lg border border-slate-300 bg-slate-50 text-slate-900 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all placeholder-slate-400" placeholder="บ้านเลขที่">
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-base font-medium text-slate-700">หมู่</label>
+                            <input type="text" id="staff-addr-moo" class="w-full text-lg rounded-lg border border-slate-300 bg-slate-50 text-slate-900 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all placeholder-slate-400" placeholder="หมู่ที่">
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-base font-medium text-slate-700">ตำบล</label>
+                            <input type="text" id="staff-addr-tambon" class="w-full text-lg rounded-lg border border-slate-300 bg-slate-50 text-slate-900 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all placeholder-slate-400" placeholder="ตำบล">
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-base font-medium text-slate-700">อำเภอ</label>
+                            <input type="text" id="staff-addr-amphoe" class="w-full text-lg rounded-lg border border-slate-300 bg-slate-50 text-slate-900 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all placeholder-slate-400" placeholder="อำเภอ">
+                        </div>
+                        <div class="space-y-2 sm:col-span-2">
+                            <label class="text-base font-medium text-slate-700">จังหวัด</label>
+                            <input type="text" id="staff-addr-province" value="สุโขทัย" class="w-full text-lg rounded-lg border border-slate-300 bg-slate-50 text-slate-900 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all placeholder-slate-400" placeholder="จังหวัด">
+                        </div>
+                    </div>
                 </div>
 
-                <div class="space-y-4 pt-6 border-t border-slate-200">
-                    <h3 class="text-lg font-semibold text-slate-800 flex items-center"><i data-feather="activity" class="w-5 h-5 mr-2 text-teal-500"></i> การป้องกันและอาการ</h3>
-                    
+                <!-- ===== ส่วนที่ 3: ข้อมูลการปฏิบัติงาน ===== -->
+                <div class="space-y-5 pt-6 border-t border-slate-200">
+                    <h3 class="text-lg font-semibold text-slate-800 flex items-center"><i data-feather="briefcase" class="w-5 h-5 mr-2 text-teal-500"></i> ข้อมูลการปฏิบัติงาน</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        <div class="space-y-2">
+                            <label class="text-base font-medium text-slate-700">หน่วยงาน / หอผู้ป่วยที่ปฏิบัติงาน</label>
+                            <input type="text" id="staff-unit" class="w-full text-lg rounded-lg border border-slate-300 bg-slate-50 text-slate-900 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all placeholder-slate-400" placeholder="เช่น หอผู้ป่วยศัลยกรรม">
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-base font-medium text-slate-700">ตำแหน่งการพยาบาล <span class="text-rose-500">*</span></label>
+                            <select id="staff-role" class="w-full text-lg rounded-lg border border-slate-300 bg-slate-50 text-slate-900 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all appearance-none cursor-pointer">
+                                <option value="พยาบาลวิชาชีพ">พยาบาลวิชาชีพ</option>
+                                <option value="พนักงานช่วยเหลือคนไข้">พนักงานช่วยเหลือคนไข้</option>
+                                <option value="แพทย์">แพทย์</option>
+                                <option value="นักกายภาพบำบัด">นักกายภาพบำบัด</option>
+                                <option value="พนักงานทำความสะอาด">พนักงานทำความสะอาด</option>
+                                <option value="อื่นๆ">อื่นๆ</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ===== ส่วนที่ 4: การคัดกรองอาการวัณโรค ===== -->
+                <div class="space-y-5 pt-6 border-t border-slate-200">
+                    <h3 class="text-lg font-semibold text-slate-800 flex items-center"><i data-feather="activity" class="w-5 h-5 mr-2 text-teal-500"></i> การคัดกรองอาการวัณโรค</h3>
+
                     <div class="space-y-2">
-                        <label class="text-base font-medium text-slate-700">การใส่หน้ากาก N95 ขณะปฏิบัติงาน/สัมผัสผู้ป่วย</label>
-                        <div class="flex flex-col sm:flex-row sm:space-x-6 mt-2 space-y-3 sm:space-y-0">
-                            <label class="flex items-center space-x-3 cursor-pointer p-2 rounded-lg hover:bg-slate-100 transition-colors border border-transparent hover:border-slate-200">
-                                <input type="radio" name="staff-n95" value="ใส่ตลอดเวลา" class="text-teal-600 focus:ring-teal-500 w-5 h-5"> 
-                                <span class="text-lg text-slate-700">ใส่ตลอดเวลา</span>
+                        <label class="text-base font-medium text-slate-700">คุณป่วยเป็นวัณโรคในขณะนี้หรือไม่</label>
+                        <div class="flex flex-wrap gap-x-6 gap-y-2 mt-2">
+                            <label class="flex items-center space-x-3 cursor-pointer p-2 rounded-lg hover:bg-slate-100 transition-colors">
+                                <input type="radio" name="staff-current-tb" value="ไม่เป็น" checked class="text-teal-600 focus:ring-teal-500 w-5 h-5">
+                                <span class="text-lg text-slate-700">ไม่เป็น</span>
                             </label>
-                            <label class="flex items-center space-x-3 cursor-pointer p-2 rounded-lg hover:bg-slate-100 transition-colors border border-transparent hover:border-slate-200">
-                                <input type="radio" name="staff-n95" value="ไม่ได้ใส่" checked class="text-teal-600 focus:ring-teal-500 w-5 h-5"> 
-                                <span class="text-lg text-slate-700">ไม่ได้ใส่ (หรือใส่หน้ากากอนามัยปกติ)</span>
+                            <label class="flex items-center space-x-3 cursor-pointer p-2 rounded-lg hover:bg-slate-100 transition-colors">
+                                <input type="radio" name="staff-current-tb" value="เป็น" class="text-teal-600 focus:ring-teal-500 w-5 h-5">
+                                <span class="text-lg text-slate-700">เป็น</span>
+                            </label>
+                            <label class="flex items-center space-x-3 cursor-pointer p-2 rounded-lg hover:bg-slate-100 transition-colors">
+                                <input type="radio" name="staff-current-tb" value="ไม่แน่ใจ" class="text-teal-600 focus:ring-teal-500 w-5 h-5">
+                                <span class="text-lg text-slate-700">ไม่แน่ใจ</span>
                             </label>
                         </div>
                     </div>
 
-                    <div class="space-y-2 mt-4">
-                        <label class="text-base font-medium text-slate-700">อาการผิดปกติในปัจจุบัน (คัดกรองวัณโรค)</label>
-                        <select id="staff-symptoms" class="w-full text-lg rounded-lg border border-slate-300 bg-slate-50 text-slate-900 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all appearance-none cursor-pointer">
-                            <option value="ไม่มี">ไม่มีอาการผิดปกติ (ปกติ)</option>
-                            <option value="ไอ">ไอติดต่อกันเกิน 2 สัปดาห์</option>
-                            <option value="ไข้">มีไข้ / เหงื่อออกกลางคืน</option>
-                            <option value="เจ็บหน้าอก">เจ็บหน้าอก / อ่อนเพลีย</option>
-                        </select>
+                    <div class="space-y-2">
+                        <label class="text-base font-medium text-slate-700">คุณมีอาการเหล่านี้หรือไม่ (เลือกได้มากกว่า 1 ข้อ)</label>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
+                            <label class="flex items-center space-x-3 cursor-pointer p-2 rounded-lg hover:bg-slate-100 transition-colors"><input type="checkbox" class="staff-symptom text-teal-600 focus:ring-teal-500 w-5 h-5" value="ไข้"><span class="text-lg text-slate-700">ไข้</span></label>
+                            <label class="flex items-center space-x-3 cursor-pointer p-2 rounded-lg hover:bg-slate-100 transition-colors"><input type="checkbox" class="staff-symptom text-teal-600 focus:ring-teal-500 w-5 h-5" value="ไอ"><span class="text-lg text-slate-700">ไอ</span></label>
+                            <label class="flex items-center space-x-3 cursor-pointer p-2 rounded-lg hover:bg-slate-100 transition-colors"><input type="checkbox" class="staff-symptom text-teal-600 focus:ring-teal-500 w-5 h-5" value="เจ็บหน้าอก"><span class="text-lg text-slate-700">เจ็บหน้าอก</span></label>
+                            <label class="flex items-center space-x-3 cursor-pointer p-2 rounded-lg hover:bg-slate-100 transition-colors"><input type="checkbox" class="staff-symptom text-teal-600 focus:ring-teal-500 w-5 h-5" value="ไอมีเสมหะปนเลือด"><span class="text-lg text-slate-700">ไอมีเสมหะปนเลือด</span></label>
+                            <label class="flex items-center space-x-3 cursor-pointer p-2 rounded-lg hover:bg-slate-100 transition-colors"><input type="checkbox" class="staff-symptom text-teal-600 focus:ring-teal-500 w-5 h-5" value="อ่อนเพลีย"><span class="text-lg text-slate-700">อ่อนเพลีย</span></label>
+                            <label class="flex items-center space-x-3 cursor-pointer p-2 rounded-lg hover:bg-slate-100 transition-colors"><input type="checkbox" class="staff-symptom text-teal-600 focus:ring-teal-500 w-5 h-5" value="เหงื่อออกกลางคืน"><span class="text-lg text-slate-700">เหงื่อออกกลางคืน</span></label>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        <div class="space-y-2">
+                            <label class="text-base font-medium text-slate-700">อาการอื่นๆ (ระบุ)</label>
+                            <input type="text" id="staff-symptom-other" class="w-full text-lg rounded-lg border border-slate-300 bg-slate-50 text-slate-900 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all placeholder-slate-400" placeholder="ถ้ามี">
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-base font-medium text-slate-700">โรคประจำตัว</label>
+                            <input type="text" id="staff-disease" class="w-full text-lg rounded-lg border border-slate-300 bg-slate-50 text-slate-900 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all placeholder-slate-400" placeholder="ถ้ามี / ไม่มี">
+                        </div>
+                        <div class="space-y-2 sm:col-span-2">
+                            <label class="text-base font-medium text-slate-700">ยาประจำตัว</label>
+                            <input type="text" id="staff-medicine" class="w-full text-lg rounded-lg border border-slate-300 bg-slate-50 text-slate-900 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all placeholder-slate-400" placeholder="ถ้ามี / ไม่มี">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ===== ส่วนที่ 5: ประวัติวัณโรคและวัคซีน ===== -->
+                <div class="space-y-5 pt-6 border-t border-slate-200">
+                    <h3 class="text-lg font-semibold text-slate-800 flex items-center"><i data-feather="clipboard" class="w-5 h-5 mr-2 text-teal-500"></i> ประวัติวัณโรคและวัคซีน BCG</h3>
+
+                    <div class="space-y-2">
+                        <label class="text-base font-medium text-slate-700">ประวัติการเป็นวัณโรคปอดในอดีต (Old Pulmonary TB)</label>
+                        <div class="flex flex-wrap gap-x-6 gap-y-2 mt-2">
+                            <label class="flex items-center space-x-3 cursor-pointer p-2 rounded-lg hover:bg-slate-100 transition-colors"><input type="radio" name="staff-old-tb" value="ไม่เคย" checked class="text-teal-600 focus:ring-teal-500 w-5 h-5"><span class="text-lg text-slate-700">ไม่เคย</span></label>
+                            <label class="flex items-center space-x-3 cursor-pointer p-2 rounded-lg hover:bg-slate-100 transition-colors"><input type="radio" name="staff-old-tb" value="เคย" class="text-teal-600 focus:ring-teal-500 w-5 h-5"><span class="text-lg text-slate-700">เคย</span></label>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        <div class="space-y-2">
+                            <label class="text-base font-medium text-slate-700">กรณีเคยเป็น: รักษาเมื่อวันที่</label>
+                            <input type="date" id="staff-old-tb-start" class="w-full text-lg rounded-lg border border-slate-300 bg-slate-50 text-slate-900 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all">
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-base font-medium text-slate-700">สิ้นสุดการรักษาเมื่อวันที่</label>
+                            <input type="date" id="staff-old-tb-end" class="w-full text-lg rounded-lg border border-slate-300 bg-slate-50 text-slate-900 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all">
+                        </div>
+                    </div>
+
+                    <div class="space-y-2">
+                        <label class="text-base font-medium text-slate-700">ประวัติการรับวัคซีนวัณโรค (BCG Vaccine)</label>
+                        <div class="flex flex-wrap gap-x-6 gap-y-2 mt-2">
+                            <label class="flex items-center space-x-3 cursor-pointer p-2 rounded-lg hover:bg-slate-100 transition-colors"><input type="radio" name="staff-bcg" value="เคยรับ" checked class="text-teal-600 focus:ring-teal-500 w-5 h-5"><span class="text-lg text-slate-700">เคยรับ</span></label>
+                            <label class="flex items-center space-x-3 cursor-pointer p-2 rounded-lg hover:bg-slate-100 transition-colors"><input type="radio" name="staff-bcg" value="ไม่เคยรับ" class="text-teal-600 focus:ring-teal-500 w-5 h-5"><span class="text-lg text-slate-700">ไม่เคยรับ</span></label>
+                            <label class="flex items-center space-x-3 cursor-pointer p-2 rounded-lg hover:bg-slate-100 transition-colors"><input type="radio" name="staff-bcg" value="ไม่ทราบ" class="text-teal-600 focus:ring-teal-500 w-5 h-5"><span class="text-lg text-slate-700">ไม่ทราบ</span></label>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        <div class="space-y-2">
+                            <label class="text-base font-medium text-slate-700">วันที่รับวัคซีน (ถ้าทราบ)</label>
+                            <input type="date" id="staff-bcg-date" class="w-full text-lg rounded-lg border border-slate-300 bg-slate-50 text-slate-900 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all">
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-base font-medium text-slate-700">แผลเป็น BCG scar</label>
+                            <select id="staff-bcg-scar" class="w-full text-lg rounded-lg border border-slate-300 bg-slate-50 text-slate-900 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all appearance-none cursor-pointer">
+                                <option value="มี">มี</option>
+                                <option value="ไม่มี">ไม่มี</option>
+                                <option value="ไม่แน่ใจ">ไม่แน่ใจ</option>
+                            </select>
+                        </div>
+                        <div class="space-y-2 sm:col-span-2">
+                            <label class="text-base font-medium text-slate-700">ตำแหน่งแผลเป็น BCG</label>
+                            <input type="text" id="staff-bcg-scar-pos" class="w-full text-lg rounded-lg border border-slate-300 bg-slate-50 text-slate-900 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all placeholder-slate-400" placeholder="เช่น ต้นแขนซ้าย">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ===== ส่วนที่ 6: ข้อมูลการสัมผัสผู้ป่วยวัณโรค ===== -->
+                <div class="space-y-5 pt-6 border-t border-slate-200">
+                    <h3 class="text-lg font-semibold text-slate-800 flex items-center"><i data-feather="users" class="w-5 h-5 mr-2 text-teal-500"></i> ข้อมูลการสัมผัสผู้ป่วยวัณโรคระยะแพร่เชื้อ</h3>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                        <div class="space-y-2 sm:col-span-1">
+                            <label class="text-base font-medium text-slate-700">ชื่อผู้ป่วยที่สัมผัส</label>
+                            <input type="text" id="staff-src-name" class="w-full text-lg rounded-lg border border-slate-300 bg-slate-50 text-slate-900 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all placeholder-slate-400" placeholder="ชื่อผู้ป่วยต้นเชื้อ">
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-base font-medium text-slate-700">HN ผู้ป่วย</label>
+                            <input type="text" id="staff-src-hn" class="w-full text-lg rounded-lg border border-slate-300 bg-slate-50 text-slate-900 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all placeholder-slate-400" placeholder="HN ผู้ป่วย">
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-base font-medium text-slate-700">หอผู้ป่วย</label>
+                            <input type="text" id="staff-src-ward" class="w-full text-lg rounded-lg border border-slate-300 bg-slate-50 text-slate-900 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all placeholder-slate-400" placeholder="หอผู้ป่วย">
+                        </div>
+                    </div>
+
+                    <div class="space-y-2">
+                        <label class="text-base font-medium text-slate-700">กิจกรรมที่ท่านได้ทำกับผู้ป่วย (เลือกได้มากกว่า 1 ข้อ)</label>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
+                            <label class="flex items-center space-x-3 cursor-pointer p-2 rounded-lg hover:bg-slate-100 transition-colors"><input type="checkbox" class="staff-activity text-teal-600 focus:ring-teal-500 w-5 h-5" value="พูดคุย/ซักประวัติ"><span class="text-lg text-slate-700">พูดคุย / ซักประวัติ</span></label>
+                            <label class="flex items-center space-x-3 cursor-pointer p-2 rounded-lg hover:bg-slate-100 transition-colors"><input type="checkbox" class="staff-activity text-teal-600 focus:ring-teal-500 w-5 h-5" value="ตรวจร่างกาย"><span class="text-lg text-slate-700">ตรวจร่างกาย</span></label>
+                            <label class="flex items-center space-x-3 cursor-pointer p-2 rounded-lg hover:bg-slate-100 transition-colors"><input type="checkbox" class="staff-activity text-teal-600 focus:ring-teal-500 w-5 h-5" value="ให้การพยาบาล"><span class="text-lg text-slate-700">ให้การพยาบาล</span></label>
+                            <label class="flex items-center space-x-3 cursor-pointer p-2 rounded-lg hover:bg-slate-100 transition-colors"><input type="checkbox" class="staff-activity text-teal-600 focus:ring-teal-500 w-5 h-5" value="ดูดเสมหะ/หัตถการทางเดินหายใจ"><span class="text-lg text-slate-700">ดูดเสมหะ / หัตถการทางเดินหายใจ</span></label>
+                            <label class="flex items-center space-x-3 cursor-pointer p-2 rounded-lg hover:bg-slate-100 transition-colors"><input type="checkbox" class="staff-activity text-teal-600 focus:ring-teal-500 w-5 h-5" value="ทำแผล/เจาะเลือด"><span class="text-lg text-slate-700">ทำแผล / เจาะเลือด</span></label>
+                            <label class="flex items-center space-x-3 cursor-pointer p-2 rounded-lg hover:bg-slate-100 transition-colors"><input type="checkbox" class="staff-activity text-teal-600 focus:ring-teal-500 w-5 h-5" value="เคลื่อนย้ายผู้ป่วย"><span class="text-lg text-slate-700">เคลื่อนย้ายผู้ป่วย</span></label>
+                        </div>
+                    </div>
+
+                    <div class="space-y-2">
+                        <label class="text-base font-medium text-slate-700">วันที่สัมผัส (ของกิจกรรมข้างต้น)</label>
+                        <input type="text" id="staff-contact-dates" class="w-full text-lg rounded-lg border border-slate-300 bg-slate-50 text-slate-900 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all placeholder-slate-400" placeholder="เช่น 15 ก.พ. 2569, 16 ก.พ. 2569">
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        <div class="space-y-2">
+                            <label class="text-base font-medium text-slate-700">5.1 การใส่หน้ากาก N95 ขณะสัมผัส</label>
+                            <select id="staff-n95" class="w-full text-lg rounded-lg border border-slate-300 bg-slate-50 text-slate-900 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all appearance-none cursor-pointer">
+                                <option value="ใส่ตลอดเวลา">ใส่ตลอดเวลา</option>
+                                <option value="ใส่บางครั้ง">ใส่บางครั้ง</option>
+                                <option value="ไม่ได้ใส่">ไม่ได้ใส่ (หรือใส่หน้ากากอนามัยปกติ)</option>
+                            </select>
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-base font-medium text-slate-700">5.2 ระยะเวลารวมในการสัมผัส/อยู่ใกล้ชิด</label>
+                            <select id="staff-duration" class="w-full text-lg rounded-lg border border-slate-300 bg-slate-50 text-slate-900 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all appearance-none cursor-pointer">
+                                <option value="น้อยกว่า 15 นาที">น้อยกว่า 15 นาที</option>
+                                <option value="15 นาที - 1 ชั่วโมง">15 นาที - 1 ชั่วโมง</option>
+                                <option value="1 - 8 ชั่วโมง">1 - 8 ชั่วโมง</option>
+                                <option value="มากกว่า 8 ชั่วโมง">มากกว่า 8 ชั่วโมง</option>
+                            </select>
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-base font-medium text-slate-700">5.3 ขนาดของห้อง/พื้นที่ที่สัมผัส</label>
+                            <select id="staff-room" class="w-full text-lg rounded-lg border border-slate-300 bg-slate-50 text-slate-900 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all appearance-none cursor-pointer">
+                                <option value="ห้องแยก/ห้องความดันลบ">ห้องแยก / ห้องความดันลบ</option>
+                                <option value="ห้องเดี่ยว ระบายอากาศดี">ห้องเดี่ยว ระบายอากาศดี</option>
+                                <option value="ห้องรวม ระบายอากาศดี">ห้องรวม ระบายอากาศดี</option>
+                                <option value="ห้องรวม ระบายอากาศไม่ดี/แออัด">ห้องรวม ระบายอากาศไม่ดี / แออัด</option>
+                            </select>
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-base font-medium text-slate-700">6.1 ในระยะ 1-3 เดือนก่อน เคยสัมผัสผู้ป่วยวัณโรคปอด (ครอบครัว/ที่ทำงาน/หมู่บ้าน)</label>
+                            <select id="staff-prior-contact" class="w-full text-lg rounded-lg border border-slate-300 bg-slate-50 text-slate-900 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all appearance-none cursor-pointer">
+                                <option value="ไม่มี">ไม่มี</option>
+                                <option value="มี">มี</option>
+                                <option value="ไม่แน่ใจ">ไม่แน่ใจ</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="space-y-2">
+                        <label class="text-base font-medium text-slate-700">หากตอบว่า "มี" โปรดระบุรายละเอียด (ชื่อผู้ป่วย, อายุ, วันที่เริ่มป่วย, สถานที่รักษา)</label>
+                        <textarea id="staff-prior-detail" rows="2" class="w-full text-lg rounded-lg border border-slate-300 bg-slate-50 text-slate-900 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all placeholder-slate-400" placeholder="ระบุรายละเอียด (ถ้ามี)"></textarea>
                     </div>
                 </div>
 
@@ -276,7 +496,7 @@
                     <h2 class="text-3xl font-bold text-slate-900 drop-shadow-sm">แผงควบคุม (Admin Dashboard)</h2>
                     <p class="text-slate-600 mt-1 text-lg">ภาพรวมการสอบสวนการระบาดและข้อมูลผู้สัมผัส</p>
                 </div>
-                <button class="bg-white border border-slate-300 text-slate-700 px-5 py-2.5 rounded-lg text-lg font-medium hover:bg-slate-50 hover:text-slate-900 flex items-center transition-all shadow-sm">
+                <button id="btn-export-csv" class="bg-white border border-slate-300 text-slate-700 px-5 py-2.5 rounded-lg text-lg font-medium hover:bg-slate-50 hover:text-slate-900 flex items-center transition-all shadow-sm">
                     <i data-feather="download-cloud" class="w-5 h-5 mr-2 text-blue-600"></i> ส่งออก CSV
                 </button>
             </div>
@@ -355,11 +575,26 @@
         feather.replace();
 
         // 1. Initial State Data (Mock Data)
-        let records = [
+        const STORAGE_KEY = 'oi-records';
+        const defaultRecords = [
             { id: 1, type: 'staff', name: 'จินดารัตน์ นาคคุ้ม', hn: '0158243', role: 'พยาบาลวิชาชีพ', symptoms: 'ไม่มี', n95: 'ไม่ได้ใส่', date: '2026-02-19', status: 'ปกติ' },
             { id: 2, type: 'staff', name: 'ปนัดดา ขีดขั้น', hn: '0107049', role: 'พยาบาลวิชาชีพ', symptoms: 'ไอ', n95: 'ไม่ได้ใส่', date: '2026-02-19', status: 'เฝ้าระวัง' },
             { id: 3, type: 'patient', name: 'เอนก เจริญมาก', hn: '332346', role: 'ผู้ป่วย (SU05)', symptoms: 'ไม่มี', n95: 'N/A', date: '2026-02-16', status: 'ปกติ' },
         ];
+
+        let records;
+        try {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            records = saved ? JSON.parse(saved) : defaultRecords.slice();
+        } catch (err) {
+            records = defaultRecords.slice();
+        }
+
+        function saveRecords() {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+            } catch (err) { /* localStorage อาจถูกปิด - ข้ามไป */ }
+        }
 
         // 2. Navigation Logic
         const navButtons = document.querySelectorAll('.nav-btn');
@@ -407,27 +642,71 @@
         // Staff Form
         document.getElementById('form-staff').addEventListener('submit', function(e) {
             e.preventDefault();
-            
-            const name = document.getElementById('staff-name').value;
-            const hn = document.getElementById('staff-hn').value;
-            const role = document.getElementById('staff-role').value;
-            const n95 = document.querySelector('input[name="staff-n95"]:checked').value;
-            const symptoms = document.getElementById('staff-symptoms').value;
-            const status = symptoms !== 'ไม่มี' ? 'เฝ้าระวัง' : 'ปกติ';
-            
+
+            const val = id => (document.getElementById(id)?.value || '').trim();
+            const radio = name => document.querySelector(`input[name="${name}"]:checked`)?.value || '';
+            const checks = sel => Array.from(document.querySelectorAll(sel)).filter(c => c.checked).map(c => c.value);
+
+            const symptomList = checks('.staff-symptom');
+            const symptomOther = val('staff-symptom-other');
+            const currentTb = radio('staff-current-tb');
+            const n95 = val('staff-n95');
+
+            // สรุปอาการเพื่อแสดงในตาราง
+            let symptomsSummary = symptomList.slice();
+            if (symptomOther) symptomsSummary.push(symptomOther);
+            const symptomsText = symptomsSummary.length ? symptomsSummary.join(', ') : 'ไม่มี';
+
+            // ประเมินสถานะเฝ้าระวัง
+            const hasSymptom = symptomList.length > 0 || symptomOther !== '';
+            const status = (currentTb === 'เป็น' || hasSymptom) ? 'เฝ้าระวัง' : 'ปกติ';
+
             const newRecord = {
                 id: Date.now(),
                 type: 'staff',
-                name: name,
-                hn: hn,
-                role: role,
-                symptoms: symptoms,
+                name: val('staff-name'),
+                phone: val('staff-phone'),
+                hn: val('staff-hn'),
+                age: val('staff-age'),
+                gender: val('staff-gender'),
+                nationality: val('staff-nationality'),
+                occupation: val('staff-occupation'),
+                addrNo: val('staff-addr-no'),
+                addrMoo: val('staff-addr-moo'),
+                addrTambon: val('staff-addr-tambon'),
+                addrAmphoe: val('staff-addr-amphoe'),
+                addrProvince: val('staff-addr-province'),
+                unit: val('staff-unit'),
+                role: val('staff-role'),
+                currentTb: currentTb,
+                symptomList: symptomList,
+                symptomOther: symptomOther,
+                symptoms: symptomsText,
+                disease: val('staff-disease'),
+                medicine: val('staff-medicine'),
+                oldTb: radio('staff-old-tb'),
+                oldTbStart: val('staff-old-tb-start'),
+                oldTbEnd: val('staff-old-tb-end'),
+                bcg: radio('staff-bcg'),
+                bcgDate: val('staff-bcg-date'),
+                bcgScar: val('staff-bcg-scar'),
+                bcgScarPos: val('staff-bcg-scar-pos'),
+                srcName: val('staff-src-name'),
+                srcHn: val('staff-src-hn'),
+                srcWard: val('staff-src-ward'),
+                activities: checks('.staff-activity'),
+                contactDates: val('staff-contact-dates'),
                 n95: n95,
+                duration: val('staff-duration'),
+                room: val('staff-room'),
+                priorContact: val('staff-prior-contact'),
+                priorDetail: val('staff-prior-detail'),
                 date: new Date().toISOString().split('T')[0],
                 status: status
             };
 
             records.unshift(newRecord); // Add to beginning of array
+            saveRecords();
             this.reset(); // Clear form
             showModal();
         });
@@ -455,6 +734,7 @@
             };
 
             records.unshift(newRecord);
+            saveRecords();
             this.reset();
             showModal();
         });
@@ -532,6 +812,47 @@
             // Go back to home screen after closing modal
             document.querySelector('nav .nav-btn[data-target="view-home"]').click();
         }
+
+        // 6. Export CSV
+        function exportCSV() {
+            const headers = [
+                'วันที่บันทึก','ประเภท','ชื่อ-สกุล','เบอร์โทรศัพท์','HN','อายุ','เพศ','สัญชาติ','อาชีพ',
+                'บ้านเลขที่','หมู่','ตำบล','อำเภอ','จังหวัด','หน่วยงาน/หอผู้ป่วย','ตำแหน่ง',
+                'ป่วยวัณโรคขณะนี้','อาการ','อาการอื่นๆ','โรคประจำตัว','ยาประจำตัว',
+                'ประวัติวัณโรคปอดในอดีต','รักษาเมื่อ','สิ้นสุดเมื่อ','ประวัติ BCG','วันที่รับ BCG','แผลเป็น BCG','ตำแหน่งแผลเป็น BCG',
+                'ชื่อผู้ป่วยที่สัมผัส','HN ผู้ป่วย','หอผู้ป่วย','กิจกรรมที่ทำ','วันที่สัมผัส',
+                'การใส่ N95','ระยะเวลาสัมผัส','ขนาดห้อง','เคยสัมผัสวัณโรค 1-3 เดือนก่อน','รายละเอียดการสัมผัสก่อนหน้า','สถานะ'
+            ];
+
+            const esc = v => {
+                let s = (v === undefined || v === null) ? '' : String(v);
+                if (Array.isArray(v)) s = v.join(' | ');
+                if (/[",\n]/.test(s)) s = '"' + s.replace(/"/g, '""') + '"';
+                return s;
+            };
+
+            const rows = records.map(r => [
+                r.date, r.type === 'patient' ? 'ผู้ป่วย' : 'เจ้าหน้าที่', r.name, r.phone, r.hn, r.age, r.gender, r.nationality, r.occupation,
+                r.addrNo, r.addrMoo, r.addrTambon, r.addrAmphoe, r.addrProvince, r.unit, r.role,
+                r.currentTb, r.symptoms, r.symptomOther, r.disease, r.medicine,
+                r.oldTb, r.oldTbStart, r.oldTbEnd, r.bcg, r.bcgDate, r.bcgScar, r.bcgScarPos,
+                r.srcName, r.srcHn, r.srcWard, r.activities, r.contactDates,
+                r.n95, r.duration, r.room, r.priorContact, r.priorDetail, r.status
+            ].map(esc).join(','));
+
+            const csv = '﻿' + headers.join(',') + '\n' + rows.join('\n');
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `outbreak-contacts-${new Date().toISOString().split('T')[0]}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        document.getElementById('btn-export-csv').addEventListener('click', exportCSV);
 
         // Initialize first view rendering
         renderAdminTable();

@@ -575,6 +575,7 @@
         const WEEKDAYS = [{ v: '1', l: 'จ.' }, { v: '2', l: 'อ.' }, { v: '3', l: 'พ.' }, { v: '4', l: 'พฤ.' }, { v: '5', l: 'ศ.' }, { v: '6', l: 'ส.' }, { v: '0', l: 'อา.' }];
         function isoToday() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
         function isoDaysAgo(n) { const d = new Date(); d.setDate(d.getDate() - n); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
+        function isoFirstOfMonth(offset) { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() + (offset || 0)); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`; }
         // แตกช่วงวันที่ตามความถี่ → รายการวันที่จริง (ISO) หักวันข้อยกเว้นที่ "ไม่ได้สัมผัส"
         function expandPattern(rangeStart, rangeEnd, p) {
             const noContact = {};
@@ -932,9 +933,9 @@
             return `<div class="contactpattern space-y-3" data-field="${field.id}">
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div class="space-y-1"><label class="text-sm font-medium text-slate-600">ช่วงวันที่ย้อนหลัง (เริ่ม)</label>
-                        <input type="text" readonly data-datepicker data-role="rangeStart" data-value="${isoDaysAgo(30)}" value="${fmtThaiDate(isoDaysAgo(30))}" class="field-input cursor-pointer bg-white"></div>
+                        <input type="text" readonly data-datepicker data-role="rangeStart" data-value="${isoFirstOfMonth(-1)}" value="${fmtThaiDate(isoFirstOfMonth(-1))}" class="field-input cursor-pointer bg-white"></div>
                     <div class="space-y-1"><label class="text-sm font-medium text-slate-600">ช่วงวันที่ย้อนหลัง (สิ้นสุด)</label>
-                        <input type="text" readonly data-datepicker data-role="rangeEnd" data-value="${isoToday()}" value="${fmtThaiDate(isoToday())}" class="field-input cursor-pointer bg-white"></div>
+                        <input type="text" readonly data-datepicker data-role="rangeEnd" data-value="${isoFirstOfMonth(0)}" value="${fmtThaiDate(isoFirstOfMonth(0))}" class="field-input cursor-pointer bg-white"></div>
                 </div>
                 <div class="contactpat-rows space-y-3">${patternBlockHTML(null, opts, labels, 0)}</div>
                 <button type="button" class="contactpat-add w-full border-2 border-dashed border-teal-300 text-teal-600 rounded-xl py-2.5 text-base font-medium hover:bg-teal-50 flex items-center justify-center"><i data-feather="plus" class="w-4 h-4 mr-1"></i> เพิ่มรูปแบบการสัมผัสอีกแบบ</button>

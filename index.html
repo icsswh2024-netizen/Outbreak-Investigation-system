@@ -280,6 +280,26 @@
         </div>
     </div>
 
+    <!-- Date Picker Modal (ปฏิทินเต็มจอ) -->
+    <div id="date-modal" class="fixed inset-0 z-[60] hidden items-center justify-center bg-slate-900/50 backdrop-blur-sm fade-in p-4">
+        <div class="bg-white rounded-2xl shadow-[0_15px_40px_rgba(0,0,0,0.25)] w-full max-w-md overflow-hidden">
+            <div class="bg-gradient-to-r from-teal-500 to-emerald-500 px-5 py-4 flex items-center justify-between text-white">
+                <button type="button" id="dp-prev" class="p-2 rounded-lg hover:bg-white/20 transition-colors"><i data-feather="chevron-left" class="w-6 h-6"></i></button>
+                <div id="dp-title" class="text-xl font-bold drop-shadow-sm"></div>
+                <button type="button" id="dp-next" class="p-2 rounded-lg hover:bg-white/20 transition-colors"><i data-feather="chevron-right" class="w-6 h-6"></i></button>
+            </div>
+            <div class="p-4 sm:p-5">
+                <div id="dp-weekdays" class="grid grid-cols-7 text-center text-sm font-semibold text-slate-400 mb-2"></div>
+                <div id="dp-days" class="grid grid-cols-7 gap-1.5"></div>
+            </div>
+            <div class="flex justify-between items-center px-5 py-4 border-t border-slate-200 bg-slate-50">
+                <button type="button" id="dp-clear" class="text-slate-500 hover:text-rose-600 font-medium px-3 py-2">ล้างวันที่</button>
+                <button type="button" id="dp-today" class="text-teal-600 hover:text-teal-800 font-semibold px-3 py-2">วันนี้</button>
+                <button type="button" id="dp-close" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold px-5 py-2 rounded-lg transition-colors">ปิด</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Detail Modal -->
     <div id="detail-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/40 backdrop-blur-sm fade-in p-4">
         <div class="bg-white border border-slate-200 rounded-2xl shadow-[0_15px_40px_rgba(0,0,0,0.15)] max-w-lg w-full max-h-[85vh] flex flex-col overflow-hidden">
@@ -392,12 +412,39 @@
         } catch (e) { records = defaultRecords.slice(); }
 
         function saveRecords() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(records)); } catch (e) {} }
+
+        // id กันชนแม้บันทึกในมิลลิวินาทีเดียวกัน
+        function genId() { return Date.now() * 1000 + Math.floor(Math.random() * 1000); }
+
+        // เพิ่มเรกคอร์ดแบบปลอดภัยต่อการบันทึกพร้อมกัน (อ่านล่าสุดก่อนเขียน)
+        function addRecord(rec) {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY);
+                const cur = raw ? JSON.parse(raw) : records;
+                cur.unshift(rec);
+                records = cur;
+            } catch (e) {
+                records.unshift(rec);
+            }
+            saveRecords();
+        }
         function saveSchema() { try { localStorage.setItem(SCHEMA_KEY, JSON.stringify(schema)); } catch (e) {} }
 
         /* ============================================================
            3. RENDER FORMS FROM SCHEMA
            ============================================================ */
         function escAttr(s) { return String(s).replace(/"/g, '&quot;'); }
+
+        // ===== วันที่แบบไทย (พ.ศ.) =====
+        const TH_MONTH_ABBR = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+        const TH_MONTH_FULL = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
+        const TH_DOW = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'];
+        function fmtThaiDate(iso) {
+            if (!iso) return '';
+            const p = iso.split('-').map(Number);
+            if (p.length !== 3 || isNaN(p[0])) return iso;
+            return `${p[2]} ${TH_MONTH_ABBR[p[1] - 1]} ${p[0] + 543}`;
+        }
 
         // ตัวเลือกย่อยของ "บันทึกการสัมผัส" (6.11-6.13)
         const CONTACT_ACTIVITIES = ['พูดคุย/ซักประวัติ', 'ตรวจร่างกาย', 'ให้การพยาบาล', 'ดูดเสมหะ/หัตถการทางเดินหายใจ', 'ทำแผล/เจาะเลือด', 'เคลื่อนย้ายผู้ป่วย'];
@@ -428,7 +475,7 @@
                 </div>
                 <div class="space-y-1">
                     <label class="text-sm font-medium text-slate-600">วันที่สัมผัส (เลือกจากปฏิทิน)</label>
-                    <input type="date" data-role="date" value="${escAttr(data.date || '')}" class="field-input">
+                    <input type="text" readonly data-datepicker data-role="date" data-value="${escAttr(data.date || '')}" value="${data.date ? fmtThaiDate(data.date) : ''}" placeholder="แตะเพื่อเลือกวันที่" class="field-input cursor-pointer bg-white">
                 </div>
                 <div class="space-y-1">
                     <label class="text-sm font-medium text-slate-600">6.4 กิจกรรมที่ทำกับผู้ป่วย (เลือกได้มากกว่า 1 ข้อ)</label>
@@ -475,6 +522,8 @@
                         <input type="checkbox" name="${field.id}" value="${escAttr(o)}" class="w-5 h-5 text-${accent}-600 focus:ring-${accent}-500">
                         <span class="text-lg text-slate-700">${o}</span>
                     </label>`).join('') + '</div>';
+            } else if (field.type === 'date') {
+                control = `<input type="text" readonly data-datepicker name="${field.id}" data-value="" value="" placeholder="แตะเพื่อเลือกวันที่" class="field-input cursor-pointer bg-white">`;
             } else if (field.type === 'textarea') {
                 control = `<textarea name="${field.id}" rows="2" class="field-input" placeholder="โปรดระบุ" ${reqAttr}></textarea>`;
             } else if (field.type === 'contactlog') {
@@ -534,7 +583,7 @@
                     } else if (f.type === 'contactlog') {
                         const cont = form.querySelector(`.contactlog[data-field="${f.id}"]`);
                         value = cont ? Array.from(cont.querySelectorAll('.contactlog-row')).map(row => ({
-                            date: row.querySelector('[data-role="date"]').value,
+                            date: row.querySelector('[data-role="date"]').dataset.value || '',
                             activities: Array.from(row.querySelectorAll('[data-role="activity"]:checked')).map(c => c.value),
                             n95: row.querySelector('[data-role="n95"]').value,
                             duration: row.querySelector('[data-role="duration"]').value,
@@ -545,6 +594,9 @@
                     } else if (f.type === 'radio') {
                         const c = form.querySelector(`input[name="${f.id}"]:checked`);
                         value = c ? c.value : '';
+                    } else if (f.type === 'date') {
+                        const el = form.querySelector(`[name="${f.id}"]`);
+                        value = el ? (el.dataset.value || '') : '';
                     } else {
                         const el = form.querySelector(`[name="${f.id}"]`);
                         value = el ? el.value.trim() : '';
@@ -576,8 +628,8 @@
                 group = answers.role || 'เจ้าหน้าที่';
             }
 
-            records.unshift({
-                id: Date.now(),
+            addRecord({
+                id: genId(),
                 type: formKey,
                 name: answers.name || '(ไม่ระบุชื่อ)',
                 hn: answers.hn || '',
@@ -586,7 +638,6 @@
                 date: new Date().toISOString().split('T')[0],
                 answers: answers
             });
-            saveRecords();
             form.reset();
             renderForm(formKey); // ล้างฟอร์มรวมถึงแถวบันทึกการสัมผัสให้กลับสู่ค่าเริ่มต้น
             showModal('บันทึกข้อมูลสำเร็จ!', 'ระบบได้ทำการบันทึกข้อมูลเรียบร้อยแล้ว');
@@ -735,6 +786,79 @@
             modal.classList.add('hidden'); modal.classList.remove('flex');
             document.querySelector('nav .nav-btn[data-target="view-home"]').click();
         }
+
+        /* ============================================================
+           8.5 CUSTOM DATE PICKER (ปฏิทินป๊อปอัปเต็มจอ)
+           ============================================================ */
+        const dpModal = document.getElementById('date-modal');
+        const dpTitle = document.getElementById('dp-title');
+        const dpDays = document.getElementById('dp-days');
+        const dpWeekdays = document.getElementById('dp-weekdays');
+        let dpInput = null, dpY, dpM;
+
+        function pad2(n) { return String(n).padStart(2, '0'); }
+
+        function openDatePicker(input) {
+            dpInput = input;
+            const iso = input.dataset.value;
+            let base;
+            if (iso) { const p = iso.split('-').map(Number); base = new Date(p[0], p[1] - 1, p[2]); }
+            else base = new Date();
+            dpY = base.getFullYear(); dpM = base.getMonth();
+            renderDP();
+            dpModal.classList.remove('hidden'); dpModal.classList.add('flex');
+        }
+        function closeDatePicker() { dpModal.classList.add('hidden'); dpModal.classList.remove('flex'); dpInput = null; }
+
+        function renderDP() {
+            dpTitle.textContent = TH_MONTH_FULL[dpM] + ' ' + (dpY + 543);
+            dpWeekdays.innerHTML = TH_DOW.map(d => `<div class="py-1">${d}</div>`).join('');
+            const firstDow = new Date(dpY, dpM, 1).getDay();
+            const daysInMonth = new Date(dpY, dpM + 1, 0).getDate();
+            const sel = dpInput ? dpInput.dataset.value : '';
+            const today = new Date();
+            const todayIso = `${today.getFullYear()}-${pad2(today.getMonth() + 1)}-${pad2(today.getDate())}`;
+            let html = '';
+            for (let i = 0; i < firstDow; i++) html += '<div></div>';
+            for (let d = 1; d <= daysInMonth; d++) {
+                const iso = `${dpY}-${pad2(dpM + 1)}-${pad2(d)}`;
+                const isSel = iso === sel;
+                const isToday = iso === todayIso;
+                let cls = 'aspect-square flex items-center justify-center rounded-full text-lg cursor-pointer transition-colors ';
+                if (isSel) cls += 'bg-teal-600 text-white font-bold shadow';
+                else if (isToday) cls += 'bg-teal-100 text-teal-700 font-semibold hover:bg-teal-200';
+                else cls += 'text-slate-700 hover:bg-slate-100';
+                html += `<button type="button" class="${cls}" data-day="${iso}">${d}</button>`;
+            }
+            dpDays.innerHTML = html;
+        }
+
+        function pickDate(iso) {
+            if (dpInput) {
+                dpInput.dataset.value = iso;
+                dpInput.value = fmtThaiDate(iso);
+            }
+            closeDatePicker();
+        }
+
+        // เปิดปฏิทินเมื่อแตะช่องวันที่ (delegate ทั้งเอกสาร)
+        document.addEventListener('click', e => {
+            const dpField = e.target.closest('[data-datepicker]');
+            if (dpField) { openDatePicker(dpField); return; }
+        });
+        document.getElementById('dp-prev').addEventListener('click', () => { if (--dpM < 0) { dpM = 11; dpY--; } renderDP(); });
+        document.getElementById('dp-next').addEventListener('click', () => { if (++dpM > 11) { dpM = 0; dpY++; } renderDP(); });
+        dpDays.addEventListener('click', e => { const b = e.target.closest('[data-day]'); if (b) pickDate(b.getAttribute('data-day')); });
+        document.getElementById('dp-today').addEventListener('click', () => {
+            const t = new Date();
+            pickDate(`${t.getFullYear()}-${pad2(t.getMonth() + 1)}-${pad2(t.getDate())}`);
+        });
+        document.getElementById('dp-clear').addEventListener('click', () => {
+            if (dpInput) { dpInput.dataset.value = ''; dpInput.value = ''; }
+            closeDatePicker();
+        });
+        document.getElementById('dp-close').addEventListener('click', closeDatePicker);
+        dpModal.addEventListener('click', e => { if (e.target === dpModal) closeDatePicker(); });
 
         /* ============================================================
            9. CSV EXPORT (dynamic columns from schema)
@@ -912,6 +1036,17 @@
             if (!confirm('คืนค่าแบบสอบถามกลับเป็นค่าเริ่มต้น? การแก้ไขที่ยังไม่บันทึกจะหายไป')) return;
             draft = defaultSchema();
             renderBuilder();
+        });
+
+        // ซิงก์ข้อมูลข้ามแท็บ/หน้าต่างเมื่อมีการบันทึกที่อื่น
+        window.addEventListener('storage', e => {
+            if (e.key === STORAGE_KEY && e.newValue) {
+                try { records = JSON.parse(e.newValue); } catch (err) {}
+                if (!document.getElementById('view-admin').classList.contains('hidden')) renderAdminTable();
+            }
+            if (e.key === SCHEMA_KEY && e.newValue) {
+                try { schema = JSON.parse(e.newValue); renderForm('staff'); renderForm('patient'); } catch (err) {}
+            }
         });
 
         /* ============================================================

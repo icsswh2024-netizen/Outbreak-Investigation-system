@@ -13,6 +13,11 @@ var SHEET_DATA = 'ข้อมูลแบบสอบถาม';
 var SHEET_SCHEMA = 'การจัดการแบบสอบถาม';
 var META_COLS = ['เวลาบันทึก', 'id', 'ประเภท', 'ชื่อ-สกุล', 'HN', 'กลุ่ม/ตำแหน่ง', 'สถานะ'];
 
+// ★ ถ้าสคริปต์ไม่ได้ผูกกับชีต (สร้างแบบ standalone) ให้วาง ID ของ Google Sheet ที่นี่
+//   ID คือส่วนระหว่าง /d/ กับ /edit ใน URL ของชีต เช่น
+//   https://docs.google.com/spreadsheets/d/1AbCdEfGhIjK.../edit  ->  '1AbCdEfGhIjK...'
+var SPREADSHEET_ID = '';
+
 /* ---------------- HTTP entry points ---------------- */
 
 function doGet(e) {
@@ -46,7 +51,12 @@ function json(obj) {
 
 /* ---------------- helpers ---------------- */
 
-function ss() { return SpreadsheetApp.getActiveSpreadsheet(); }
+function ss() {
+  var s = SpreadsheetApp.getActiveSpreadsheet();
+  if (!s && SPREADSHEET_ID) s = SpreadsheetApp.openById(SPREADSHEET_ID);
+  if (!s) throw new Error('ไม่พบสเปรดชีต: ให้เปิด Apps Script ผ่านเมนู "ส่วนขยาย → Apps Script" ของชีต หรือกรอก SPREADSHEET_ID ในโค้ด');
+  return s;
+}
 
 function getSheet(name) {
   var s = ss().getSheetByName(name);

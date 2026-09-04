@@ -56,6 +56,19 @@
 ## อัปเดตโค้ดภายหลัง
 ถ้าแก้ `Code.gs` ต้อง **Deploy → Manage deployments → (ดินสอ) → Version: New version → Deploy** เพื่อให้ URL เดิมใช้โค้ดใหม่
 
+## แก้ปัญหา (Troubleshooting)
+
+**`TypeError: Cannot read properties of null (reading 'getSheetByName')`**
+แปลว่าสคริปต์ไม่ได้ผูกกับชีต (`getActiveSpreadsheet()` เป็น null) — เกิดเมื่อสร้าง Apps Script แบบ standalone
+แก้โดยเลือกทางใดทางหนึ่ง:
+- **ทางที่ 1 (แนะนำ):** เปิด Apps Script จากในชีตโดยตรง — เมนู **ส่วนขยาย → Apps Script** แล้ววางโค้ดที่นั่น
+- **ทางที่ 2:** เปิดชีตที่ต้องการใช้ คัดลอก **ID** จาก URL (ส่วนระหว่าง `/d/` กับ `/edit`)
+  แล้ววางในโค้ด `Code.gs` บรรทัด `var SPREADSHEET_ID = '';` เช่น
+  ```js
+  var SPREADSHEET_ID = '1AbCdEfGhIjKlMnOpQrStUvWxYz1234567890';
+  ```
+  จากนั้น **Deploy ใหม่** (Manage deployments → New version)
+
 ## หมายเหตุความปลอดภัย
 `Who has access: Anyone` = ใครมี URL ก็ส่งข้อมูลได้ เหมาะกับการใช้ภายใน/ช่วงเก็บข้อมูล
 ถ้าต้องการจำกัดสิทธิ์ ควรเพิ่มรหัสลับ (token) ตรวจใน `doPost`/`doGet` หรือใช้ Google Identity — แจ้งได้ถ้าต้องการให้เพิ่ม

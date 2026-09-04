@@ -455,7 +455,7 @@
 
             if (field.type === 'select') {
                 const opts = (field.options || []).map(o => `<option value="${escAttr(o)}">${o}</option>`).join('');
-                control = `<select name="${field.id}" class="field-input appearance-none cursor-pointer" ${reqAttr}>${opts}</select>`;
+                control = `<select name="${field.id}" class="field-input appearance-none cursor-pointer" ${reqAttr}><option value="" selected>โปรดระบุ</option>${opts}</select>`;
             } else if (field.type === 'radio') {
                 control = '<div class="flex flex-wrap gap-x-6 gap-y-2 mt-1">' + (field.options || []).map((o, i) =>
                     `<label class="flex items-center space-x-3 cursor-pointer p-2 rounded-lg hover:bg-slate-100 transition-colors">
@@ -469,7 +469,7 @@
                         <span class="text-lg text-slate-700">${o}</span>
                     </label>`).join('') + '</div>';
             } else if (field.type === 'textarea') {
-                control = `<textarea name="${field.id}" rows="2" class="field-input" ${reqAttr}></textarea>`;
+                control = `<textarea name="${field.id}" rows="2" class="field-input" placeholder="โปรดระบุ" ${reqAttr}></textarea>`;
             } else if (field.type === 'contactlog') {
                 control = `<div class="contactlog space-y-3" data-field="${field.id}">
                     <div class="contactlog-rows space-y-3">${contactRowHTML()}</div>
@@ -478,7 +478,8 @@
                     </button>
                 </div>`;
             } else {
-                control = `<input type="${field.type}" name="${field.id}" class="field-input" ${reqAttr}>`;
+                const ph = (field.type === 'date') ? '' : 'placeholder="โปรดระบุ"';
+                control = `<input type="${field.type}" name="${field.id}" class="field-input" ${ph} ${reqAttr}>`;
             }
 
             return `<div class="space-y-2">

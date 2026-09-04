@@ -16,7 +16,7 @@ var META_COLS = ['เวลาบันทึก', 'id', 'ประเภท', '
 // ★ ถ้าสคริปต์ไม่ได้ผูกกับชีต (สร้างแบบ standalone) ให้วาง ID ของ Google Sheet ที่นี่
 //   ID คือส่วนระหว่าง /d/ กับ /edit ใน URL ของชีต เช่น
 //   https://docs.google.com/spreadsheets/d/1AbCdEfGhIjK.../edit  ->  '1AbCdEfGhIjK...'
-var SPREADSHEET_ID = '';
+var SPREADSHEET_ID = '1-vvdG18uzzn9EQgSAnQ1G4aCLdUvNIQA6deWZrk92EI';
 
 /* ---------------- HTTP entry points ---------------- */
 

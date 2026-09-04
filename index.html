@@ -430,6 +430,16 @@
         }
 
         function fieldHTML(field, accent) {
+            // ค่าที่แอดมินกำหนดไว้ล่วงหน้า → แสดงแบบล็อก ผู้ตอบไม่ต้องตอบ
+            if (field.fixed !== undefined && field.fixed !== '') {
+                return `<div class="space-y-2">
+                    <label class="text-base font-medium text-slate-700">${field.label}</label>
+                    <div class="field-input bg-slate-100 text-slate-600 flex items-center justify-between cursor-not-allowed">
+                        <span>${field.fixed}</span>
+                        <span class="inline-flex items-center text-xs text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full"><i data-feather="lock" class="w-3 h-3 mr-1"></i> กำหนดโดยแอดมิน</span>
+                    </div>
+                </div>`;
+            }
             const req = field.required ? ' <span class="text-rose-500">*</span>' : '';
             const reqAttr = field.required ? 'required' : '';
             let control = '';
@@ -502,7 +512,9 @@
             schema[formKey].sections.forEach(sec => {
                 sec.fields.forEach(f => {
                     let value;
-                    if (f.type === 'contactlog') {
+                    if (f.fixed !== undefined && f.fixed !== '') {
+                        value = f.fixed;
+                    } else if (f.type === 'contactlog') {
                         const cont = form.querySelector(`.contactlog[data-field="${f.id}"]`);
                         value = cont ? Array.from(cont.querySelectorAll('.contactlog-row')).map(row => ({
                             date: row.querySelector('[data-role="date"]').value,
@@ -804,6 +816,10 @@
                     <button data-act="field-del" data-si="${si}" data-fi="${fi}" class="text-rose-500 hover:text-rose-700 p-1" title="ลบคำถาม"><i data-feather="trash-2" class="w-5 h-5"></i></button>
                 </div>
                 ${optionsBlock}
+                <div class="mt-2">
+                    <label class="text-sm text-slate-500 flex items-center"><i data-feather="lock" class="w-3.5 h-3.5 mr-1"></i> ค่าที่แอดมินกำหนดไว้ล่วงหน้า (ถ้ากรอก ผู้ตอบจะไม่ต้องตอบข้อนี้)</label>
+                    <input data-act="field-fixed" data-si="${si}" data-fi="${fi}" value="${escAttr(f.fixed || '')}" class="w-full text-base rounded-lg border border-amber-300 bg-amber-50/60 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400 mt-1" placeholder="เว้นว่าง = ให้ผู้ตอบกรอกเอง">
+                </div>
             </div>`;
         }
 
@@ -815,6 +831,7 @@
             const secs = draft[builderForm].sections;
             if (act === 'sec-title') secs[si].title = el.value;
             else if (act === 'field-label') secs[si].fields[fi].label = el.value;
+            else if (act === 'field-fixed') secs[si].fields[fi].fixed = el.value;
             else if (act === 'field-options') secs[si].fields[fi].options = el.value.split('\n').map(s => s.trim()).filter(Boolean);
         });
 

@@ -1718,10 +1718,16 @@
         function getHiddenNav() { try { return JSON.parse(localStorage.getItem(NAV_HIDE_KEY) || '[]'); } catch (e) { return []; } }
         function applyNavVisibility() {
             const hidden = getHiddenNav();
+            // ปุ่มบนแถบเมนู
             document.querySelectorAll('nav button.nav-btn[data-target]').forEach(b => {
                 const t = b.getAttribute('data-target');
                 if (t === 'view-admin') return; // เมนู Admin แสดงเสมอ
                 b.classList.toggle('hidden', hidden.includes(t));
+            });
+            // การ์ดบนหน้าแรก (เจ้าหน้าที่ / ผู้ป่วย)
+            document.querySelectorAll('#view-home .nav-btn[data-target]').forEach(card => {
+                const t = card.getAttribute('data-target');
+                card.classList.toggle('hidden', hidden.includes(t));
             });
         }
         function renderNavToggles() {

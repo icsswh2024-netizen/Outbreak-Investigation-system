@@ -599,6 +599,85 @@
         }
         const FREQ_LABEL = { daily: 'ทุกวัน', workdays: 'เฉพาะวันทำงาน (จ.–ศ.)', weekly: 'เลือกวันในสัปดาห์', custom: 'เลือกวันที่เอง' };
 
+        // อ่านค่ารูปแบบการสัมผัส 1 บล็อก
+        function readPatternBlock(bl) {
+            return {
+                freq: (bl.querySelector('[data-role="freq"]:checked') || {}).value || '',
+                weekdays: Array.from(bl.querySelectorAll('[data-role="weekday"]:checked')).map(c => c.value),
+                customDates: [bl.querySelector('[data-role="customdate1"]').dataset.value, bl.querySelector('[data-role="customdate2"]').dataset.value].filter(Boolean),
+                activities: Array.from(bl.querySelectorAll('[data-role="activity"]:checked')).map(c => c.value),
+                mask: bl.querySelector('[data-role="mask"]').value,
+                duration: bl.querySelector('[data-role="duration"]').value,
+                room: bl.querySelector('[data-role="room"]').value,
+                location: bl.querySelector('[data-role="location"]').value,
+                timeStart: bl.querySelector('[data-role="timeStart"]').value,
+                timeEnd: bl.querySelector('[data-role="timeEnd"]').value,
+                exceptions: Array.from(bl.querySelectorAll('.pat-exc')).map(ex => ({
+                    date: ex.querySelector('[data-role="excdate"]').dataset.value || '',
+                    noContact: ex.querySelector('[data-role="excnocontact"]').checked,
+                    mask: ex.querySelector('[data-role="excmask"]').value,
+                    duration: ex.querySelector('[data-role="excduration"]').value
+                })).filter(ex => ex.date)
+            };
+        }
+        function readContactPattern(cont) {
+            return {
+                rangeStart: cont.querySelector('[data-role="rangeStart"]').dataset.value || '',
+                rangeEnd: cont.querySelector('[data-role="rangeEnd"]').dataset.value || '',
+                patterns: Array.from(cont.querySelectorAll('.contactpat-pattern')).map(readPatternBlock)
+            };
+        }
+        // แตกรูปแบบทั้งหมดเป็นแถวรายวัน (สำหรับตารางพรีวิว/สรุป)
+        function expandToRows(value) {
+            const rows = [];
+            (value.patterns || []).forEach(p => {
+                const excMap = {};
+                (p.exceptions || []).forEach(e => { if (e.date) excMap[e.date] = e; });
+                expandPattern(value.rangeStart, value.rangeEnd, p).forEach(d => {
+                    const ex = excMap[d];
+                    rows.push({
+                        date: d,
+                        activities: (p.activities || []).join(', ') || '-',
+                        location: p.location || '-',
+                        mask: (ex && ex.mask) ? ex.mask : (p.mask || '-'),
+                        duration: (ex && ex.duration) ? ex.duration : (p.duration || '-'),
+                        room: p.room || '-',
+                        note: ex ? 'ต่างจากปกติ' : ''
+                    });
+                });
+            });
+            rows.sort((a, b) => a.date.localeCompare(b.date));
+            return rows;
+        }
+        // เรนเดอร์ตารางสรุปเรียลไทม์ใต้ข้อ 6.4
+        function renderPatternPreview(cont) {
+            const box = cont.querySelector('.pat-preview');
+            if (!box) return;
+            const rows = expandToRows(readContactPattern(cont));
+            if (!rows.length) { box.innerHTML = '<p class="text-sm text-slate-400 mt-2">— ยังไม่มีข้อมูลพอจะสรุป (เลือกช่วงวันและความถี่) —</p>'; return; }
+            const body = rows.map(r => `<tr class="border-b border-slate-100">
+                <td class="px-3 py-1.5 whitespace-nowrap">${fmtThaiDate(r.date)}</td>
+                <td class="px-3 py-1.5">${r.activities}</td>
+                <td class="px-3 py-1.5">${r.location}</td>
+                <td class="px-3 py-1.5">${r.mask}</td>
+                <td class="px-3 py-1.5 whitespace-nowrap">${r.duration}</td>
+                <td class="px-3 py-1.5">${r.room}</td>
+                <td class="px-3 py-1.5 ${r.note ? 'text-amber-600 font-medium' : 'text-slate-400'}">${r.note || '-'}</td>
+            </tr>`).join('');
+            box.innerHTML = `<div class="mt-3 rounded-xl border border-teal-200 bg-white overflow-hidden">
+                <div class="px-3 py-2 bg-teal-50 text-teal-700 font-semibold text-sm flex items-center"><i data-feather="check-circle" class="w-4 h-4 mr-1.5"></i> ตัวอย่างข้อมูลรายวัน (ระบบสร้างให้อัตโนมัติ) — รวม ${rows.length} วัน</div>
+                <div class="overflow-x-auto max-h-72 overflow-y-auto">
+                    <table class="w-full text-sm text-left">
+                        <thead class="text-xs text-slate-500 bg-slate-50 sticky top-0"><tr>
+                            <th class="px-3 py-2 whitespace-nowrap">วันที่</th><th class="px-3 py-2">กิจกรรม</th><th class="px-3 py-2">สถานที่</th><th class="px-3 py-2">หน้ากาก</th><th class="px-3 py-2 whitespace-nowrap">ระยะเวลา</th><th class="px-3 py-2">ขนาดห้อง</th><th class="px-3 py-2">หมายเหตุ</th>
+                        </tr></thead>
+                        <tbody class="text-slate-700">${body}</tbody>
+                    </table>
+                </div>
+            </div>`;
+            feather.replace();
+        }
+
         // แปลงรูปแบบการสัมผัส (6.4 แบบใหม่) เป็นข้อความ
         function isPatternObj(v) { return v && typeof v === 'object' && !Array.isArray(v) && Array.isArray(v.patterns); }
         function fmtPatterns(v) {
@@ -779,6 +858,7 @@
                 </div>
                 <div class="contactpat-rows space-y-3">${patternBlockHTML(null, opts, labels, 0)}</div>
                 <button type="button" class="contactpat-add w-full border-2 border-dashed border-teal-300 text-teal-600 rounded-xl py-2.5 text-base font-medium hover:bg-teal-50 flex items-center justify-center"><i data-feather="plus" class="w-4 h-4 mr-1"></i> เพิ่มรูปแบบการสัมผัสอีกแบบ</button>
+                <div class="pat-preview"></div>
             </div>`;
         }
 
@@ -859,6 +939,7 @@
 
             form.innerHTML = html;
             feather.replace();
+            if (typeof refreshPatternPreviews === 'function') refreshPatternPreviews(form);
         }
 
         /* ============================================================
@@ -874,30 +955,7 @@
                         value = f.fixed;
                     } else if (f.type === 'contactpattern') {
                         const cont = form.querySelector(`.contactpattern[data-field="${f.id}"]`);
-                        if (cont) {
-                            value = {
-                                rangeStart: cont.querySelector('[data-role="rangeStart"]').dataset.value || '',
-                                rangeEnd: cont.querySelector('[data-role="rangeEnd"]').dataset.value || '',
-                                patterns: Array.from(cont.querySelectorAll('.contactpat-pattern')).map(bl => ({
-                                    freq: (bl.querySelector('[data-role="freq"]:checked') || {}).value || '',
-                                    weekdays: Array.from(bl.querySelectorAll('[data-role="weekday"]:checked')).map(c => c.value),
-                                    customDates: [bl.querySelector('[data-role="customdate1"]').dataset.value, bl.querySelector('[data-role="customdate2"]').dataset.value].filter(Boolean),
-                                    activities: Array.from(bl.querySelectorAll('[data-role="activity"]:checked')).map(c => c.value),
-                                    mask: bl.querySelector('[data-role="mask"]').value,
-                                    duration: bl.querySelector('[data-role="duration"]').value,
-                                    room: bl.querySelector('[data-role="room"]').value,
-                                    location: bl.querySelector('[data-role="location"]').value,
-                                    timeStart: bl.querySelector('[data-role="timeStart"]').value,
-                                    timeEnd: bl.querySelector('[data-role="timeEnd"]').value,
-                                    exceptions: Array.from(bl.querySelectorAll('.pat-exc')).map(ex => ({
-                                        date: ex.querySelector('[data-role="excdate"]').dataset.value || '',
-                                        noContact: ex.querySelector('[data-role="excnocontact"]').checked,
-                                        mask: ex.querySelector('[data-role="excmask"]').value,
-                                        duration: ex.querySelector('[data-role="excduration"]').value
-                                    })).filter(ex => ex.date)
-                                }))
-                            };
-                        } else value = { rangeStart: '', rangeEnd: '', patterns: [] };
+                        value = cont ? readContactPattern(cont) : { rangeStart: '', rangeEnd: '', patterns: [] };
                     } else if (f.type === 'contactlog') {
                         const cont = form.querySelector(`.contactlog[data-field="${f.id}"]`);
                         value = cont ? Array.from(cont.querySelectorAll('.contactlog-row')).map(row => ({
@@ -1115,9 +1173,13 @@
         document.getElementById('form-staff').addEventListener('submit', handleSubmit);
         document.getElementById('form-patient').addEventListener('submit', handleSubmit);
 
+        // อัปเดตตารางพรีวิวของทุก contactpattern ในฟอร์ม
+        function refreshPatternPreviews(form) {
+            form.querySelectorAll('.contactpattern').forEach(c => renderPatternPreview(c));
+        }
         // เพิ่ม/ลบ แถวบันทึกการสัมผัส (contactlog)
         function bindContactLog(form) {
-            // toggle วันในสัปดาห์ / วันที่เอง ตามความถี่
+            // toggle วันในสัปดาห์ / วันที่เอง ตามความถี่ + อัปเดตพรีวิว
             form.addEventListener('change', e => {
                 const fr = e.target.closest('[data-role="freq"]');
                 if (fr && fr.checked) {
@@ -1126,7 +1188,10 @@
                     if (wd) wd.classList.toggle('hidden', fr.value !== 'weekly');
                     if (cu) cu.classList.toggle('hidden', fr.value !== 'custom');
                 }
+                if (e.target.closest('.contactpattern')) refreshPatternPreviews(form);
             });
+            // พิมพ์/เลือกวันที่ → อัปเดตพรีวิวเรียลไทม์
+            form.addEventListener('input', e => { if (e.target.closest('.contactpattern')) refreshPatternPreviews(form); });
             form.addEventListener('click', e => {
                 // ===== contactpattern (6.4 แบบใหม่) =====
                 const patAdd = e.target.closest('.contactpat-add');
@@ -1136,7 +1201,7 @@
                     const cf = findFieldById(cont.dataset.field);
                     const opts = Object.assign({}, contactOptsFor(cf), { location: (cf.contactOptions && cf.contactOptions.location && cf.contactOptions.location.length) ? cf.contactOptions.location : CONTACT_LOCATION });
                     rows.insertAdjacentHTML('beforeend', patternBlockHTML(null, opts, contactLabelsFor(cf), rows.querySelectorAll('.contactpat-pattern').length));
-                    feather.replace();
+                    feather.replace(); refreshPatternPreviews(form);
                     return;
                 }
                 const patDel = e.target.closest('.contactpat-del');
@@ -1144,6 +1209,7 @@
                     const rows = patDel.closest('.contactpat-rows');
                     if (rows.querySelectorAll('.contactpat-pattern').length > 1) patDel.closest('.contactpat-pattern').remove();
                     rows.querySelectorAll('.pat-index').forEach((el, i) => el.textContent = i + 1);
+                    refreshPatternPreviews(form);
                     return;
                 }
                 const excAdd = e.target.closest('.pat-exc-add');
@@ -1153,7 +1219,7 @@
                     return;
                 }
                 const excDel = e.target.closest('.pat-exc-del');
-                if (excDel) { excDel.closest('.pat-exc').remove(); return; }
+                if (excDel) { excDel.closest('.pat-exc').remove(); refreshPatternPreviews(form); return; }
 
                 const addBtn = e.target.closest('.contactlog-add');
                 if (addBtn) {
@@ -1453,6 +1519,7 @@
             if (dpInput) {
                 dpInput.dataset.value = iso;
                 dpInput.value = fmtThaiDate(iso);
+                dpInput.dispatchEvent(new Event('input', { bubbles: true })); // ให้พรีวิวอัปเดต
             }
             closeDatePicker();
         }
@@ -1470,7 +1537,7 @@
             pickDate(`${t.getFullYear()}-${pad2(t.getMonth() + 1)}-${pad2(t.getDate())}`);
         });
         document.getElementById('dp-clear').addEventListener('click', () => {
-            if (dpInput) { dpInput.dataset.value = ''; dpInput.value = ''; }
+            if (dpInput) { dpInput.dataset.value = ''; dpInput.value = ''; dpInput.dispatchEvent(new Event('input', { bubbles: true })); }
             closeDatePicker();
         });
         document.getElementById('dp-close').addEventListener('click', closeDatePicker);

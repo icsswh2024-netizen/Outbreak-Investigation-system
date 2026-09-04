@@ -535,6 +535,22 @@
                 room: (c.room && c.room.length) ? c.room : CONTACT_ROOM
             };
         }
+        // หัวข้อของแต่ละชุดใน 6.4 (แก้ได้ผ่านแอดมิน)
+        const CONTACT_LABELS_DEFAULT = {
+            activities: '6.4 กิจกรรมที่ทำกับผู้ป่วย (เลือกได้มากกว่า 1 ข้อ)',
+            n95: '6.11 การใส่หน้ากาก N95 ขณะสัมผัส',
+            duration: '6.12 ระยะเวลาโดยรวมในการสัมผัส/อยู่ใกล้ชิด',
+            room: '6.13 ขนาดของห้อง/บริเวณพื้นที่ที่สัมผัส'
+        };
+        function contactLabelsFor(field) {
+            const c = (field && field.contactLabels) ? field.contactLabels : {};
+            return {
+                activities: c.activities || CONTACT_LABELS_DEFAULT.activities,
+                n95: c.n95 || CONTACT_LABELS_DEFAULT.n95,
+                duration: c.duration || CONTACT_LABELS_DEFAULT.duration,
+                room: c.room || CONTACT_LABELS_DEFAULT.room
+            };
+        }
         function findFieldById(id) {
             for (const fk of ['staff', 'patient']) {
                 for (const sec of schema[fk].sections) {
@@ -545,9 +561,10 @@
             return null;
         }
 
-        function contactRowHTML(data, opts) {
+        function contactRowHTML(data, opts, labels) {
             data = data || {};
             opts = opts || { activities: CONTACT_ACTIVITIES, n95: CONTACT_N95, duration: CONTACT_DURATION, room: CONTACT_ROOM };
+            labels = labels || CONTACT_LABELS_DEFAULT;
             const sel = (role, options, cur, label) => `
                 <div class="space-y-1">
                     <label class="text-sm font-medium text-slate-600">${label}</label>
@@ -566,7 +583,7 @@
                     <input type="text" readonly data-datepicker data-role="date" data-value="${escAttr(data.date || '')}" value="${data.date ? fmtThaiDate(data.date) : ''}" placeholder="แตะเพื่อเลือกวันที่" class="field-input cursor-pointer bg-white">
                 </div>
                 <div class="space-y-1">
-                    <label class="text-sm font-medium text-slate-600">6.4 กิจกรรมที่ทำกับผู้ป่วย (เลือกได้มากกว่า 1 ข้อ)</label>
+                    <label class="text-sm font-medium text-slate-600">${labels.activities}</label>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
                         ${opts.activities.map(o => `<label class="flex items-center space-x-2 cursor-pointer p-1.5 rounded-lg hover:bg-white transition-colors">
                             <input type="checkbox" data-role="activity" value="${escAttr(o)}" ${(data.activities || []).includes(o) ? 'checked' : ''} class="w-4 h-4 text-teal-600 focus:ring-teal-500">
@@ -574,9 +591,9 @@
                         </label>`).join('')}
                     </div>
                 </div>
-                ${sel('n95', opts.n95, data.n95, '6.11 การใส่หน้ากาก N95 ขณะสัมผัส')}
-                ${sel('duration', opts.duration, data.duration, '6.12 ระยะเวลาโดยรวมในการสัมผัส/อยู่ใกล้ชิด')}
-                ${sel('room', opts.room, data.room, '6.13 ขนาดของห้อง/บริเวณพื้นที่ที่สัมผัส')}
+                ${sel('n95', opts.n95, data.n95, labels.n95)}
+                ${sel('duration', opts.duration, data.duration, labels.duration)}
+                ${sel('room', opts.room, data.room, labels.room)}
             </div>`;
         }
 
@@ -616,7 +633,7 @@
                 control = `<textarea name="${field.id}" rows="2" class="field-input" placeholder="โปรดระบุ" ${reqAttr}></textarea>`;
             } else if (field.type === 'contactlog') {
                 control = `<div class="contactlog space-y-3" data-field="${field.id}">
-                    <div class="contactlog-rows space-y-3">${contactRowHTML(null, contactOptsFor(field))}</div>
+                    <div class="contactlog-rows space-y-3">${contactRowHTML(null, contactOptsFor(field), contactLabelsFor(field))}</div>
                     <button type="button" class="contactlog-add w-full border-2 border-dashed border-teal-300 text-teal-600 rounded-xl py-2.5 text-base font-medium hover:bg-teal-50 hover:border-teal-400 transition-all flex items-center justify-center">
                         <i data-feather="plus" class="w-4 h-4 mr-1"></i> เพิ่มวันที่สัมผัส
                     </button>
@@ -782,7 +799,8 @@
                 if (addBtn) {
                     const cont = addBtn.closest('.contactlog');
                     const rows = cont.querySelector('.contactlog-rows');
-                    rows.insertAdjacentHTML('beforeend', contactRowHTML(null, contactOptsFor(findFieldById(cont.dataset.field))));
+                    const cf = findFieldById(cont.dataset.field);
+                    rows.insertAdjacentHTML('beforeend', contactRowHTML(null, contactOptsFor(cf), contactLabelsFor(cf)));
                     feather.replace();
                     return;
                 }
@@ -1176,19 +1194,21 @@
                 : '';
             // ตัวจัดการข้อย่อยของ 6.4 (contactlog): กิจกรรม / N95 / ระยะเวลา / ขนาดห้อง
             const co = f.contactOptions || {};
-            const subBox = (act, label, arr) => `
-                <div>
-                    <label class="text-sm text-slate-500">${label} (บรรทัดละ 1 รายการ)</label>
-                    <textarea data-act="${act}" data-si="${si}" data-fi="${fi}" rows="3" class="w-full text-base rounded-lg border border-teal-300 bg-teal-50/50 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-400 mt-1" placeholder="พิมพ์ตัวเลือกทีละบรรทัด">${arr.join('\n')}</textarea>
+            const cl = f.contactLabels || {};
+            const subBox = (key, arr, defLabel) => `
+                <div class="space-y-1">
+                    <input data-act="contact-lbl-${key}" data-si="${si}" data-fi="${fi}" value="${escAttr(cl[key] || defLabel)}" class="w-full text-sm font-semibold text-teal-700 rounded-lg border border-teal-300 bg-white px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-teal-400" placeholder="หัวข้อของชุดนี้">
+                    <label class="text-xs text-slate-400">ตัวเลือก (บรรทัดละ 1 รายการ)</label>
+                    <textarea data-act="contact-${key}" data-si="${si}" data-fi="${fi}" rows="3" class="w-full text-base rounded-lg border border-teal-300 bg-teal-50/50 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-400" placeholder="พิมพ์ตัวเลือกทีละบรรทัด">${arr.join('\n')}</textarea>
                 </div>`;
             const contactBlock = f.type === 'contactlog'
                 ? `<div class="mt-3 rounded-xl border border-teal-200 bg-white p-3 space-y-3">
-                        <div class="text-sm font-semibold text-teal-700 flex items-center"><i data-feather="sliders" class="w-4 h-4 mr-1"></i> จัดการตัวเลือกย่อยในข้อนี้</div>
+                        <div class="text-sm font-semibold text-teal-700 flex items-center"><i data-feather="sliders" class="w-4 h-4 mr-1"></i> จัดการหัวข้อและตัวเลือกย่อยในข้อนี้</div>
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            ${subBox('contact-activities', 'กิจกรรมที่ทำกับผู้ป่วย', (co.activities && co.activities.length) ? co.activities : CONTACT_ACTIVITIES)}
-                            ${subBox('contact-n95', 'การใส่หน้ากาก N95', (co.n95 && co.n95.length) ? co.n95 : CONTACT_N95)}
-                            ${subBox('contact-duration', 'ระยะเวลาการสัมผัส', (co.duration && co.duration.length) ? co.duration : CONTACT_DURATION)}
-                            ${subBox('contact-room', 'ขนาดของห้อง', (co.room && co.room.length) ? co.room : CONTACT_ROOM)}
+                            ${subBox('activities', (co.activities && co.activities.length) ? co.activities : CONTACT_ACTIVITIES, CONTACT_LABELS_DEFAULT.activities)}
+                            ${subBox('n95', (co.n95 && co.n95.length) ? co.n95 : CONTACT_N95, CONTACT_LABELS_DEFAULT.n95)}
+                            ${subBox('duration', (co.duration && co.duration.length) ? co.duration : CONTACT_DURATION, CONTACT_LABELS_DEFAULT.duration)}
+                            ${subBox('room', (co.room && co.room.length) ? co.room : CONTACT_ROOM, CONTACT_LABELS_DEFAULT.room)}
                         </div>
                    </div>`
                 : '';
@@ -1220,8 +1240,14 @@
             else if (act === 'field-label') secs[si].fields[fi].label = el.value;
             else if (act === 'field-fixed') secs[si].fields[fi].fixed = el.value;
             else if (act === 'field-options') secs[si].fields[fi].options = el.value.split('\n').map(s => s.trim()).filter(Boolean);
+            else if (act.indexOf('contact-lbl-') === 0) {
+                const key = act.replace('contact-lbl-', '');
+                const fld = secs[si].fields[fi];
+                if (!fld.contactLabels) fld.contactLabels = {};
+                fld.contactLabels[key] = el.value;
+            }
             else if (act.indexOf('contact-') === 0) {
-                const key = { 'contact-activities': 'activities', 'contact-n95': 'n95', 'contact-duration': 'duration', 'contact-room': 'room' }[act];
+                const key = act.replace('contact-', '');
                 const fld = secs[si].fields[fi];
                 if (!fld.contactOptions) fld.contactOptions = {};
                 fld.contactOptions[key] = el.value.split('\n').map(s => s.trim()).filter(Boolean);

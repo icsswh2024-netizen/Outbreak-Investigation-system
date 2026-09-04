@@ -226,7 +226,7 @@
                 <button id="btn-save-tbdef" class="bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-600 hover:to-red-700 text-white px-5 py-2 rounded-lg text-base font-semibold flex items-center transition-all shadow-[0_4px_15px_rgba(244,63,94,0.3)]"><i data-feather="save" class="w-4 h-4 mr-2"></i> บันทึกนิยาม</button>
             </div>
 
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-4 sm:gap-6">
                 <div class="rounded-2xl border p-5 flex flex-col bg-white border-blue-200 shadow-[0_4px_15px_rgba(59,130,246,0.1)] transition-transform hover:-translate-y-1">
                     <span class="text-base font-medium mb-1 text-slate-500">ผู้สัมผัสทั้งหมด</span>
                     <div class="text-4xl font-extrabold text-blue-600 drop-shadow-[0_2px_5px_rgba(59,130,246,0.3)]" id="stat-total">0</div>
@@ -247,13 +247,39 @@
                         <i data-feather="alert-triangle" class="w-7 h-7 ml-3 mb-1 text-rose-500 animate-pulse"></i>
                     </div>
                 </div>
+                <div class="rounded-2xl border p-5 flex flex-col bg-white border-rose-300 shadow-[0_4px_15px_rgba(244,63,94,0.12)] relative overflow-hidden group transition-transform hover:-translate-y-1">
+                    <div class="absolute -right-6 -top-6 w-24 h-24 bg-rose-100 rounded-full blur-xl group-hover:bg-rose-200 transition-all"></div>
+                    <span class="text-base font-medium mb-1 text-slate-500 relative">เสี่ยงสูง (Close Contact)</span>
+                    <div class="text-4xl font-extrabold text-rose-600 drop-shadow-[0_2px_5px_rgba(225,29,72,0.3)] relative" id="stat-close">0</div>
+                </div>
             </div>
 
             <div class="bg-white rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.05)] border border-slate-200 overflow-hidden mt-8">
-                <div class="px-6 py-5 border-b border-slate-200 bg-slate-50/80 flex justify-between items-center">
-                    <h3 class="text-xl font-bold text-slate-800 flex items-center">
-                        <i data-feather="list" class="w-5 h-5 mr-2 text-slate-500"></i> รายชื่อผู้สัมผัส (Contact List)
-                    </h3>
+                <div class="px-6 py-5 border-b border-slate-200 bg-slate-50/80 space-y-4">
+                    <div class="flex justify-between items-center">
+                        <h3 class="text-xl font-bold text-slate-800 flex items-center">
+                            <i data-feather="list" class="w-5 h-5 mr-2 text-slate-500"></i> รายชื่อผู้สัมผัส (Contact List)
+                        </h3>
+                        <span id="flt-count" class="text-sm text-slate-500"></span>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                        <div class="relative sm:col-span-2 lg:col-span-1">
+                            <i data-feather="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                            <input id="flt-search" type="text" placeholder="ค้นหา ชื่อ / HN" class="w-full text-base rounded-lg border border-slate-300 bg-white pl-9 pr-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400">
+                        </div>
+                        <select id="flt-type" class="text-base rounded-lg border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 cursor-pointer">
+                            <option value="">ประเภท: ทั้งหมด</option><option value="staff">เจ้าหน้าที่</option><option value="patient">ผู้ป่วย</option>
+                        </select>
+                        <select id="flt-status" class="text-base rounded-lg border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 cursor-pointer">
+                            <option value="">สถานะ: ทั้งหมด</option><option value="ปกติ">ปกติ</option><option value="เฝ้าระวัง">เฝ้าระวัง</option>
+                        </select>
+                        <div class="flex gap-2">
+                            <select id="flt-risk" class="flex-1 text-base rounded-lg border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 cursor-pointer">
+                                <option value="">ความเสี่ยง: ทั้งหมด</option><option value="high">เสี่ยงสูง</option><option value="normal">เสี่ยงทั่วไป</option>
+                            </select>
+                            <button id="btn-flt-clear" class="px-3 py-2 rounded-lg border border-slate-300 bg-white text-slate-500 hover:bg-slate-50" title="ล้างตัวกรอง"><i data-feather="x" class="w-5 h-5"></i></button>
+                        </div>
+                    </div>
                 </div>
                 <div class="overflow-x-auto">
                     <table class="w-full text-base text-left">
@@ -1499,13 +1525,31 @@
             document.getElementById('stat-staff').textContent = records.filter(r => r.type === 'staff').length;
             document.getElementById('stat-patient').textContent = records.filter(r => r.type === 'patient').length;
             document.getElementById('stat-risk').textContent = records.filter(r => r.status === 'เฝ้าระวัง').length;
+            const closeEl = document.getElementById('stat-close');
+            if (closeEl) closeEl.textContent = records.filter(r => computeRecordRisk(r).isClose).length;
 
-            if (records.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="8" class="px-6 py-8 text-center text-slate-500 text-lg">ไม่มีข้อมูลการบันทึก</td></tr>`;
+            // ตัวกรอง
+            const q = (document.getElementById('flt-search') || {}).value || '';
+            const ftype = (document.getElementById('flt-type') || {}).value || '';
+            const fstatus = (document.getElementById('flt-status') || {}).value || '';
+            const frisk = (document.getElementById('flt-risk') || {}).value || '';
+            const qq = q.trim().toLowerCase();
+            const filtered = records.filter(r => {
+                if (ftype && r.type !== ftype) return false;
+                if (fstatus && r.status !== fstatus) return false;
+                if (frisk) { const c = computeRecordRisk(r).isClose; if (frisk === 'high' && !c) return false; if (frisk === 'normal' && c) return false; }
+                if (qq) { const hay = ((r.name || '') + ' ' + (r.hn || '')).toLowerCase(); if (hay.indexOf(qq) < 0) return false; }
+                return true;
+            });
+            const cnt = document.getElementById('flt-count');
+            if (cnt) cnt.textContent = `แสดง ${filtered.length} / ${records.length} รายการ`;
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" class="px-6 py-8 text-center text-slate-500 text-lg">${records.length ? 'ไม่พบข้อมูลตามตัวกรอง' : 'ไม่มีข้อมูลการบันทึก'}</td></tr>`;
                 return;
             }
 
-            records.forEach(record => {
+            filtered.forEach(record => {
                 const tr = document.createElement('tr');
                 tr.className = 'hover:bg-slate-50 transition-colors border-b border-slate-100 last:border-0';
                 const statusDisplay = record.status === 'เฝ้าระวัง'
@@ -2147,6 +2191,17 @@
             const hint = document.getElementById('nav-save-hint');
             if (hint) hint.hidden = true;
             showModal('บันทึกสำเร็จ!', 'บันทึกการตั้งค่าเมนูแล้ว ระบบจะจำค่านี้ไว้' + (USE_SERVER ? ' (ทุกเครื่อง)' : ''), false);
+        });
+
+        // ผูกตัวกรองตารางรายชื่อ
+        ['flt-search', 'flt-type', 'flt-status', 'flt-risk'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.addEventListener('input', renderAdminTable);
+        });
+        const fltClear = document.getElementById('btn-flt-clear');
+        if (fltClear) fltClear.addEventListener('click', () => {
+            ['flt-search', 'flt-type', 'flt-status', 'flt-risk'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+            renderAdminTable();
         });
 
         renderForm('staff');

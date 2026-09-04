@@ -1559,6 +1559,34 @@
         function showAlert(title, messageHtml) {
             openConfirm({ title: title, messageHtml: messageHtml, warn: true, hideCancel: true, confirmText: 'ตกลง' });
         }
+
+        /* ===== คำสั่งสำเร็จรูป (ใช้ซ้ำได้ทุกจุด/เผื่ออนาคต) =====
+           confirmDelete(ข้อความ, ฟังก์ชันเมื่อยืนยัน, ข้อความสำเร็จ)
+           confirmSave(ข้อความ, ฟังก์ชันเมื่อยืนยัน, ข้อความสำเร็จ)
+           - รองรับ onConfirm ที่คืน Promise (async) จะโชว์ "สำเร็จ" หลังทำเสร็จ
+        */
+        function confirmDelete(message, onConfirm, successMsg) {
+            openConfirm({
+                title: 'ยืนยันการลบ', danger: true, confirmText: 'ลบ',
+                message: message || 'ต้องการลบรายการนี้ใช่หรือไม่?',
+                onConfirm: () => {
+                    const r = onConfirm && onConfirm();
+                    const done = () => showModal('ลบสำเร็จ!', successMsg || 'ลบข้อมูลเรียบร้อยแล้ว', false);
+                    if (r && typeof r.then === 'function') r.then(done); else done();
+                }
+            });
+        }
+        function confirmSave(message, onConfirm, successMsg) {
+            openConfirm({
+                title: 'ยืนยันการบันทึก', confirmText: 'บันทึก',
+                message: message || 'ต้องการบันทึกข้อมูลนี้ใช่หรือไม่?',
+                onConfirm: () => {
+                    const r = onConfirm && onConfirm();
+                    const done = () => showModal('บันทึกสำเร็จ!', successMsg || 'บันทึกข้อมูลเรียบร้อยแล้ว', false);
+                    if (r && typeof r.then === 'function') r.then(done); else done();
+                }
+            });
+        }
         function closeConfirm() { confirmModal.classList.add('hidden'); confirmModal.classList.remove('flex'); confirmCb = null; }
 
         confirmOk.addEventListener('click', () => { const cb = confirmCb; closeConfirm(); if (cb) cb(); });

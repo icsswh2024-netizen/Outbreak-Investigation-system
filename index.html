@@ -315,6 +315,34 @@
         feather.replace();
 
         /* ============================================================
+           0. การเชื่อมต่อ Google Sheets (ฐานข้อมูลกลาง)
+           วาง URL ของ Web App (Apps Script) ที่ deploy แล้วตรงนี้
+           ถ้าเว้นว่าง = โหมดออฟไลน์ (localStorage เครื่องเดียว)
+           ============================================================ */
+        const API_URL = ''; // <<< วาง URL Web App ที่นี่ เช่น 'https://script.google.com/macros/s/xxxx/exec'
+        const USE_SERVER = !!API_URL;
+
+        async function serverLoad() {
+            if (!USE_SERVER) return;
+            try {
+                const res = await fetch(API_URL + '?action=load&t=' + Date.now());
+                const data = await res.json();
+                if (data && data.schema) { schema = data.schema; try { localStorage.setItem(SCHEMA_KEY, JSON.stringify(schema)); } catch (e) {} }
+                if (data && Array.isArray(data.records)) { records = data.records; try { localStorage.setItem(STORAGE_KEY, JSON.stringify(records)); } catch (e) {} }
+                renderForm('staff'); renderForm('patient');
+                if (!document.getElementById('view-admin').classList.contains('hidden')) renderAdminTable();
+            } catch (e) { /* ออฟไลน์: ใช้ข้อมูลใน localStorage ต่อไป */ }
+        }
+        function serverSubmit(rec) {
+            if (!USE_SERVER) return;
+            fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'submit', record: rec }) }).catch(() => {});
+        }
+        function serverSaveSchema(sc) {
+            if (!USE_SERVER) return;
+            fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'saveSchema', schema: sc }) }).catch(() => {});
+        }
+
+        /* ============================================================
            1. DEFAULT FORM SCHEMA
            field.type: text | tel | number | date | textarea | select | radio | checkbox
            field.options: array (สำหรับ select/radio/checkbox)
@@ -427,6 +455,7 @@
                 records.unshift(rec);
             }
             saveRecords();
+            serverSubmit(rec); // ส่งขึ้นฐานข้อมูลกลาง (ถ้าตั้งค่า API_URL)
         }
         function saveSchema() { try { localStorage.setItem(SCHEMA_KEY, JSON.stringify(schema)); } catch (e) {} }
 
@@ -696,7 +725,7 @@
                     }
                 });
 
-                if (targetId === 'view-admin') renderAdminTable();
+                if (targetId === 'view-admin') { renderAdminTable(); serverLoad(); }
                 if (targetId === 'view-builder') renderBuilder();
             });
         });
@@ -1026,9 +1055,10 @@
         document.getElementById('btn-builder-save').addEventListener('click', () => {
             schema = JSON.parse(JSON.stringify(draft));
             saveSchema();
+            serverSaveSchema(schema); // อัปเดต schema บนชีต (ถ้าตั้งค่า API_URL)
             renderForm('staff');
             renderForm('patient');
-            showModal('บันทึกแบบสอบถามสำเร็จ!', 'แบบสอบถามถูกอัปเดตแล้ว ฟอร์มเจ้าหน้าที่และผู้ป่วยจะใช้รูปแบบใหม่ทันที');
+            showModal('บันทึกแบบสอบถามสำเร็จ!', 'แบบสอบถามถูกอัปเดตแล้ว ฟอร์มเจ้าหน้าที่และผู้ป่วยจะใช้รูปแบบใหม่ทันที' + (USE_SERVER ? ' และซิงก์ขึ้นชีตแล้ว' : ''));
         });
 
         // Reset to default
@@ -1055,6 +1085,15 @@
         renderForm('staff');
         renderForm('patient');
         renderAdminTable();
+
+        // โหลดจากฐานข้อมูลกลาง + รีเฟรชอัตโนมัติ (รองรับหลายเครื่องพร้อมกัน)
+        if (USE_SERVER) {
+            serverLoad();
+            setInterval(() => {
+                // รีเฟรชเมื่อดูหน้า Admin เพื่อเห็นข้อมูลล่าสุดจากเครื่องอื่น
+                if (!document.getElementById('view-admin').classList.contains('hidden')) serverLoad();
+            }, 20000);
+        }
     </script>
 </body>
 </html>

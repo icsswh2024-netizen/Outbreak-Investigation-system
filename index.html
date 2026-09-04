@@ -180,6 +180,9 @@
                     <button id="btn-export-csv" class="bg-white border border-slate-300 text-slate-700 px-5 py-2.5 rounded-lg text-lg font-medium hover:bg-slate-50 hover:text-slate-900 flex items-center transition-all shadow-sm">
                         <i data-feather="download-cloud" class="w-5 h-5 mr-2 text-blue-600"></i> ส่งออก CSV
                     </button>
+                    <button id="btn-logout" class="bg-white border border-rose-200 text-rose-600 px-5 py-2.5 rounded-lg text-lg font-medium hover:bg-rose-50 flex items-center transition-all shadow-sm">
+                        <i data-feather="log-out" class="w-5 h-5 mr-2"></i> ออกจากระบบ
+                    </button>
                 </div>
             </div>
 
@@ -263,6 +266,26 @@
             </button>
         </div>
     </main>
+
+    <!-- Login Modal (เข้าสู่ระบบผู้ดูแล) -->
+    <div id="login-modal" class="fixed inset-0 z-[80] hidden items-center justify-center bg-slate-900/50 backdrop-blur-sm fade-in p-4">
+        <div class="bg-white border border-slate-200 rounded-2xl shadow-[0_15px_40px_rgba(0,0,0,0.2)] p-8 max-w-sm w-full space-y-5">
+            <div class="text-center space-y-2">
+                <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-blue-100 text-blue-600 shadow-inner"><i data-feather="lock" class="h-8 w-8"></i></div>
+                <h3 class="text-2xl font-bold text-slate-900">เข้าสู่ระบบผู้ดูแล</h3>
+                <p class="text-slate-500 text-base">เฉพาะผู้ดูแลระบบ (Admin) เท่านั้น</p>
+            </div>
+            <div class="space-y-3">
+                <input id="login-user" type="text" autocomplete="username" placeholder="ชื่อผู้ใช้" class="field-input">
+                <input id="login-pass" type="password" autocomplete="current-password" placeholder="รหัสผ่าน" class="field-input">
+                <p id="login-error" class="text-rose-600 text-base font-medium" hidden><i data-feather="alert-circle" class="w-4 h-4 inline mr-1"></i> ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง</p>
+            </div>
+            <div class="flex gap-3">
+                <button id="login-cancel" class="flex-1 rounded-lg border border-slate-300 px-4 py-3 bg-white text-lg font-semibold text-slate-600 hover:bg-slate-50 transition-all">ยกเลิก</button>
+                <button id="login-ok" class="flex-1 rounded-lg px-4 py-3 text-lg font-semibold text-white bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 shadow-[0_4px_15px_rgba(59,130,246,0.3)] transition-all">เข้าสู่ระบบ</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Confirm Modal (ยืนยันการทำรายการ) -->
     <div id="confirm-modal" class="fixed inset-0 z-[70] hidden items-center justify-center bg-slate-900/40 backdrop-blur-sm fade-in p-4">
@@ -659,10 +682,42 @@
             return { answers, risk };
         }
 
+        // หาข้อมูลสำคัญ (required) ที่ยังไม่ได้กรอก
+        function missingRequired(form, formKey) {
+            const missing = [];
+            schema[formKey].sections.forEach(sec => sec.fields.forEach(f => {
+                if (!f.required) return;
+                if (f.fixed !== undefined && f.fixed !== '') return; // มีค่าตายตัวแล้ว
+                let empty = false;
+                if (f.type === 'checkbox') {
+                    empty = form.querySelectorAll(`input[name="${f.id}"]:checked`).length === 0;
+                } else if (f.type === 'radio') {
+                    empty = !form.querySelector(`input[name="${f.id}"]:checked`);
+                } else if (f.type === 'date') {
+                    const el = form.querySelector(`[name="${f.id}"]`);
+                    empty = !el || !(el.dataset.value || '').trim();
+                } else {
+                    const el = form.querySelector(`[name="${f.id}"]`);
+                    empty = !el || !(el.value || '').trim();
+                }
+                if (empty) missing.push(f.label);
+            }));
+            return missing;
+        }
+
         function handleSubmit(e) {
             e.preventDefault();
             const form = e.target;
             const formKey = form.getAttribute('data-form');
+
+            const missing = missingRequired(form, formKey);
+            if (missing.length) {
+                showAlert('กรอกข้อมูลไม่ครบ',
+                    'กรุณากรอกข้อมูลสำคัญต่อไปนี้ให้ครบก่อนบันทึก:<br><br>' +
+                    '<span class="text-slate-700 font-medium">• ' + missing.join('<br>• ') + '</span>');
+                return;
+            }
+
             openConfirm({
                 title: 'ยืนยันการบันทึก',
                 message: 'ต้องการบันทึกข้อมูลแบบสอบถามนี้ใช่หรือไม่?',
@@ -747,6 +802,12 @@
             btn.addEventListener('click', () => {
                 let targetId = btn.getAttribute('data-target') || btn.closest('.nav-btn')?.getAttribute('data-target');
                 if (!targetId) return;
+
+                // ป้องกันหน้า Admin / จัดการแบบสอบถาม ด้วยการล็อกอิน
+                if ((targetId === 'view-admin' || targetId === 'view-builder') && !isAdminAuthed()) {
+                    openLogin(targetId);
+                    return;
+                }
 
                 viewSections.forEach(s => s.classList.add('hidden'));
                 document.getElementById(targetId)?.classList.remove('hidden');
@@ -863,24 +924,72 @@
 
         function openConfirm(opts) {
             document.getElementById('confirm-title').textContent = opts.title || 'ยืนยันการทำรายการ';
-            document.getElementById('confirm-msg').textContent = opts.message || '';
+            document.getElementById('confirm-msg').innerHTML = opts.messageHtml || '';
+            if (!opts.messageHtml) document.getElementById('confirm-msg').textContent = opts.message || '';
             confirmOk.textContent = opts.confirmText || 'ยืนยัน';
             confirmOk.className = 'flex-1 rounded-lg px-4 py-3 text-lg font-semibold text-white transition-all ' +
                 (opts.danger
                     ? 'bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-600 hover:to-red-700 shadow-[0_4px_15px_rgba(244,63,94,0.3)]'
-                    : 'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 shadow-[0_4px_15px_rgba(59,130,246,0.3)]');
+                    : (opts.warn
+                        ? 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 shadow-[0_4px_15px_rgba(245,158,11,0.3)]'
+                        : 'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 shadow-[0_4px_15px_rgba(59,130,246,0.3)]'));
             confirmIcon.className = 'mx-auto flex items-center justify-center h-20 w-20 rounded-full shadow-inner ' +
                 (opts.danger ? 'bg-rose-100 text-rose-600' : 'bg-amber-100 text-amber-600');
-            confirmIcon.innerHTML = `<i data-feather="${opts.danger ? 'trash-2' : 'help-circle'}" class="h-10 w-10"></i>`;
+            confirmIcon.innerHTML = `<i data-feather="${opts.danger ? 'trash-2' : (opts.warn ? 'alert-triangle' : 'help-circle')}" class="h-10 w-10"></i>`;
+            document.getElementById('confirm-cancel').hidden = !!opts.hideCancel;
             confirmCb = opts.onConfirm || null;
             confirmModal.classList.remove('hidden'); confirmModal.classList.add('flex');
             feather.replace();
+        }
+        // แจ้งเตือนปุ่มเดียว
+        function showAlert(title, messageHtml) {
+            openConfirm({ title: title, messageHtml: messageHtml, warn: true, hideCancel: true, confirmText: 'ตกลง' });
         }
         function closeConfirm() { confirmModal.classList.add('hidden'); confirmModal.classList.remove('flex'); confirmCb = null; }
 
         confirmOk.addEventListener('click', () => { const cb = confirmCb; closeConfirm(); if (cb) cb(); });
         document.getElementById('confirm-cancel').addEventListener('click', closeConfirm);
         confirmModal.addEventListener('click', e => { if (e.target === confirmModal) closeConfirm(); });
+
+        /* ===== ระบบล็อกอินผู้ดูแล (Admin) ===== */
+        const ADMIN_USER = 'icn';   // ไม่สนตัวพิมพ์เล็ก/ใหญ่
+        const ADMIN_PASS = '10725';
+        const loginModal = document.getElementById('login-modal');
+        const loginUser = document.getElementById('login-user');
+        const loginPass = document.getElementById('login-pass');
+        const loginError = document.getElementById('login-error');
+        let pendingAdminTarget = null;
+
+        function isAdminAuthed() { try { return sessionStorage.getItem('oi-admin') === '1'; } catch (e) { return false; } }
+        function openLogin(target) {
+            pendingAdminTarget = target;
+            loginUser.value = ''; loginPass.value = ''; loginError.hidden = true;
+            loginModal.classList.remove('hidden'); loginModal.classList.add('flex');
+            setTimeout(() => loginUser.focus(), 50);
+        }
+        function closeLogin() { loginModal.classList.add('hidden'); loginModal.classList.remove('flex'); }
+        function doLogin() {
+            const u = (loginUser.value || '').trim().toLowerCase();
+            const p = (loginPass.value || '').trim();
+            if (u === ADMIN_USER && p === ADMIN_PASS) {
+                try { sessionStorage.setItem('oi-admin', '1'); } catch (e) {}
+                closeLogin();
+                const t = pendingAdminTarget || 'view-admin';
+                const btn = document.querySelector('.nav-btn[data-target="' + t + '"]');
+                if (btn) btn.click();
+            } else {
+                loginError.hidden = false;
+            }
+        }
+        document.getElementById('login-ok').addEventListener('click', doLogin);
+        document.getElementById('login-cancel').addEventListener('click', closeLogin);
+        loginModal.addEventListener('click', e => { if (e.target === loginModal) closeLogin(); });
+        loginPass.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+        loginUser.addEventListener('keydown', e => { if (e.key === 'Enter') loginPass.focus(); });
+        document.getElementById('btn-logout').addEventListener('click', () => {
+            try { sessionStorage.removeItem('oi-admin'); } catch (e) {}
+            document.querySelector('nav .nav-btn[data-target="view-home"]').click();
+        });
 
         /* ============================================================
            8.5 CUSTOM DATE PICKER (ปฏิทินป๊อปอัปเต็มจอ)

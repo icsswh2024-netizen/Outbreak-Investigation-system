@@ -22,10 +22,18 @@ var SPREADSHEET_ID = '1-vvdG18uzzn9EQgSAnQ1G4aCLdUvNIQA6deWZrk92EI';
 
 function doGet(e) {
   var action = (e && e.parameter && e.parameter.action) || 'load';
-  if (action === 'load') {
-    return json({ schema: readSchema(), records: readRecords() });
+  var out;
+  if (action === 'load') out = { schema: readSchema(), records: readRecords() };
+  else out = { error: 'unknown action' };
+
+  // รองรับ JSONP (เรียกจากเว็บสถิตข้ามโดเมนได้ ผ่าน callback)
+  var callback = e && e.parameter && e.parameter.callback;
+  if (callback) {
+    return ContentService
+      .createTextOutput(callback + '(' + JSON.stringify(out) + ')')
+      .setMimeType(ContentService.MimeType.JAVASCRIPT);
   }
-  return json({ error: 'unknown action' });
+  return json(out);
 }
 
 function doPost(e) {

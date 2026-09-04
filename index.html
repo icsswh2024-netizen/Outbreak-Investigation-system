@@ -360,41 +360,54 @@
         const API_URL = 'https://script.google.com/macros/s/AKfycbyfciwFmknrZC7D_ZFC9dpElvaZChBpausXNeNJoWpEeW7HX44biyuA-EzvkH1T9pnQ/exec'; // Google Sheets Web App
         const USE_SERVER = !!API_URL;
 
-        async function serverLoad() {
-            if (!USE_SERVER) return;
-            try {
-                const res = await fetch(API_URL + '?action=load&t=' + Date.now());
-                const data = await res.json();
-
-                // แท็บ "การจัดการแบบสอบถาม": มีบนชีต -> ใช้; ยังว่าง -> เติม schema ปัจจุบันขึ้นไป
-                if (data && data.schema) {
-                    schema = data.schema;
-                    try { localStorage.setItem(SCHEMA_KEY, JSON.stringify(schema)); } catch (e) {}
-                } else {
-                    serverSaveSchema(schema); // เติมแท็บการจัดการแบบสอบถามอัตโนมัติ
-                }
-
-                // แท็บ "ข้อมูลแบบสอบถาม": มีบนชีต -> ใช้; ยังว่าง แต่มีข้อมูลในเครื่อง -> ส่งขึ้นเป็นตัวอย่าง
-                if (data && Array.isArray(data.records)) {
-                    if (data.records.length) {
-                        records = data.records;
-                        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(records)); } catch (e) {}
-                    } else if (records.length) {
-                        records.forEach(r => serverSubmit(r)); // เติมแท็บข้อมูลแบบสอบถามอัตโนมัติ
-                    }
-                }
-
-                renderForm('staff'); renderForm('patient');
-                if (!document.getElementById('view-admin').classList.contains('hidden')) renderAdminTable();
-            } catch (e) { /* ออฟไลน์: ใช้ข้อมูลใน localStorage ต่อไป */ }
+        // อ่านข้อมูลผ่าน JSONP (เลี่ยง CORS ของ GAS)
+        function serverLoad() {
+            if (!USE_SERVER) return Promise.resolve();
+            return new Promise(resolve => {
+                const cb = 'oiCb_' + Date.now() + Math.floor(Math.random() * 1000);
+                let done = false;
+                const cleanup = () => { try { delete window[cb]; } catch (e) { window[cb] = undefined; } if (s.parentNode) s.parentNode.removeChild(s); };
+                window[cb] = (data) => {
+                    done = true;
+                    handleServerData(data);
+                    cleanup();
+                    resolve();
+                };
+                const s = document.createElement('script');
+                s.src = API_URL + '?action=load&callback=' + cb + '&t=' + Date.now();
+                s.onerror = () => { if (!done) { cleanup(); resolve(); } };
+                document.body.appendChild(s);
+                setTimeout(() => { if (!done) { cleanup(); resolve(); } }, 15000);
+            });
         }
+        function handleServerData(data) {
+            // แท็บ "การจัดการแบบสอบถาม": มีบนชีต -> ใช้; ยังว่าง -> เติม schema ปัจจุบันขึ้นไป
+            if (data && data.schema) {
+                schema = data.schema;
+                try { localStorage.setItem(SCHEMA_KEY, JSON.stringify(schema)); } catch (e) {}
+            } else {
+                serverSaveSchema(schema);
+            }
+            // แท็บ "ข้อมูลแบบสอบถาม": มีบนชีต -> ใช้; ยังว่างแต่มีในเครื่อง -> ส่งขึ้นเป็นตัวอย่าง
+            if (data && Array.isArray(data.records)) {
+                if (data.records.length) {
+                    records = data.records;
+                    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(records)); } catch (e) {}
+                } else if (records.length) {
+                    records.forEach(r => serverSubmit(r));
+                }
+            }
+            renderForm('staff'); renderForm('patient');
+            if (!document.getElementById('view-admin').classList.contains('hidden')) renderAdminTable();
+        }
+        // เขียนข้อมูลผ่าน fetch no-cors (ส่งได้/เขียนได้ แม้อ่าน response ไม่ได้)
         function serverSubmit(rec) {
             if (!USE_SERVER) return;
-            fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'submit', record: rec }) }).catch(() => {});
+            fetch(API_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'submit', record: rec }) }).catch(() => {});
         }
         function serverSaveSchema(sc) {
             if (!USE_SERVER) return;
-            fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'saveSchema', schema: sc }) }).catch(() => {});
+            fetch(API_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'saveSchema', schema: sc }) }).catch(() => {});
         }
 
         /* ============================================================

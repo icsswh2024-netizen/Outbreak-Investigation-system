@@ -577,25 +577,32 @@
         function isoDaysAgo(n) { const d = new Date(); d.setDate(d.getDate() - n); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
         // แตกช่วงวันที่ตามความถี่ → รายการวันที่จริง (ISO) หักวันข้อยกเว้นที่ "ไม่ได้สัมผัส"
         function expandPattern(rangeStart, rangeEnd, p) {
-            if (!rangeStart || !rangeEnd) return [];
-            const out = [];
             const noContact = {};
             (p.exceptions || []).forEach(e => { if (e.noContact && e.date) noContact[e.date] = true; });
-            const custom = (p.customDates || []);
-            let cur = new Date(rangeStart + 'T00:00:00'), end = new Date(rangeEnd + 'T00:00:00');
-            let guard = 0;
-            while (cur <= end && guard++ < 400) {
-                const iso = `${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, '0')}-${String(cur.getDate()).padStart(2, '0')}`;
-                const dow = cur.getDay(); // 0=อา
-                let include = false;
-                if (p.freq === 'daily') include = true;
-                else if (p.freq === 'workdays') include = (dow >= 1 && dow <= 5);
-                else if (p.freq === 'weekly') include = (p.weekdays || []).includes(String(dow));
-                else if (p.freq === 'custom') include = custom.includes(iso);
-                if (include && !noContact[iso]) out.push(iso);
-                cur.setDate(cur.getDate() + 1);
+            const out = [];
+            const walk = (s, e) => {
+                if (!s) return;
+                let cur = new Date(s + 'T00:00:00'), end = new Date((e || s) + 'T00:00:00');
+                let guard = 0;
+                while (cur <= end && guard++ < 400) {
+                    const iso = `${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, '0')}-${String(cur.getDate()).padStart(2, '0')}`;
+                    const dow = cur.getDay();
+                    let include = true;
+                    if (p.freq === 'workdays') include = (dow >= 1 && dow <= 5);
+                    else if (p.freq === 'weekly') include = (p.weekdays || []).includes(String(dow));
+                    // daily และ custom = รวมทุกวันในช่วง
+                    if (include && !noContact[iso]) out.push(iso);
+                    cur.setDate(cur.getDate() + 1);
+                }
+            };
+            if (p.freq === 'custom') {
+                // ใช้ช่วงวันที่ที่ผู้ตอบระบุเอง (รองรับหลายช่วง)
+                (p.customRanges && p.customRanges.length ? p.customRanges : (p.customDates || []).map(d => ({ start: d, end: d })))
+                    .forEach(rg => walk(rg.start, rg.end));
+            } else {
+                walk(rangeStart, rangeEnd);
             }
-            return out;
+            return Array.from(new Set(out)).sort();
         }
         const FREQ_LABEL = { daily: 'ทุกวัน', workdays: 'เฉพาะวันทำงาน (จ.–ศ.)', weekly: 'เลือกวันในสัปดาห์', custom: 'เลือกวันที่เอง' };
 
@@ -604,7 +611,7 @@
             return {
                 freq: (bl.querySelector('[data-role="freq"]:checked') || {}).value || '',
                 weekdays: Array.from(bl.querySelectorAll('[data-role="weekday"]:checked')).map(c => c.value),
-                customDates: [bl.querySelector('[data-role="customdate1"]').dataset.value, bl.querySelector('[data-role="customdate2"]').dataset.value].filter(Boolean),
+                customRanges: Array.from(bl.querySelectorAll('.pat-crange')).map(r => ({ start: r.querySelector('[data-role="crstart"]').dataset.value || '', end: r.querySelector('[data-role="crend"]').dataset.value || '' })).filter(x => x.start || x.end),
                 activities: Array.from(bl.querySelectorAll('[data-role="activity"]:checked')).map(c => c.value),
                 mask: bl.querySelector('[data-role="mask"]').value,
                 duration: bl.querySelector('[data-role="duration"]').value,
@@ -890,11 +897,16 @@
                     </div>
                 </div>
                 <div class="pat-custom ${freq === 'custom' ? '' : 'hidden'} space-y-1">
-                    <label class="text-sm font-medium text-slate-600">ระบุวันที่เอง (เลือกจากปฏิทิน)</label>
-                    <div class="grid grid-cols-2 gap-3">
-                        <input type="text" readonly data-datepicker data-role="customdate1" data-value="${escAttr((data.customDates || [])[0] || '')}" value="${(data.customDates || [])[0] ? fmtThaiDate(data.customDates[0]) : ''}" placeholder="วันที่ 1" class="field-input cursor-pointer bg-white text-base">
-                        <input type="text" readonly data-datepicker data-role="customdate2" data-value="${escAttr((data.customDates || [])[1] || '')}" value="${(data.customDates || [])[1] ? fmtThaiDate(data.customDates[1]) : ''}" placeholder="วันที่ 2" class="field-input cursor-pointer bg-white text-base">
+                    <label class="text-sm font-medium text-slate-600">ระบุช่วงวันที่เอง (เริ่ม–ถึง) เพิ่มได้หลายช่วง</label>
+                    <div class="pat-crange-list space-y-2">
+                        ${(data.customRanges && data.customRanges.length ? data.customRanges : ((data.customDates || []).length ? data.customDates.map(d => ({ start: d, end: d })) : [{}])).map(rg => `
+                        <div class="pat-crange grid grid-cols-[1fr_1fr_auto] gap-2 items-center">
+                            <input type="text" readonly data-datepicker data-role="crstart" data-value="${escAttr(rg.start || '')}" value="${rg.start ? fmtThaiDate(rg.start) : ''}" placeholder="วันเริ่ม" class="field-input cursor-pointer bg-white text-base">
+                            <input type="text" readonly data-datepicker data-role="crend" data-value="${escAttr(rg.end || '')}" value="${rg.end ? fmtThaiDate(rg.end) : ''}" placeholder="วันสิ้นสุด" class="field-input cursor-pointer bg-white text-base">
+                            <button type="button" class="pat-crange-del text-rose-500 hover:text-rose-700 p-1"><i data-feather="x" class="w-4 h-4"></i></button>
+                        </div>`).join('')}
                     </div>
+                    <button type="button" class="pat-crange-add text-teal-600 hover:text-teal-800 text-sm font-medium inline-flex items-center"><i data-feather="plus" class="w-4 h-4 mr-1"></i> เพิ่มช่วงวันที่</button>
                 </div>
 
                 <div class="space-y-1">
@@ -1321,6 +1333,26 @@
                 }
                 const excDel = e.target.closest('.pat-exc-del');
                 if (excDel) { excDel.closest('.pat-exc').remove(); refreshPatternPreviews(form); return; }
+                // เพิ่ม/ลบช่วงวันที่ (เลือกวันที่เอง)
+                const crAdd = e.target.closest('.pat-crange-add');
+                if (crAdd) {
+                    crAdd.previousElementSibling.insertAdjacentHTML('beforeend', `
+                        <div class="pat-crange grid grid-cols-[1fr_1fr_auto] gap-2 items-center">
+                            <input type="text" readonly data-datepicker data-role="crstart" data-value="" value="" placeholder="วันเริ่ม" class="field-input cursor-pointer bg-white text-base">
+                            <input type="text" readonly data-datepicker data-role="crend" data-value="" value="" placeholder="วันสิ้นสุด" class="field-input cursor-pointer bg-white text-base">
+                            <button type="button" class="pat-crange-del text-rose-500 hover:text-rose-700 p-1"><i data-feather="x" class="w-4 h-4"></i></button>
+                        </div>`);
+                    feather.replace();
+                    return;
+                }
+                const crDel = e.target.closest('.pat-crange-del');
+                if (crDel) {
+                    const list = crDel.closest('.pat-crange-list');
+                    if (list.querySelectorAll('.pat-crange').length > 1) crDel.closest('.pat-crange').remove();
+                    else crDel.closest('.pat-crange').querySelectorAll('input').forEach(el => { el.value = ''; el.dataset.value = ''; });
+                    refreshPatternPreviews(form);
+                    return;
+                }
 
                 const addBtn = e.target.closest('.contactlog-add');
                 if (addBtn) {

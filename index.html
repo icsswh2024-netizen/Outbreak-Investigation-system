@@ -340,7 +340,7 @@
 
     <!-- Detail Modal -->
     <div id="detail-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/40 backdrop-blur-sm fade-in p-4">
-        <div class="bg-white border border-slate-200 rounded-2xl shadow-[0_15px_40px_rgba(0,0,0,0.15)] max-w-lg w-full max-h-[85vh] flex flex-col overflow-hidden">
+        <div class="bg-white border border-slate-200 rounded-2xl shadow-[0_15px_40px_rgba(0,0,0,0.15)] max-w-2xl w-full max-h-[85vh] flex flex-col overflow-hidden">
             <div class="px-6 py-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
                 <h3 class="text-xl font-bold text-slate-800 flex items-center"><i data-feather="file-text" class="w-5 h-5 mr-2 text-blue-600"></i> รายละเอียดการบันทึก</h3>
                 <button onclick="closeDetail()" class="text-slate-400 hover:text-slate-700"><i data-feather="x" class="w-6 h-6"></i></button>
@@ -959,14 +959,17 @@
             if (!rec) return;
             const body = document.getElementById('detail-body');
             const ans = rec.answers || {};
-            let rows = `<div class="flex justify-between py-1.5 border-b border-slate-100"><span class="text-slate-500">ประเภท</span><span class="font-medium text-slate-800">${rec.type === 'patient' ? 'ผู้ป่วย' : 'เจ้าหน้าที่'}</span></div>
-                <div class="flex justify-between py-1.5 border-b border-slate-100"><span class="text-slate-500">วันที่บันทึก</span><span class="font-medium text-slate-800">${rec.date}</span></div>`;
+            const metaRow = (lbl, val) => `<div class="py-2 border-b border-slate-100"><div class="text-sm text-slate-500 mb-0.5">${lbl}</div><div class="font-medium text-slate-800 break-words">${val}</div></div>`;
+            let rows = metaRow('ประเภท', rec.type === 'patient' ? 'ผู้ป่วย' : 'เจ้าหน้าที่') + metaRow('วันที่บันทึก', rec.date);
             Object.keys(ans).forEach(k => {
                 let v = ans[k];
-                if (isEventArray(v)) v = fmtEvents(v);
+                if (isEventArray(v)) v = fmtEvents(v).split(' | ').join('\n'); // แสดงแต่ละครั้งคนละบรรทัด
                 else if (Array.isArray(v)) v = v.length ? v.join(', ') : '-';
                 if (v === '' || v === undefined || v === null) v = '-';
-                rows += `<div class="flex justify-between gap-4 py-1.5 border-b border-slate-100"><span class="text-slate-500 flex-shrink-0">${labelFor(rec.type, k)}</span><span class="font-medium text-slate-800 text-right">${v}</span></div>`;
+                rows += `<div class="py-2 border-b border-slate-100">
+                    <div class="text-sm text-slate-500 mb-0.5">${labelFor(rec.type, k)}</div>
+                    <div class="font-medium text-slate-800 break-words whitespace-pre-wrap">${v}</div>
+                </div>`;
             });
             body.innerHTML = rows;
             const m = document.getElementById('detail-modal');

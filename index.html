@@ -1027,7 +1027,7 @@
                 </div>`;
             }
             const req = field.required ? ' <span class="text-rose-500">*</span>' : '';
-            const reqAttr = field.required ? 'required' : '';
+            const reqAttr = ''; // ไม่ใช้ native required — ใช้ป๊อปอัปของระบบตรวจเฉพาะข้อบังคับตอบ
             let control = '';
 
             if (field.type === 'select') {

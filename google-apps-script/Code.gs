@@ -10,7 +10,8 @@
  */
 
 var SHEET_DATA = 'ข้อมูลแบบสอบถาม';
-var SHEET_SCHEMA = 'การจัดการแบบสอบถาม';
+var SHEET_SCHEMA = 'การจัดการแบบสอบถาม';      // เก็บ JSON สำรอง (A2)
+var SHEET_STRUCT = 'โครงสร้างแบบสอบถาม';      // ตารางแก้ไขคำถามแบบมือ (source of truth)
 var META_COLS = ['เวลาบันทึก', 'id', 'ประเภท', 'ชื่อ-สกุล', 'HN', 'กลุ่ม/ตำแหน่ง', 'สถานะ'];
 
 // ★ ถ้าสคริปต์ไม่ได้ผูกกับชีต (สร้างแบบ standalone) ให้วาง ID ของ Google Sheet ที่นี่
@@ -75,17 +76,90 @@ function getSheet(name) {
 
 /* ---------------- SCHEMA (แท็บการจัดการแบบสอบถาม) ---------------- */
 
+// อ่าน schema: ให้ความสำคัญกับตาราง "โครงสร้างแบบสอบถาม" ก่อน ถ้าไม่มีจึงใช้ JSON สำรอง
 function readSchema() {
+  var s = readSchemaFromStruct();
+  if (s) return s;
   var sh = getSheet(SHEET_SCHEMA);
   var v = sh.getRange(2, 1).getValue();
   if (!v) return null;
   try { return JSON.parse(v); } catch (e) { return null; }
 }
 
+// เขียน schema: เก็บ JSON สำรอง + สร้างตารางแก้ไขให้ตรงกัน
 function writeSchema(schema) {
   var sh = getSheet(SHEET_SCHEMA);
-  sh.getRange(1, 1).setValue('SCHEMA_JSON — จัดการผ่านหน้าแอดมินของเว็บแอป (ห้ามแก้เซลล์ด้านล่างด้วยมือ)');
+  sh.getRange(1, 1).setValue('SCHEMA_JSON (สำรอง) — แก้แบบสอบถามได้ที่แท็บ "โครงสร้างแบบสอบถาม" หรือหน้าแอดมินของเว็บแอป');
   sh.getRange(2, 1).setValue(JSON.stringify(schema));
+  writeSchemaToStruct(schema);
+}
+
+var STRUCT_HEADER = ['แบบฟอร์ม', 'ส่วนที่', 'หัวข้อส่วน', 'ไอคอน', 'รหัสข้อ', 'คำถาม', 'ชนิด', 'บังคับตอบ', 'ตัวเลือก (บรรทัดละ 1)', 'ค่าตายตัว'];
+
+// สร้าง/อัปเดตตารางโครงสร้างจาก schema
+function writeSchemaToStruct(schema) {
+  var sh = ss().getSheetByName(SHEET_STRUCT) || ss().insertSheet(SHEET_STRUCT);
+  sh.clearContents();
+  var rows = [STRUCT_HEADER];
+  ['staff', 'patient'].forEach(function (form) {
+    var secs = (schema[form] && schema[form].sections) ? schema[form].sections : [];
+    secs.forEach(function (sec, si) {
+      sec.fields.forEach(function (f) {
+        var opt = '';
+        if (f.type === 'select' || f.type === 'radio' || f.type === 'checkbox') opt = (f.options || []).join('\n');
+        else if (f.type === 'contactlog') opt = JSON.stringify({ contactOptions: f.contactOptions || {}, contactLabels: f.contactLabels || {} });
+        rows.push([form, si + 1, sec.title || '', sec.icon || '', f.id, f.label || '', f.type || 'text', !!f.required, opt, (f.fixed !== undefined ? f.fixed : '')]);
+      });
+    });
+  });
+  sh.getRange(1, 1, rows.length, STRUCT_HEADER.length).setValues(rows);
+  sh.getRange(1, 1, 1, STRUCT_HEADER.length).setFontWeight('bold');
+  sh.setFrozenRows(1);
+}
+
+// อ่าน schema จากตารางโครงสร้าง (คืน null ถ้ายังไม่มีข้อมูล)
+function readSchemaFromStruct() {
+  var sh = ss().getSheetByName(SHEET_STRUCT);
+  if (!sh) return null;
+  var last = sh.getLastRow();
+  if (last < 2) return null;
+  var vals = sh.getRange(2, 1, last - 1, STRUCT_HEADER.length).getValues();
+  var schema = { staff: { sections: [] }, patient: { sections: [] } };
+  var secMap = {};
+  var hasOpts = { select: 1, radio: 1, checkbox: 1 };
+  vals.forEach(function (r) {
+    var form = String(r[0] || '').trim();
+    if (form !== 'staff' && form !== 'patient') return;
+    var secNo = String(r[1] || '').trim();
+    var secTitle = String(r[2] || '').trim();
+    var icon = String(r[3] || '').trim();
+    var fid = String(r[4] || '').trim();
+    var label = String(r[5] || '').trim();
+    var type = String(r[6] || 'text').trim();
+    var reqv = r[7];
+    var required = (reqv === true || String(reqv).toLowerCase() === 'true' || String(reqv) === 'ใช่' || String(reqv) === '1');
+    var optRaw = r[8];
+    var fixed = (r[9] === null || r[9] === undefined) ? '' : String(r[9]);
+    if (!fid || !label) return;
+    var key = form + '#' + (secNo || secTitle);
+    var sec = secMap[key];
+    if (!sec) {
+      sec = { id: 's' + (schema[form].sections.length + 1), title: secTitle, icon: icon || 'chevron-right', fields: [] };
+      secMap[key] = sec;
+      schema[form].sections.push(sec);
+    }
+    var field = { id: fid, label: label, type: type };
+    if (required) field.required = true;
+    if (hasOpts[type]) {
+      field.options = String(optRaw || '').split(/\r?\n|\|/).map(function (s) { return s.trim(); }).filter(function (s) { return s; });
+    } else if (type === 'contactlog') {
+      try { var o = JSON.parse(String(optRaw || '{}')); if (o.contactOptions) field.contactOptions = o.contactOptions; if (o.contactLabels) field.contactLabels = o.contactLabels; } catch (e) {}
+    }
+    if (fixed !== '') field.fixed = fixed;
+    sec.fields.push(field);
+  });
+  if (schema.staff.sections.length === 0 && schema.patient.sections.length === 0) return null;
+  return schema;
 }
 
 /* ---------------- RECORDS (แท็บข้อมูลแบบสอบถาม) ---------------- */

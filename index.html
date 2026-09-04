@@ -462,7 +462,7 @@
                             { id: 'srcName', label: '6.1 ชื่อผู้ป่วยวัณโรคระยะแพร่เชื้อที่สัมผัส', type: 'text' },
                             { id: 'srcHn', label: '6.2 HN ผู้ป่วย', type: 'text' },
                             { id: 'srcWard', label: '6.3 หอผู้ป่วย', type: 'text' },
-                            { id: 'contactEvents', label: '6.4 บันทึกการสัมผัส — เลือกวันที่จากปฏิทิน แล้วระบุรายละเอียดต่อครั้ง (กิจกรรม, N95, ระยะเวลา, ขนาดห้อง) เพิ่มได้หลายครั้ง', type: 'contactlog' },
+                            { id: 'contactEvents', label: '6.4 ประวัติการสัมผัสในช่วง 1 เดือนย้อนหลัง — กำหนดช่วงวัน เลือกความถี่ (ทุกวัน/วันทำงาน/เลือกวัน) แล้วกรอกรายละเอียดครั้งเดียว เพิ่มรูปแบบ/ข้อยกเว้นได้', type: 'contactpattern' },
                             { id: 'priorContact', label: '6.14 ในระยะ 1-3 เดือนก่อน ท่านเคยสัมผัสผู้ป่วยวัณโรคปอด หรืออาการคล้ายวัณโรคปอด ในครอบครัว/ที่ทำงาน/หมู่บ้าน หรือไม่', type: 'select', options: ['ไม่มี', 'มี', 'ไม่แน่ใจ'] },
                             { id: 'priorDetail', label: '6.15 หากตอบว่า "มี" โปรดระบุรายละเอียด (ชื่อผู้ป่วย, อายุ, วันที่เริ่มป่วย, สถานที่รักษา)', type: 'textarea' }
                         ]}
@@ -548,7 +548,52 @@
         const CONTACT_N95 = ['ใส่ตลอดเวลา', 'ใส่บางครั้ง', 'ไม่ได้ใส่'];
         const CONTACT_DURATION = ['< 4 ชม.', '4-8 ชม.', '8-16 ชม.', '16-24 ชม.', '24-50 ชม.', '50-100 ชม.', '> 100 ชม.'];
         const CONTACT_ROOM = ['ห้องขนาดเล็ก (เช่น ห้องผ่าตัด, ห้องส่องกล้อง, ห้องพิเศษ, ห้องแยกโรค)', 'ห้องขนาดห้องเรียน (เช่น ห้อง Resuscitation, พักฟื้นหลังผ่าตัด ไม่เกิน 30 ตร.ม.)', 'ห้องขนาดใหญ่ (เช่น ห้องประชุม, ห้องบรรยาย ตั้งแต่ 30 ตร.ม. ขึ้นไป)'];
+        const CONTACT_LOCATION = ['ห้องทำงาน', 'ห้องพัก', 'ห้องประชุม', 'หอผู้ป่วย', 'อื่นๆ'];
+        const WEEKDAYS = [{ v: '1', l: 'จ.' }, { v: '2', l: 'อ.' }, { v: '3', l: 'พ.' }, { v: '4', l: 'พฤ.' }, { v: '5', l: 'ศ.' }, { v: '6', l: 'ส.' }, { v: '0', l: 'อา.' }];
+        function isoToday() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
+        function isoDaysAgo(n) { const d = new Date(); d.setDate(d.getDate() - n); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
+        // แตกช่วงวันที่ตามความถี่ → รายการวันที่จริง (ISO) หักวันข้อยกเว้นที่ "ไม่ได้สัมผัส"
+        function expandPattern(rangeStart, rangeEnd, p) {
+            if (!rangeStart || !rangeEnd) return [];
+            const out = [];
+            const noContact = {};
+            (p.exceptions || []).forEach(e => { if (e.noContact && e.date) noContact[e.date] = true; });
+            const custom = (p.customDates || []);
+            let cur = new Date(rangeStart + 'T00:00:00'), end = new Date(rangeEnd + 'T00:00:00');
+            let guard = 0;
+            while (cur <= end && guard++ < 400) {
+                const iso = `${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, '0')}-${String(cur.getDate()).padStart(2, '0')}`;
+                const dow = cur.getDay(); // 0=อา
+                let include = false;
+                if (p.freq === 'daily') include = true;
+                else if (p.freq === 'workdays') include = (dow >= 1 && dow <= 5);
+                else if (p.freq === 'weekly') include = (p.weekdays || []).includes(String(dow));
+                else if (p.freq === 'custom') include = custom.includes(iso);
+                if (include && !noContact[iso]) out.push(iso);
+                cur.setDate(cur.getDate() + 1);
+            }
+            return out;
+        }
+        const FREQ_LABEL = { daily: 'ทุกวัน', workdays: 'เฉพาะวันทำงาน (จ.–ศ.)', weekly: 'เลือกวันในสัปดาห์', custom: 'เลือกวันที่เอง' };
 
+        // แปลงรูปแบบการสัมผัส (6.4 แบบใหม่) เป็นข้อความ
+        function isPatternObj(v) { return v && typeof v === 'object' && !Array.isArray(v) && Array.isArray(v.patterns); }
+        function fmtPatterns(v) {
+            const head = `ช่วง ${fmtThaiDate(v.rangeStart) || '-'} ถึง ${fmtThaiDate(v.rangeEnd) || '-'}`;
+            const parts = (v.patterns || []).map((p, i) => {
+                const days = expandPattern(v.rangeStart, v.rangeEnd, p);
+                let s = `รูปแบบที่ ${i + 1}: ${FREQ_LABEL[p.freq] || p.freq || '-'}`;
+                if (p.freq === 'weekly') s += ' (' + (p.weekdays || []).map(w => (WEEKDAYS.find(x => x.v === w) || {}).l).join(',') + ')';
+                s += ` — ${days.length} วัน`;
+                if (p.timeStart || p.timeEnd) s += ` เวลา ${p.timeStart || ''}-${p.timeEnd || ''}`;
+                s += ` | กิจกรรม: ${(p.activities || []).join(', ') || '-'}`;
+                s += ` | หน้ากาก: ${p.mask || '-'} | ระยะเวลา: ${p.duration || '-'} | ห้อง: ${p.room || '-'} | สถานที่: ${p.location || '-'}`;
+                const exc = (p.exceptions || []).filter(e => e.date);
+                if (exc.length) s += ` | ข้อยกเว้น: ${exc.map(e => e.date + (e.noContact ? '(ไม่สัมผัส)' : '')).join(', ')}`;
+                return s;
+            });
+            return head + '\n' + parts.join('\n');
+        }
         // แปลงบันทึกการสัมผัสเป็นข้อความ
         function isEventArray(v) { return Array.isArray(v) && v.length > 0 && typeof v[0] === 'object'; }
         function fmtEvents(arr) {
@@ -627,6 +672,90 @@
             </div>`;
         }
 
+        /* ===== 6.4 แบบใหม่: รูปแบบการสัมผัส (contactpattern) ===== */
+        function patExceptionHTML(ev) {
+            ev = ev || {};
+            return `<div class="pat-exc border border-amber-200 rounded-lg p-3 bg-amber-50/50 space-y-2">
+                <div class="flex items-center justify-between">
+                    <span class="text-sm font-medium text-amber-700">วันที่ต่างจากปกติ</span>
+                    <button type="button" class="pat-exc-del text-rose-500 hover:text-rose-700 text-xs inline-flex items-center"><i data-feather="x" class="w-3.5 h-3.5 mr-0.5"></i>ลบ</button>
+                </div>
+                <input type="text" readonly data-datepicker data-role="excdate" data-value="${escAttr(ev.date || '')}" value="${ev.date ? fmtThaiDate(ev.date) : ''}" placeholder="แตะเลือกวันที่" class="field-input cursor-pointer bg-white">
+                <label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" data-role="excnocontact" ${ev.noContact ? 'checked' : ''} class="w-4 h-4 text-rose-600"><span class="text-base text-slate-700">วันนี้ไม่ได้สัมผัส</span></label>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <input type="text" data-role="excmask" value="${escAttr(ev.mask || '')}" placeholder="หน้ากากต่างจากปกติ (ถ้ามี)" class="field-input text-base">
+                    <input type="text" data-role="excduration" value="${escAttr(ev.duration || '')}" placeholder="ระยะเวลาต่างจากปกติ (ถ้ามี)" class="field-input text-base">
+                </div>
+            </div>`;
+        }
+        function patternBlockHTML(data, opts, labels, index) {
+            data = data || {};
+            opts = opts || { activities: CONTACT_ACTIVITIES, n95: CONTACT_N95, duration: CONTACT_DURATION, room: CONTACT_ROOM, location: CONTACT_LOCATION };
+            labels = labels || CONTACT_LABELS_DEFAULT;
+            const uid = 'freq' + Date.now() + Math.floor(Math.random() * 1e4);
+            const freq = data.freq || 'workdays';
+            const selOf = (role, arr, cur, label) => `<div class="space-y-1"><label class="text-sm font-medium text-slate-600">${label}</label>
+                <select data-role="${role}" class="field-input appearance-none cursor-pointer"><option value="">— เลือก —</option>${arr.map(o => `<option value="${escAttr(o)}" ${cur === o ? 'selected' : ''}>${o}</option>`).join('')}</select></div>`;
+            return `<div class="contactpat-pattern border border-teal-200 rounded-xl p-4 bg-teal-50/40 space-y-3">
+                <div class="flex items-center justify-between">
+                    <span class="text-base font-semibold text-teal-700 flex items-center"><i data-feather="repeat" class="w-4 h-4 mr-1.5"></i> รูปแบบการสัมผัสที่ <span class="pat-index">${(index || 0) + 1}</span></span>
+                    <button type="button" class="contactpat-del text-rose-500 hover:text-rose-700 text-sm inline-flex items-center"><i data-feather="trash-2" class="w-4 h-4 mr-1"></i> ลบรูปแบบ</button>
+                </div>
+
+                <div class="space-y-1">
+                    <label class="text-sm font-medium text-slate-600">ความถี่ของการสัมผัส</label>
+                    <div class="flex flex-wrap gap-x-5 gap-y-1">
+                        ${Object.keys(FREQ_LABEL).map(fk => `<label class="flex items-center space-x-2 cursor-pointer p-1"><input type="radio" name="${uid}" data-role="freq" value="${fk}" ${freq === fk ? 'checked' : ''} class="w-4 h-4 text-teal-600"><span class="text-base text-slate-700">${FREQ_LABEL[fk]}</span></label>`).join('')}
+                    </div>
+                </div>
+                <div class="pat-weekdays ${freq === 'weekly' ? '' : 'hidden'}">
+                    <div class="flex flex-wrap gap-x-4 gap-y-1">
+                        ${WEEKDAYS.map(w => `<label class="flex items-center space-x-1.5 cursor-pointer p-1"><input type="checkbox" data-role="weekday" value="${w.v}" ${(data.weekdays || ['1', '2', '3', '4', '5']).includes(w.v) ? 'checked' : ''} class="w-4 h-4 text-teal-600"><span class="text-base text-slate-700">${w.l}</span></label>`).join('')}
+                    </div>
+                </div>
+                <div class="pat-custom ${freq === 'custom' ? '' : 'hidden'} space-y-1">
+                    <label class="text-sm font-medium text-slate-600">ระบุวันที่เอง (คั่นด้วยจุลภาค เช่น 2569-08-01, 2569-08-05)</label>
+                    <input type="text" data-role="customdates" value="${escAttr((data.customDates || []).join(', '))}" placeholder="YYYY-MM-DD, YYYY-MM-DD" class="field-input text-base">
+                </div>
+
+                <div class="space-y-1">
+                    <label class="text-sm font-medium text-slate-600">${labels.activities}</label>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                        ${opts.activities.map(o => `<label class="flex items-center space-x-2 cursor-pointer p-1.5 rounded-lg hover:bg-white"><input type="checkbox" data-role="activity" value="${escAttr(o)}" ${(data.activities || []).includes(o) ? 'checked' : ''} class="w-4 h-4 text-teal-600"><span class="text-base text-slate-700">${o}</span></label>`).join('')}
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    ${selOf('mask', opts.n95, data.mask, labels.n95)}
+                    ${selOf('duration', opts.duration, data.duration, labels.duration)}
+                    ${selOf('room', opts.room, data.room, labels.room)}
+                    ${selOf('location', opts.location || CONTACT_LOCATION, data.location, 'สถานที่')}
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="space-y-1"><label class="text-sm font-medium text-slate-600">ช่วงเวลา (เริ่ม)</label><input type="time" data-role="timeStart" value="${escAttr(data.timeStart || '')}" class="field-input"></div>
+                    <div class="space-y-1"><label class="text-sm font-medium text-slate-600">ช่วงเวลา (ถึง)</label><input type="time" data-role="timeEnd" value="${escAttr(data.timeEnd || '')}" class="field-input"></div>
+                </div>
+
+                <div class="pat-exceptions space-y-2">
+                    ${(data.exceptions || []).map(ev => patExceptionHTML(ev)).join('')}
+                </div>
+                <button type="button" class="pat-exc-add text-amber-600 hover:text-amber-800 text-sm font-medium inline-flex items-center"><i data-feather="plus" class="w-4 h-4 mr-1"></i> มีบางวันที่แตกต่างจากปกติ</button>
+            </div>`;
+        }
+        function contactPatternHTML(field) {
+            const opts = Object.assign({}, contactOptsFor(field), { location: (field.contactOptions && field.contactOptions.location && field.contactOptions.location.length) ? field.contactOptions.location : CONTACT_LOCATION });
+            const labels = contactLabelsFor(field);
+            return `<div class="contactpattern space-y-3" data-field="${field.id}">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div class="space-y-1"><label class="text-sm font-medium text-slate-600">ช่วงวันที่ย้อนหลัง (เริ่ม)</label>
+                        <input type="text" readonly data-datepicker data-role="rangeStart" data-value="${isoDaysAgo(30)}" value="${fmtThaiDate(isoDaysAgo(30))}" class="field-input cursor-pointer bg-white"></div>
+                    <div class="space-y-1"><label class="text-sm font-medium text-slate-600">ช่วงวันที่ย้อนหลัง (สิ้นสุด)</label>
+                        <input type="text" readonly data-datepicker data-role="rangeEnd" data-value="${isoToday()}" value="${fmtThaiDate(isoToday())}" class="field-input cursor-pointer bg-white"></div>
+                </div>
+                <div class="contactpat-rows space-y-3">${patternBlockHTML(null, opts, labels, 0)}</div>
+                <button type="button" class="contactpat-add w-full border-2 border-dashed border-teal-300 text-teal-600 rounded-xl py-2.5 text-base font-medium hover:bg-teal-50 flex items-center justify-center"><i data-feather="plus" class="w-4 h-4 mr-1"></i> เพิ่มรูปแบบการสัมผัสอีกแบบ</button>
+            </div>`;
+        }
+
         function fieldHTML(field, accent) {
             // ค่าที่แอดมินกำหนดไว้ล่วงหน้า → แสดงแบบล็อก ผู้ตอบไม่ต้องตอบ
             if (field.fixed !== undefined && field.fixed !== '') {
@@ -661,6 +790,8 @@
                 control = `<input type="text" readonly data-datepicker name="${field.id}" data-value="" value="" placeholder="แตะเพื่อเลือกวันที่" class="field-input cursor-pointer bg-white">`;
             } else if (field.type === 'textarea') {
                 control = `<textarea name="${field.id}" rows="2" class="field-input" placeholder="โปรดระบุ" ${reqAttr}></textarea>`;
+            } else if (field.type === 'contactpattern') {
+                control = contactPatternHTML(field);
             } else if (field.type === 'contactlog') {
                 control = `<div class="contactlog space-y-3" data-field="${field.id}">
                     <div class="contactlog-rows space-y-3">${contactRowHTML(null, contactOptsFor(field), contactLabelsFor(field))}</div>
@@ -715,6 +846,32 @@
                     let value;
                     if (f.fixed !== undefined && f.fixed !== '') {
                         value = f.fixed;
+                    } else if (f.type === 'contactpattern') {
+                        const cont = form.querySelector(`.contactpattern[data-field="${f.id}"]`);
+                        if (cont) {
+                            value = {
+                                rangeStart: cont.querySelector('[data-role="rangeStart"]').dataset.value || '',
+                                rangeEnd: cont.querySelector('[data-role="rangeEnd"]').dataset.value || '',
+                                patterns: Array.from(cont.querySelectorAll('.contactpat-pattern')).map(bl => ({
+                                    freq: (bl.querySelector('[data-role="freq"]:checked') || {}).value || '',
+                                    weekdays: Array.from(bl.querySelectorAll('[data-role="weekday"]:checked')).map(c => c.value),
+                                    customDates: (bl.querySelector('[data-role="customdates"]').value || '').split(',').map(s => s.trim()).filter(Boolean),
+                                    activities: Array.from(bl.querySelectorAll('[data-role="activity"]:checked')).map(c => c.value),
+                                    mask: bl.querySelector('[data-role="mask"]').value,
+                                    duration: bl.querySelector('[data-role="duration"]').value,
+                                    room: bl.querySelector('[data-role="room"]').value,
+                                    location: bl.querySelector('[data-role="location"]').value,
+                                    timeStart: bl.querySelector('[data-role="timeStart"]').value,
+                                    timeEnd: bl.querySelector('[data-role="timeEnd"]').value,
+                                    exceptions: Array.from(bl.querySelectorAll('.pat-exc')).map(ex => ({
+                                        date: ex.querySelector('[data-role="excdate"]').dataset.value || '',
+                                        noContact: ex.querySelector('[data-role="excnocontact"]').checked,
+                                        mask: ex.querySelector('[data-role="excmask"]').value,
+                                        duration: ex.querySelector('[data-role="excduration"]').value
+                                    })).filter(ex => ex.date)
+                                }))
+                            };
+                        } else value = { rangeStart: '', rangeEnd: '', patterns: [] };
                     } else if (f.type === 'contactlog') {
                         const cont = form.querySelector(`.contactlog[data-field="${f.id}"]`);
                         value = cont ? Array.from(cont.querySelectorAll('.contactlog-row')).map(row => ({
@@ -757,7 +914,11 @@
                 if (!f.required) return;
                 if (f.fixed !== undefined && f.fixed !== '') return; // มีค่าตายตัวแล้ว
                 let empty = false;
-                if (f.type === 'contactlog') {
+                if (f.type === 'contactpattern') {
+                    const cont = form.querySelector(`.contactpattern[data-field="${f.id}"]`);
+                    empty = !cont || !cont.querySelector('[data-role="rangeStart"]').dataset.value ||
+                        !Array.from(cont.querySelectorAll('.contactpat-pattern')).some(bl => bl.querySelector('[data-role="freq"]:checked'));
+                } else if (f.type === 'contactlog') {
                     const cont = form.querySelector(`.contactlog[data-field="${f.id}"]`);
                     empty = !cont || !Array.from(cont.querySelectorAll('.contactlog-row')).some(row =>
                         (row.querySelector('[data-role="date"]').dataset.value || '') ||
@@ -859,7 +1020,16 @@
             schema[formKey].sections.forEach(sec => sec.fields.forEach(f => {
                 const v = answers[f.id];
                 if (v === undefined) return;
-                if (f.type === 'contactlog') {
+                if (f.type === 'contactpattern') {
+                    const cont = form.querySelector(`.contactpattern[data-field="${f.id}"]`);
+                    if (!cont || !v || typeof v !== 'object') return;
+                    const rs = cont.querySelector('[data-role="rangeStart"]'), re = cont.querySelector('[data-role="rangeEnd"]');
+                    if (v.rangeStart) { rs.dataset.value = v.rangeStart; rs.value = fmtThaiDate(v.rangeStart); }
+                    if (v.rangeEnd) { re.dataset.value = v.rangeEnd; re.value = fmtThaiDate(v.rangeEnd); }
+                    const opts = Object.assign({}, contactOptsFor(f), { location: (f.contactOptions && f.contactOptions.location && f.contactOptions.location.length) ? f.contactOptions.location : CONTACT_LOCATION });
+                    const arr = (v.patterns && v.patterns.length) ? v.patterns : [null];
+                    cont.querySelector('.contactpat-rows').innerHTML = arr.map((p, i) => patternBlockHTML(p, opts, contactLabelsFor(f), i)).join('');
+                } else if (f.type === 'contactlog') {
                     const cont = form.querySelector(`.contactlog[data-field="${f.id}"]`);
                     if (!cont) return;
                     const rowsWrap = cont.querySelector('.contactlog-rows');
@@ -921,7 +1091,44 @@
 
         // เพิ่ม/ลบ แถวบันทึกการสัมผัส (contactlog)
         function bindContactLog(form) {
+            // toggle วันในสัปดาห์ / วันที่เอง ตามความถี่
+            form.addEventListener('change', e => {
+                const fr = e.target.closest('[data-role="freq"]');
+                if (fr && fr.checked) {
+                    const block = fr.closest('.contactpat-pattern');
+                    const wd = block.querySelector('.pat-weekdays'), cu = block.querySelector('.pat-custom');
+                    if (wd) wd.classList.toggle('hidden', fr.value !== 'weekly');
+                    if (cu) cu.classList.toggle('hidden', fr.value !== 'custom');
+                }
+            });
             form.addEventListener('click', e => {
+                // ===== contactpattern (6.4 แบบใหม่) =====
+                const patAdd = e.target.closest('.contactpat-add');
+                if (patAdd) {
+                    const cont = patAdd.closest('.contactpattern');
+                    const rows = cont.querySelector('.contactpat-rows');
+                    const cf = findFieldById(cont.dataset.field);
+                    const opts = Object.assign({}, contactOptsFor(cf), { location: (cf.contactOptions && cf.contactOptions.location && cf.contactOptions.location.length) ? cf.contactOptions.location : CONTACT_LOCATION });
+                    rows.insertAdjacentHTML('beforeend', patternBlockHTML(null, opts, contactLabelsFor(cf), rows.querySelectorAll('.contactpat-pattern').length));
+                    feather.replace();
+                    return;
+                }
+                const patDel = e.target.closest('.contactpat-del');
+                if (patDel) {
+                    const rows = patDel.closest('.contactpat-rows');
+                    if (rows.querySelectorAll('.contactpat-pattern').length > 1) patDel.closest('.contactpat-pattern').remove();
+                    rows.querySelectorAll('.pat-index').forEach((el, i) => el.textContent = i + 1);
+                    return;
+                }
+                const excAdd = e.target.closest('.pat-exc-add');
+                if (excAdd) {
+                    excAdd.previousElementSibling.insertAdjacentHTML('beforeend', patExceptionHTML(null));
+                    feather.replace();
+                    return;
+                }
+                const excDel = e.target.closest('.pat-exc-del');
+                if (excDel) { excDel.closest('.pat-exc').remove(); return; }
+
                 const addBtn = e.target.closest('.contactlog-add');
                 if (addBtn) {
                     const cont = addBtn.closest('.contactlog');
@@ -1060,7 +1267,8 @@
             let rows = metaRow('ประเภท', rec.type === 'patient' ? 'ผู้ป่วย' : 'เจ้าหน้าที่') + metaRow('วันที่บันทึก', rec.date);
             Object.keys(ans).forEach(k => {
                 let v = ans[k];
-                if (isEventArray(v)) v = fmtEvents(v).split(' | ').join('\n'); // แสดงแต่ละครั้งคนละบรรทัด
+                if (isPatternObj(v)) v = fmtPatterns(v);
+                else if (isEventArray(v)) v = fmtEvents(v).split(' | ').join('\n'); // แสดงแต่ละครั้งคนละบรรทัด
                 else if (Array.isArray(v)) v = v.length ? v.join(', ') : '-';
                 if (v === '' || v === undefined || v === null) v = '-';
                 rows += `<div class="py-2 border-b border-slate-100">
@@ -1248,7 +1456,8 @@
         function exportCSV() {
             const esc = v => {
                 let s;
-                if (isEventArray(v)) s = fmtEvents(v);
+                if (isPatternObj(v)) s = fmtPatterns(v).split('\n').join(' || ');
+                else if (isEventArray(v)) s = fmtEvents(v);
                 else if (Array.isArray(v)) s = v.join(' | ');
                 else s = (v === undefined || v === null) ? '' : String(v);
                 if (/[",\n]/.test(s)) s = '"' + s.replace(/"/g, '""') + '"';
@@ -1288,7 +1497,8 @@
         const TYPE_LABELS = {
             text: 'ข้อความสั้น', tel: 'เบอร์โทร', number: 'ตัวเลข', date: 'วันที่',
             textarea: 'ข้อความยาว', select: 'ดรอปดาวน์ (เลือก 1)', radio: 'ตัวเลือก (เลือก 1)', checkbox: 'เลือกได้หลายข้อ',
-            contactlog: 'บันทึกการสัมผัส (วันที่+รายละเอียด)'
+            contactlog: 'บันทึกการสัมผัส (วันที่+รายละเอียด)',
+            contactpattern: 'รูปแบบการสัมผัส (6.4 แบบใหม่)'
         };
         const HAS_OPTIONS = ['select', 'radio', 'checkbox'];
 
@@ -1339,7 +1549,12 @@
                     <label class="text-xs text-slate-400">ตัวเลือก (บรรทัดละ 1 รายการ)</label>
                     <textarea data-act="contact-${key}" data-si="${si}" data-fi="${fi}" rows="3" class="w-full text-base rounded-lg border border-teal-300 bg-teal-50/50 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-400" placeholder="พิมพ์ตัวเลือกทีละบรรทัด">${arr.join('\n')}</textarea>
                 </div>`;
-            const contactBlock = f.type === 'contactlog'
+            const isContactType = (f.type === 'contactlog' || f.type === 'contactpattern');
+            const locBox = f.type === 'contactpattern'
+                ? `<div class="space-y-1"><label class="text-xs text-slate-400">สถานที่ — ตัวเลือก (บรรทัดละ 1)</label>
+                    <textarea data-act="contact-location" data-si="${si}" data-fi="${fi}" rows="3" class="w-full text-base rounded-lg border border-teal-300 bg-teal-50/50 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-400" placeholder="พิมพ์ตัวเลือกทีละบรรทัด">${((co.location && co.location.length) ? co.location : CONTACT_LOCATION).join('\n')}</textarea></div>`
+                : '';
+            const contactBlock = isContactType
                 ? `<div class="mt-3 rounded-xl border border-teal-200 bg-white p-3 space-y-3">
                         <div class="text-sm font-semibold text-teal-700 flex items-center"><i data-feather="sliders" class="w-4 h-4 mr-1"></i> จัดการหัวข้อและตัวเลือกย่อยในข้อนี้</div>
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1347,6 +1562,7 @@
                             ${subBox('n95', (co.n95 && co.n95.length) ? co.n95 : CONTACT_N95, CONTACT_LABELS_DEFAULT.n95)}
                             ${subBox('duration', (co.duration && co.duration.length) ? co.duration : CONTACT_DURATION, CONTACT_LABELS_DEFAULT.duration)}
                             ${subBox('room', (co.room && co.room.length) ? co.room : CONTACT_ROOM, CONTACT_LABELS_DEFAULT.room)}
+                            ${locBox}
                         </div>
                    </div>`
                 : '';

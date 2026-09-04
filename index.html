@@ -410,6 +410,12 @@
                     records.forEach(r => serverSubmit(r));
                 }
             }
+            // การตั้งค่าเมนูจากระบบกลาง (ค่าล่าสุดที่บันทึกไว้ ใช้กับทุกเครื่อง)
+            if (data && data.settings && Array.isArray(data.settings.navHidden)) {
+                try { localStorage.setItem(NAV_HIDE_KEY, JSON.stringify(data.settings.navHidden)); } catch (e) {}
+                if (typeof applyNavVisibility === 'function') applyNavVisibility();
+                if (typeof renderNavToggles === 'function' && !document.getElementById('view-admin').classList.contains('hidden')) renderNavToggles();
+            }
             renderForm('staff'); renderForm('patient');
             if (!document.getElementById('view-admin').classList.contains('hidden')) renderAdminTable();
         }
@@ -421,6 +427,10 @@
         function serverSaveSchema(sc) {
             if (!USE_SERVER) return;
             fetch(API_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'saveSchema', schema: sc }) }).catch(() => {});
+        }
+        function serverSaveSettings(obj) {
+            if (!USE_SERVER) return;
+            fetch(API_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'saveSettings', settings: obj }) }).catch(() => {});
         }
 
         /* ============================================================
@@ -1760,9 +1770,10 @@
             document.querySelectorAll('#nav-toggle-list .nav-toggle').forEach(cb => { if (!cb.checked) hid.push(cb.getAttribute('data-target')); });
             try { localStorage.setItem(NAV_HIDE_KEY, JSON.stringify(hid)); } catch (e) {}
             applyNavVisibility();
+            serverSaveSettings({ navHidden: hid }); // เก็บบนระบบกลาง ใช้กับทุกเครื่อง
             const hint = document.getElementById('nav-save-hint');
             if (hint) hint.hidden = true;
-            showModal('บันทึกสำเร็จ!', 'บันทึกการตั้งค่าเมนูแล้ว ระบบจะจำค่านี้ไว้', false);
+            showModal('บันทึกสำเร็จ!', 'บันทึกการตั้งค่าเมนูแล้ว ระบบจะจำค่านี้ไว้' + (USE_SERVER ? ' (ทุกเครื่อง)' : ''), false);
         });
 
         renderForm('staff');

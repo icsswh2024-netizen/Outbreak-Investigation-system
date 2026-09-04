@@ -24,7 +24,7 @@ var SPREADSHEET_ID = '1-vvdG18uzzn9EQgSAnQ1G4aCLdUvNIQA6deWZrk92EI';
 function doGet(e) {
   var action = (e && e.parameter && e.parameter.action) || 'load';
   var out;
-  if (action === 'load') out = { schema: readSchema(), records: readRecords() };
+  if (action === 'load') out = { schema: readSchema(), records: readRecords(), settings: readSettings() };
   else out = { error: 'unknown action' };
 
   // รองรับ JSONP (เรียกจากเว็บสถิตข้ามโดเมนได้ ผ่าน callback)
@@ -45,6 +45,7 @@ function doPost(e) {
     if (body.action === 'submit') { appendRecord(body.record); return json({ ok: true }); }
     if (body.action === 'saveSchema') { writeSchema(body.schema); return json({ ok: true }); }
     if (body.action === 'delete') { deleteRecord(body.id); return json({ ok: true }); }
+    if (body.action === 'saveSettings') { writeSettings(body.settings); return json({ ok: true }); }
     return json({ error: 'unknown action' });
   } catch (err) {
     return json({ error: String(err) });
@@ -160,6 +161,19 @@ function readSchemaFromStruct() {
   });
   if (schema.staff.sections.length === 0 && schema.patient.sections.length === 0) return null;
   return schema;
+}
+
+/* ---------------- SETTINGS (เก็บใน SHEET_SCHEMA เซลล์ A4) ---------------- */
+function readSettings() {
+  var sh = getSheet(SHEET_SCHEMA);
+  var v = sh.getRange(4, 1).getValue();
+  if (!v) return {};
+  try { return JSON.parse(v); } catch (e) { return {}; }
+}
+function writeSettings(obj) {
+  var sh = getSheet(SHEET_SCHEMA);
+  sh.getRange(3, 1).setValue('SETTINGS_JSON (การตั้งค่าเมนู ฯลฯ — จัดการผ่านหน้าแอดมิน)');
+  sh.getRange(4, 1).setValue(JSON.stringify(obj || {}));
 }
 
 /* ---------------- RECORDS (แท็บข้อมูลแบบสอบถาม) ---------------- */

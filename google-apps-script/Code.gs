@@ -43,6 +43,7 @@ function doPost(e) {
     var body = JSON.parse(e.postData.contents);
     if (body.action === 'submit') { appendRecord(body.record); return json({ ok: true }); }
     if (body.action === 'saveSchema') { writeSchema(body.schema); return json({ ok: true }); }
+    if (body.action === 'delete') { deleteRecord(body.id); return json({ ok: true }); }
     return json({ error: 'unknown action' });
   } catch (err) {
     return json({ error: String(err) });
@@ -152,6 +153,17 @@ function appendRecord(rec) {
   cols.forEach(function (c) { row.push(flatten(ans[c.id])); });
   row.push(JSON.stringify(rec)); // เก็บ JSON เต็มไว้ให้เว็บแอปอ่านกลับได้ครบ
   sh.appendRow(row);
+}
+
+function deleteRecord(id) {
+  if (!id) return;
+  var sh = getSheet(SHEET_DATA);
+  var last = sh.getLastRow();
+  if (last < 2) return;
+  var idVals = sh.getRange(2, 2, last - 1, 1).getValues(); // คอลัมน์ B = id
+  for (var i = idVals.length - 1; i >= 0; i--) {
+    if (String(idVals[i][0]) === String(id)) sh.deleteRow(i + 2);
+  }
 }
 
 function readRecords() {

@@ -802,6 +802,8 @@
             });
         }
 
+        let editingId = null; // ถ้ากำลังแก้ไขเรกคอร์ด จะเก็บ id ไว้
+
         function doSaveForm(form, formKey) {
             const { answers, risk } = collectAnswers(form, formKey);
 
@@ -810,6 +812,30 @@
                 group = 'ผู้ป่วย' + (answers.bed ? ` (${answers.bed})` : '');
             } else {
                 group = answers.role || 'เจ้าหน้าที่';
+            }
+
+            if (editingId != null) {
+                // โหมดแก้ไข: อัปเดตเรกคอร์ดเดิม
+                const idx = records.findIndex(r => String(r.id) === String(editingId));
+                if (idx >= 0) {
+                    records[idx] = Object.assign({}, records[idx], {
+                        name: answers.name || '(ไม่ระบุชื่อ)',
+                        hn: answers.hn || '',
+                        group: group,
+                        status: risk ? 'เฝ้าระวัง' : 'ปกติ',
+                        answers: answers
+                    });
+                    saveRecords();
+                    serverDelete(editingId);    // ลบแถวเก่าบนชีต
+                    serverSubmit(records[idx]); // แล้วเพิ่มเวอร์ชันแก้ไข (id เดิม)
+                }
+                const doneId = editingId;
+                editingId = null;
+                form.reset();
+                renderForm(formKey);
+                showModal('แก้ไขสำเร็จ!', 'อัปเดตข้อมูลเรียบร้อยแล้ว', false);
+                document.querySelector('nav .nav-btn[data-target="view-admin"]').click();
+                return;
             }
 
             addRecord({
@@ -825,6 +851,69 @@
             form.reset();
             renderForm(formKey); // ล้างฟอร์มรวมถึงแถวบันทึกการสัมผัสให้กลับสู่ค่าเริ่มต้น
             showModal('บันทึกสำเร็จ!', 'ระบบได้ทำการบันทึกข้อมูลเรียบร้อยแล้ว', true);
+        }
+
+        // เติมค่าลงฟอร์มจากคำตอบเดิม (สำหรับแก้ไข)
+        function fillForm(formKey, answers) {
+            const form = document.getElementById('form-' + formKey);
+            schema[formKey].sections.forEach(sec => sec.fields.forEach(f => {
+                const v = answers[f.id];
+                if (v === undefined) return;
+                if (f.type === 'contactlog') {
+                    const cont = form.querySelector(`.contactlog[data-field="${f.id}"]`);
+                    if (!cont) return;
+                    const rowsWrap = cont.querySelector('.contactlog-rows');
+                    const arr = Array.isArray(v) && v.length ? v : [null];
+                    rowsWrap.innerHTML = arr.map(ev => contactRowHTML(ev, contactOptsFor(f), contactLabelsFor(f))).join('');
+                } else if (f.type === 'checkbox') {
+                    (Array.isArray(v) ? v : []).forEach(val => {
+                        const el = form.querySelector(`input[name="${f.id}"][value="${CSS.escape(val)}"]`);
+                        if (el) el.checked = true;
+                    });
+                } else if (f.type === 'radio') {
+                    const el = form.querySelector(`input[name="${f.id}"][value="${CSS.escape(v)}"]`);
+                    if (el) el.checked = true;
+                } else if (f.type === 'date') {
+                    const el = form.querySelector(`[name="${f.id}"]`);
+                    if (el) { el.dataset.value = v || ''; el.value = v ? fmtThaiDate(v) : ''; }
+                } else {
+                    const el = form.querySelector(`[name="${f.id}"]`);
+                    if (el) el.value = v;
+                }
+            }));
+            feather.replace();
+        }
+
+        function startEdit(id) {
+            const rec = records.find(r => String(r.id) === String(id));
+            if (!rec) return;
+            const formKey = rec.type;
+            // ไปหน้าฟอร์มก่อน (nav handler จะเคลียร์ editingId) แล้วค่อยตั้งค่าใหม่
+            document.querySelector('nav .nav-btn[data-target="view-' + formKey + '"]').click();
+            editingId = rec.id;
+            renderForm(formKey);
+            fillForm(formKey, rec.answers || {});
+            showModal('โหมดแก้ไข', 'แก้ไขข้อมูลแล้วกด "บันทึกข้อมูล" ด้านล่างเพื่ออัปเดต', false);
+        }
+
+        function deleteRecord(id) {
+            const rec = records.find(r => String(r.id) === String(id));
+            if (!rec) return;
+            openConfirm({
+                title: 'ยืนยันการลบ', danger: true, confirmText: 'ลบ',
+                message: 'ต้องการลบข้อมูลของ "' + (rec.name || '-') + '" ใช่หรือไม่?',
+                onConfirm: () => {
+                    records = records.filter(r => String(r.id) !== String(id));
+                    saveRecords();
+                    serverDelete(id);
+                    renderAdminTable();
+                    showModal('ลบสำเร็จ!', 'ลบข้อมูลเรียบร้อยแล้ว', false);
+                }
+            });
+        }
+        function serverDelete(id) {
+            if (!USE_SERVER) return;
+            fetch(API_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'delete', id: String(id) }) }).catch(() => {});
         }
 
         document.getElementById('form-staff').addEventListener('submit', handleSubmit);
@@ -887,6 +976,8 @@
                     return;
                 }
 
+                editingId = null; // ออกจากโหมดแก้ไขเมื่อเปลี่ยนหน้า (startEdit จะตั้งใหม่หลังจากนี้)
+
                 viewSections.forEach(s => s.classList.add('hidden'));
                 document.getElementById(targetId)?.classList.remove('hidden');
 
@@ -937,12 +1028,18 @@
                     <td class="px-6 py-5 whitespace-nowrap">${record.group || '-'}</td>
                     <td class="px-6 py-5 whitespace-nowrap">${statusDisplay}</td>
                     <td class="px-6 py-5 whitespace-nowrap text-right">
-                        <button class="btn-detail text-blue-600 hover:text-blue-800 font-medium inline-flex items-center" data-id="${record.id}"><i data-feather="eye" class="w-4 h-4 mr-1"></i> ดู</button>
+                        <div class="inline-flex items-center gap-3">
+                            <button class="btn-detail text-blue-600 hover:text-blue-800 font-medium inline-flex items-center" data-id="${record.id}" title="ดูรายละเอียด"><i data-feather="eye" class="w-4 h-4 mr-1"></i> ดู</button>
+                            <button class="btn-edit text-amber-600 hover:text-amber-800 font-medium inline-flex items-center" data-id="${record.id}" title="แก้ไข"><i data-feather="edit-2" class="w-4 h-4 mr-1"></i> แก้ไข</button>
+                            <button class="btn-del text-rose-600 hover:text-rose-800 font-medium inline-flex items-center" data-id="${record.id}" title="ลบ"><i data-feather="trash-2" class="w-4 h-4 mr-1"></i> ลบ</button>
+                        </div>
                     </td>`;
                 tbody.appendChild(tr);
             });
 
             tbody.querySelectorAll('.btn-detail').forEach(b => b.addEventListener('click', () => showDetail(b.getAttribute('data-id'))));
+            tbody.querySelectorAll('.btn-edit').forEach(b => b.addEventListener('click', () => startEdit(b.getAttribute('data-id'))));
+            tbody.querySelectorAll('.btn-del').forEach(b => b.addEventListener('click', () => deleteRecord(b.getAttribute('data-id'))));
             feather.replace();
         }
 

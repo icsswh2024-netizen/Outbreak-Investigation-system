@@ -339,8 +339,7 @@
                             { id: 'srcName', label: '6.1 ชื่อผู้ป่วยวัณโรคระยะแพร่เชื้อที่สัมผัส', type: 'text' },
                             { id: 'srcHn', label: '6.2 HN ผู้ป่วย', type: 'text' },
                             { id: 'srcWard', label: '6.3 หอผู้ป่วย', type: 'text' },
-                            { id: 'activities', label: '6.4 กิจกรรมที่ท่านได้ทำกับผู้ป่วย (เลือกได้มากกว่า 1 ข้อ)', type: 'checkbox', options: ['พูดคุย/ซักประวัติ', 'ตรวจร่างกาย', 'ให้การพยาบาล', 'ดูดเสมหะ/หัตถการทางเดินหายใจ', 'ทำแผล/เจาะเลือด', 'เคลื่อนย้ายผู้ป่วย'] },
-                            { id: 'contactEvents', label: '6.5 บันทึกการสัมผัส — เลือกวันที่จากปฏิทิน แล้วระบุรายละเอียด (6.11 N95, 6.12 ระยะเวลา, 6.13 ขนาดห้อง) เพิ่มได้หลายครั้ง', type: 'contactlog' },
+                            { id: 'contactEvents', label: '6.4 บันทึกการสัมผัส — เลือกวันที่จากปฏิทิน แล้วระบุรายละเอียดต่อครั้ง (กิจกรรม, N95, ระยะเวลา, ขนาดห้อง) เพิ่มได้หลายครั้ง', type: 'contactlog' },
                             { id: 'priorContact', label: '6.14 ในระยะ 1-3 เดือนก่อน ท่านเคยสัมผัสผู้ป่วยวัณโรคปอด หรืออาการคล้ายวัณโรคปอด ในครอบครัว/ที่ทำงาน/หมู่บ้าน หรือไม่', type: 'select', options: ['ไม่มี', 'มี', 'ไม่แน่ใจ'] },
                             { id: 'priorDetail', label: '6.15 หากตอบว่า "มี" โปรดระบุรายละเอียด (ชื่อผู้ป่วย, อายุ, วันที่เริ่มป่วย, สถานที่รักษา)', type: 'textarea' }
                         ]}
@@ -394,6 +393,7 @@
         function escAttr(s) { return String(s).replace(/"/g, '&quot;'); }
 
         // ตัวเลือกย่อยของ "บันทึกการสัมผัส" (6.11-6.13)
+        const CONTACT_ACTIVITIES = ['พูดคุย/ซักประวัติ', 'ตรวจร่างกาย', 'ให้การพยาบาล', 'ดูดเสมหะ/หัตถการทางเดินหายใจ', 'ทำแผล/เจาะเลือด', 'เคลื่อนย้ายผู้ป่วย'];
         const CONTACT_N95 = ['ใส่ตลอดเวลา', 'ใส่บางครั้ง', 'ไม่ได้ใส่'];
         const CONTACT_DURATION = ['น้อยกว่า 15 นาที', '15 นาที - 1 ชั่วโมง', '1 - 8 ชั่วโมง', 'มากกว่า 8 ชั่วโมง'];
         const CONTACT_ROOM = ['ห้องแยก/ห้องความดันลบ', 'ห้องเดี่ยว ระบายอากาศดี', 'ห้องรวม ระบายอากาศดี', 'ห้องรวม ระบายอากาศไม่ดี/แออัด'];
@@ -401,7 +401,7 @@
         // แปลงบันทึกการสัมผัสเป็นข้อความ
         function isEventArray(v) { return Array.isArray(v) && v.length > 0 && typeof v[0] === 'object'; }
         function fmtEvents(arr) {
-            return arr.map((e, i) => `ครั้งที่ ${i + 1}: ${e.date || '-'} (N95: ${e.n95 || '-'}, ระยะเวลา: ${e.duration || '-'}, ห้อง: ${e.room || '-'})`).join(' | ');
+            return arr.map((e, i) => `ครั้งที่ ${i + 1}: ${e.date || '-'} [กิจกรรม: ${(e.activities && e.activities.length) ? e.activities.join(', ') : '-'}] (N95: ${e.n95 || '-'}, ระยะเวลา: ${e.duration || '-'}, ห้อง: ${e.room || '-'})`).join(' | ');
         }
 
         function contactRowHTML(data) {
@@ -422,6 +422,15 @@
                 <div class="space-y-1">
                     <label class="text-sm font-medium text-slate-600">วันที่สัมผัส (เลือกจากปฏิทิน)</label>
                     <input type="date" data-role="date" value="${escAttr(data.date || '')}" class="field-input">
+                </div>
+                <div class="space-y-1">
+                    <label class="text-sm font-medium text-slate-600">6.4 กิจกรรมที่ทำกับผู้ป่วย (เลือกได้มากกว่า 1 ข้อ)</label>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                        ${CONTACT_ACTIVITIES.map(o => `<label class="flex items-center space-x-2 cursor-pointer p-1.5 rounded-lg hover:bg-white transition-colors">
+                            <input type="checkbox" data-role="activity" value="${escAttr(o)}" ${(data.activities || []).includes(o) ? 'checked' : ''} class="w-4 h-4 text-teal-600 focus:ring-teal-500">
+                            <span class="text-base text-slate-700">${o}</span>
+                        </label>`).join('')}
+                    </div>
                 </div>
                 ${sel('n95', CONTACT_N95, data.n95, '6.11 การใส่หน้ากาก N95 ขณะสัมผัส')}
                 ${sel('duration', CONTACT_DURATION, data.duration, '6.12 ระยะเวลาโดยรวมในการสัมผัส/อยู่ใกล้ชิด')}
@@ -518,10 +527,11 @@
                         const cont = form.querySelector(`.contactlog[data-field="${f.id}"]`);
                         value = cont ? Array.from(cont.querySelectorAll('.contactlog-row')).map(row => ({
                             date: row.querySelector('[data-role="date"]').value,
+                            activities: Array.from(row.querySelectorAll('[data-role="activity"]:checked')).map(c => c.value),
                             n95: row.querySelector('[data-role="n95"]').value,
                             duration: row.querySelector('[data-role="duration"]').value,
                             room: row.querySelector('[data-role="room"]').value
-                        })).filter(ev => ev.date || ev.n95 || ev.duration || ev.room) : [];
+                        })).filter(ev => ev.date || ev.activities.length || ev.n95 || ev.duration || ev.room) : [];
                     } else if (f.type === 'checkbox') {
                         value = Array.from(form.querySelectorAll(`input[name="${f.id}"]:checked`)).map(c => c.value);
                     } else if (f.type === 'radio') {

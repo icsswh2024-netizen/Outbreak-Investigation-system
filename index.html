@@ -340,15 +340,7 @@
                             { id: 'srcHn', label: '6.2 HN ผู้ป่วย', type: 'text' },
                             { id: 'srcWard', label: '6.3 หอผู้ป่วย', type: 'text' },
                             { id: 'activities', label: '6.4 กิจกรรมที่ท่านได้ทำกับผู้ป่วย (เลือกได้มากกว่า 1 ข้อ)', type: 'checkbox', options: ['พูดคุย/ซักประวัติ', 'ตรวจร่างกาย', 'ให้การพยาบาล', 'ดูดเสมหะ/หัตถการทางเดินหายใจ', 'ทำแผล/เจาะเลือด', 'เคลื่อนย้ายผู้ป่วย'] },
-                            { id: 'contactDate1', label: '6.5 วันที่สัมผัส — พูดคุย/ซักประวัติ', type: 'date' },
-                            { id: 'contactDate2', label: '6.6 วันที่สัมผัส — ตรวจร่างกาย', type: 'date' },
-                            { id: 'contactDate3', label: '6.7 วันที่สัมผัส — ให้การพยาบาล', type: 'date' },
-                            { id: 'contactDate4', label: '6.8 วันที่สัมผัส — ดูดเสมหะ/หัตถการทางเดินหายใจ', type: 'date' },
-                            { id: 'contactDate5', label: '6.9 วันที่สัมผัส — ทำแผล/เจาะเลือด', type: 'date' },
-                            { id: 'contactDate6', label: '6.10 วันที่สัมผัส — เคลื่อนย้ายผู้ป่วย', type: 'date' },
-                            { id: 'n95', label: '6.11 การใส่หน้ากาก N95 ขณะสัมผัส', type: 'select', options: ['ใส่ตลอดเวลา', 'ใส่บางครั้ง', 'ไม่ได้ใส่'] },
-                            { id: 'duration', label: '6.12 ระยะเวลาโดยรวม (ทุกครั้งที่สัมผัส) ในการสัมผัส/อยู่ร่วมกับผู้ป่วยวัณโรคอย่างใกล้ชิด', type: 'select', options: ['น้อยกว่า 15 นาที', '15 นาที - 1 ชั่วโมง', '1 - 8 ชั่วโมง', 'มากกว่า 8 ชั่วโมง'] },
-                            { id: 'room', label: '6.13 ขนาดของห้อง/บริเวณพื้นที่ที่สัมผัส', type: 'select', options: ['ห้องแยก/ห้องความดันลบ', 'ห้องเดี่ยว ระบายอากาศดี', 'ห้องรวม ระบายอากาศดี', 'ห้องรวม ระบายอากาศไม่ดี/แออัด'] },
+                            { id: 'contactEvents', label: '6.5 บันทึกการสัมผัส — เลือกวันที่จากปฏิทิน แล้วระบุรายละเอียด (6.11 N95, 6.12 ระยะเวลา, 6.13 ขนาดห้อง) เพิ่มได้หลายครั้ง', type: 'contactlog' },
                             { id: 'priorContact', label: '6.14 ในระยะ 1-3 เดือนก่อน ท่านเคยสัมผัสผู้ป่วยวัณโรคปอด หรืออาการคล้ายวัณโรคปอด ในครอบครัว/ที่ทำงาน/หมู่บ้าน หรือไม่', type: 'select', options: ['ไม่มี', 'มี', 'ไม่แน่ใจ'] },
                             { id: 'priorDetail', label: '6.15 หากตอบว่า "มี" โปรดระบุรายละเอียด (ชื่อผู้ป่วย, อายุ, วันที่เริ่มป่วย, สถานที่รักษา)', type: 'textarea' }
                         ]}
@@ -401,6 +393,42 @@
            ============================================================ */
         function escAttr(s) { return String(s).replace(/"/g, '&quot;'); }
 
+        // ตัวเลือกย่อยของ "บันทึกการสัมผัส" (6.11-6.13)
+        const CONTACT_N95 = ['ใส่ตลอดเวลา', 'ใส่บางครั้ง', 'ไม่ได้ใส่'];
+        const CONTACT_DURATION = ['น้อยกว่า 15 นาที', '15 นาที - 1 ชั่วโมง', '1 - 8 ชั่วโมง', 'มากกว่า 8 ชั่วโมง'];
+        const CONTACT_ROOM = ['ห้องแยก/ห้องความดันลบ', 'ห้องเดี่ยว ระบายอากาศดี', 'ห้องรวม ระบายอากาศดี', 'ห้องรวม ระบายอากาศไม่ดี/แออัด'];
+
+        // แปลงบันทึกการสัมผัสเป็นข้อความ
+        function isEventArray(v) { return Array.isArray(v) && v.length > 0 && typeof v[0] === 'object'; }
+        function fmtEvents(arr) {
+            return arr.map((e, i) => `ครั้งที่ ${i + 1}: ${e.date || '-'} (N95: ${e.n95 || '-'}, ระยะเวลา: ${e.duration || '-'}, ห้อง: ${e.room || '-'})`).join(' | ');
+        }
+
+        function contactRowHTML(data) {
+            data = data || {};
+            const sel = (role, opts, cur, label) => `
+                <div class="space-y-1">
+                    <label class="text-sm font-medium text-slate-600">${label}</label>
+                    <select data-role="${role}" class="field-input appearance-none cursor-pointer">
+                        <option value="">— เลือก —</option>
+                        ${opts.map(o => `<option value="${escAttr(o)}" ${cur === o ? 'selected' : ''}>${o}</option>`).join('')}
+                    </select>
+                </div>`;
+            return `<div class="contactlog-row border border-teal-200 rounded-xl p-4 space-y-3 bg-teal-50/40">
+                <div class="flex items-center justify-between">
+                    <span class="text-base font-semibold text-teal-700 flex items-center"><i data-feather="calendar" class="w-4 h-4 mr-1.5"></i> ครั้งที่สัมผัส</span>
+                    <button type="button" class="contactlog-del text-rose-500 hover:text-rose-700 text-sm inline-flex items-center"><i data-feather="trash-2" class="w-4 h-4 mr-1"></i> ลบ</button>
+                </div>
+                <div class="space-y-1">
+                    <label class="text-sm font-medium text-slate-600">วันที่สัมผัส (เลือกจากปฏิทิน)</label>
+                    <input type="date" data-role="date" value="${escAttr(data.date || '')}" class="field-input">
+                </div>
+                ${sel('n95', CONTACT_N95, data.n95, '6.11 การใส่หน้ากาก N95 ขณะสัมผัส')}
+                ${sel('duration', CONTACT_DURATION, data.duration, '6.12 ระยะเวลาโดยรวมในการสัมผัส/อยู่ใกล้ชิด')}
+                ${sel('room', CONTACT_ROOM, data.room, '6.13 ขนาดของห้อง/บริเวณพื้นที่ที่สัมผัส')}
+            </div>`;
+        }
+
         function fieldHTML(field, accent) {
             const req = field.required ? ' <span class="text-rose-500">*</span>' : '';
             const reqAttr = field.required ? 'required' : '';
@@ -423,6 +451,13 @@
                     </label>`).join('') + '</div>';
             } else if (field.type === 'textarea') {
                 control = `<textarea name="${field.id}" rows="2" class="field-input" ${reqAttr}></textarea>`;
+            } else if (field.type === 'contactlog') {
+                control = `<div class="contactlog space-y-3" data-field="${field.id}">
+                    <div class="contactlog-rows space-y-3">${contactRowHTML()}</div>
+                    <button type="button" class="contactlog-add w-full border-2 border-dashed border-teal-300 text-teal-600 rounded-xl py-2.5 text-base font-medium hover:bg-teal-50 hover:border-teal-400 transition-all flex items-center justify-center">
+                        <i data-feather="plus" class="w-4 h-4 mr-1"></i> เพิ่มวันที่สัมผัส
+                    </button>
+                </div>`;
             } else {
                 control = `<input type="${field.type}" name="${field.id}" class="field-input" ${reqAttr}>`;
             }
@@ -467,7 +502,15 @@
             schema[formKey].sections.forEach(sec => {
                 sec.fields.forEach(f => {
                     let value;
-                    if (f.type === 'checkbox') {
+                    if (f.type === 'contactlog') {
+                        const cont = form.querySelector(`.contactlog[data-field="${f.id}"]`);
+                        value = cont ? Array.from(cont.querySelectorAll('.contactlog-row')).map(row => ({
+                            date: row.querySelector('[data-role="date"]').value,
+                            n95: row.querySelector('[data-role="n95"]').value,
+                            duration: row.querySelector('[data-role="duration"]').value,
+                            room: row.querySelector('[data-role="room"]').value
+                        })).filter(ev => ev.date || ev.n95 || ev.duration || ev.room) : [];
+                    } else if (f.type === 'checkbox') {
                         value = Array.from(form.querySelectorAll(`input[name="${f.id}"]:checked`)).map(c => c.value);
                     } else if (f.type === 'radio') {
                         const c = form.querySelector(`input[name="${f.id}"]:checked`);
@@ -515,11 +558,37 @@
             });
             saveRecords();
             form.reset();
+            renderForm(formKey); // ล้างฟอร์มรวมถึงแถวบันทึกการสัมผัสให้กลับสู่ค่าเริ่มต้น
             showModal('บันทึกข้อมูลสำเร็จ!', 'ระบบได้ทำการบันทึกข้อมูลเรียบร้อยแล้ว');
         }
 
         document.getElementById('form-staff').addEventListener('submit', handleSubmit);
         document.getElementById('form-patient').addEventListener('submit', handleSubmit);
+
+        // เพิ่ม/ลบ แถวบันทึกการสัมผัส (contactlog)
+        function bindContactLog(form) {
+            form.addEventListener('click', e => {
+                const addBtn = e.target.closest('.contactlog-add');
+                if (addBtn) {
+                    const rows = addBtn.parentElement.querySelector('.contactlog-rows');
+                    rows.insertAdjacentHTML('beforeend', contactRowHTML());
+                    feather.replace();
+                    return;
+                }
+                const delBtn = e.target.closest('.contactlog-del');
+                if (delBtn) {
+                    const wrap = delBtn.closest('.contactlog-rows');
+                    if (wrap.querySelectorAll('.contactlog-row').length > 1) {
+                        delBtn.closest('.contactlog-row').remove();
+                    } else {
+                        // เหลือแถวเดียว: ล้างค่าแทนการลบ
+                        delBtn.closest('.contactlog-row').querySelectorAll('input,select').forEach(el => el.value = '');
+                    }
+                }
+            });
+        }
+        bindContactLog(document.getElementById('form-staff'));
+        bindContactLog(document.getElementById('form-patient'));
 
         /* ============================================================
            5. NAVIGATION
@@ -608,7 +677,8 @@
                 <div class="flex justify-between py-1.5 border-b border-slate-100"><span class="text-slate-500">วันที่บันทึก</span><span class="font-medium text-slate-800">${rec.date}</span></div>`;
             Object.keys(ans).forEach(k => {
                 let v = ans[k];
-                if (Array.isArray(v)) v = v.length ? v.join(', ') : '-';
+                if (isEventArray(v)) v = fmtEvents(v);
+                else if (Array.isArray(v)) v = v.length ? v.join(', ') : '-';
                 if (v === '' || v === undefined || v === null) v = '-';
                 rows += `<div class="flex justify-between gap-4 py-1.5 border-b border-slate-100"><span class="text-slate-500 flex-shrink-0">${labelFor(rec.type, k)}</span><span class="font-medium text-slate-800 text-right">${v}</span></div>`;
             });
@@ -641,7 +711,10 @@
            ============================================================ */
         function exportCSV() {
             const esc = v => {
-                let s = Array.isArray(v) ? v.join(' | ') : (v === undefined || v === null ? '' : String(v));
+                let s;
+                if (isEventArray(v)) s = fmtEvents(v);
+                else if (Array.isArray(v)) s = v.join(' | ');
+                else s = (v === undefined || v === null) ? '' : String(v);
                 if (/[",\n]/.test(s)) s = '"' + s.replace(/"/g, '""') + '"';
                 return s;
             };
@@ -678,7 +751,8 @@
         let draft = JSON.parse(JSON.stringify(schema)); // สำเนาสำหรับแก้ไข
         const TYPE_LABELS = {
             text: 'ข้อความสั้น', tel: 'เบอร์โทร', number: 'ตัวเลข', date: 'วันที่',
-            textarea: 'ข้อความยาว', select: 'ดรอปดาวน์ (เลือก 1)', radio: 'ตัวเลือก (เลือก 1)', checkbox: 'เลือกได้หลายข้อ'
+            textarea: 'ข้อความยาว', select: 'ดรอปดาวน์ (เลือก 1)', radio: 'ตัวเลือก (เลือก 1)', checkbox: 'เลือกได้หลายข้อ',
+            contactlog: 'บันทึกการสัมผัส (วันที่+รายละเอียด)'
         };
         const HAS_OPTIONS = ['select', 'radio', 'checkbox'];
 

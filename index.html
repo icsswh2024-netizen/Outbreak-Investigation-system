@@ -186,6 +186,13 @@
                 </div>
             </div>
 
+            <!-- ตั้งค่าการแสดงเมนู -->
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+                <h3 class="text-lg font-semibold text-slate-800 flex items-center mb-3"><i data-feather="eye-off" class="w-5 h-5 mr-2 text-purple-500"></i> จัดการเมนู (เลือกซ่อน/แสดง)</h3>
+                <div id="nav-toggle-list" class="flex flex-wrap gap-x-6 gap-y-2"></div>
+                <p class="text-sm text-slate-400 mt-2">ติ๊กออก = ซ่อนเมนูนั้นสำหรับผู้ใช้ (เมนู Admin จะแสดงเสมอ)</p>
+            </div>
+
             <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
                 <div class="rounded-2xl border p-5 flex flex-col bg-white border-blue-200 shadow-[0_4px_15px_rgba(59,130,246,0.1)] transition-transform hover:-translate-y-1">
                     <span class="text-base font-medium mb-1 text-slate-500">ผู้สัมผัสทั้งหมด</span>
@@ -1199,7 +1206,7 @@
                     }
                 });
 
-                if (targetId === 'view-admin') { renderAdminTable(); serverLoad(); }
+                if (targetId === 'view-admin') { renderAdminTable(); renderNavToggles(); serverLoad(); }
                 if (targetId === 'view-builder') renderBuilder();
             });
         });
@@ -1701,9 +1708,44 @@
         /* ============================================================
            11. INIT
            ============================================================ */
+        /* ===== ซ่อน/แสดงเมนู (ตั้งค่าจากหน้า Admin) ===== */
+        const NAV_HIDE_KEY = 'oi-nav-hidden';
+        const NAV_ITEMS = [
+            { t: 'view-home', l: 'หน้าแรก' },
+            { t: 'view-staff', l: 'จนท.' },
+            { t: 'view-patient', l: 'ผู้ป่วย' }
+        ];
+        function getHiddenNav() { try { return JSON.parse(localStorage.getItem(NAV_HIDE_KEY) || '[]'); } catch (e) { return []; } }
+        function applyNavVisibility() {
+            const hidden = getHiddenNav();
+            document.querySelectorAll('nav button.nav-btn[data-target]').forEach(b => {
+                const t = b.getAttribute('data-target');
+                if (t === 'view-admin') return; // เมนู Admin แสดงเสมอ
+                b.classList.toggle('hidden', hidden.includes(t));
+            });
+        }
+        function renderNavToggles() {
+            const wrap = document.getElementById('nav-toggle-list');
+            if (!wrap) return;
+            const hidden = getHiddenNav();
+            wrap.innerHTML = NAV_ITEMS.map(it =>
+                `<label class="flex items-center space-x-2 cursor-pointer">
+                    <input type="checkbox" class="nav-toggle w-5 h-5 text-purple-600 focus:ring-purple-500" data-target="${it.t}" ${hidden.includes(it.t) ? '' : 'checked'}>
+                    <span class="text-lg text-slate-700">${it.l}</span>
+                </label>`).join('');
+            wrap.querySelectorAll('.nav-toggle').forEach(cb => cb.addEventListener('change', () => {
+                let hid = getHiddenNav();
+                const t = cb.getAttribute('data-target');
+                if (cb.checked) hid = hid.filter(x => x !== t); else if (!hid.includes(t)) hid.push(t);
+                try { localStorage.setItem(NAV_HIDE_KEY, JSON.stringify(hid)); } catch (e) {}
+                applyNavVisibility();
+            }));
+        }
+
         renderForm('staff');
         renderForm('patient');
         renderAdminTable();
+        applyNavVisibility();
 
         // โหลดจากฐานข้อมูลกลาง + รีเฟรชอัตโนมัติ (รองรับหลายเครื่องพร้อมกัน)
         if (USE_SERVER) {

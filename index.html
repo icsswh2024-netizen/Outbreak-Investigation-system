@@ -201,7 +201,10 @@
 
             <!-- จัดการนิยาม / เกณฑ์ความเสี่ยง (Closed Contact TB) -->
             <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-3">
-                <h3 class="text-lg font-semibold text-slate-800 flex items-center"><i data-feather="book-open" class="w-5 h-5 mr-2 text-rose-500"></i> จัดการนิยาม / เกณฑ์ความเสี่ยง (Closed Contact TB)</h3>
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <h3 class="text-lg font-semibold text-slate-800 flex items-center"><i data-feather="book-open" class="w-5 h-5 mr-2 text-rose-500"></i> จัดการนิยาม / เกณฑ์ความเสี่ยง (Closed Contact TB)</h3>
+                    <label class="flex items-center gap-2 cursor-pointer text-base text-slate-600"><input type="checkbox" id="tb-show" class="w-5 h-5 text-rose-600"> แสดงกล่องสรุปความเสี่ยงในฟอร์ม</label>
+                </div>
                 <div class="space-y-1">
                     <label class="text-base font-medium text-slate-700">ข้อความนิยาม Closed / Household Contact</label>
                     <textarea id="tb-text" rows="2" class="w-full text-base rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-rose-400"></textarea>
@@ -757,6 +760,7 @@
                 if (h > maxDaily) maxDaily = h;
             });
             const tb = getTbDef();
+            const showSummary = tb.show !== false;
             const isClose = maxDaily >= (tb.hrPerDay || 8) || totalHours > (tb.hrPerMonth || 120);
             const form = cont.closest('form');
             const ageEl = form && form.querySelector('[name="age"]');
@@ -791,7 +795,7 @@
                         <tbody class="text-slate-700">${body}</tbody>
                     </table>
                 </div>
-            </div>${summary}`;
+            </div>${showSummary ? summary : ''}`;
             feather.replace();
         }
 
@@ -1670,7 +1674,8 @@
                 risks: {
                     u1: val('tb-r-u1').trim(), a1_5: val('tb-r-a15').trim(), a6_10: val('tb-r-a610').trim(),
                     a11_15: val('tb-r-a1115').trim(), adult: val('tb-r-adult').trim()
-                }
+                },
+                show: (document.getElementById('tb-show') || {}).checked !== false
             };
             confirmSave('บันทึกนิยาม/เกณฑ์ความเสี่ยงนี้ใช่หรือไม่?', () => {
                 try { localStorage.setItem(TBDEF_KEY, JSON.stringify(obj)); } catch (e) {}
@@ -2054,7 +2059,8 @@
             return {
                 text: 'ผู้ที่อยู่สถานที่เดียวกัน (บ้าน/ห้องนอน/ห้องเรียน/ที่ทำงานเดียวกัน) สัมผัสใกล้ชิดต่อเนื่อง ≥ 8 ชม./วัน หรือสะสม > 120 ชม./เดือน',
                 hrPerDay: 8, hrPerMonth: 120,
-                risks: { u1: '43%', a1_5: '24%', a6_10: 'ประมาณ 15–24%', a11_15: '15%', adult: '5–10%' }
+                risks: { u1: '43%', a1_5: '24%', a6_10: 'ประมาณ 15–24%', a11_15: '15%', adult: '5–10%' },
+                show: true
             };
         }
         function getTbDef() {
@@ -2067,6 +2073,7 @@
             set('tb-text', t.text); set('tb-hrday', t.hrPerDay); set('tb-hrmonth', t.hrPerMonth);
             set('tb-r-u1', t.risks.u1); set('tb-r-a15', t.risks.a1_5); set('tb-r-a610', t.risks.a6_10);
             set('tb-r-a1115', t.risks.a11_15); set('tb-r-adult', t.risks.adult);
+            const sc = document.getElementById('tb-show'); if (sc) sc.checked = (t.show !== false);
         }
         function applyNavVisibility() {
             const hidden = getHiddenNav();

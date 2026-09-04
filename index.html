@@ -1926,8 +1926,13 @@
                 message: 'ใช้แบบสอบถามที่กำลังแก้ไขอยู่นี้เป็น "ค่าเริ่มต้น" ใช่หรือไม่? (ปุ่มคืนค่าเริ่มต้นจะกลับมาที่ชุดนี้)',
                 onConfirm: () => {
                     try { localStorage.setItem(DEFAULT_SCHEMA_KEY, JSON.stringify(draft)); } catch (e) {}
-                    serverSaveSettings(currentSettings()); // เก็บบนระบบกลาง ใช้ทุกเครื่อง
-                    showModal('ตั้งค่าเริ่มต้นสำเร็จ!', 'บันทึกเป็นค่าเริ่มต้นแล้ว' + (USE_SERVER ? ' (ทุกเครื่อง)' : ''), false);
+                    // นำไปใช้เป็นแบบสอบถามปัจจุบัน + เขียนลงแท็บ "โครงสร้างแบบสอบถาม"
+                    schema = JSON.parse(JSON.stringify(draft));
+                    saveSchema();
+                    serverSaveSchema(schema);          // อัปเดตแท็บโครงสร้างแบบสอบถาม
+                    serverSaveSettings(currentSettings()); // เก็บเป็นค่าเริ่มต้นบนระบบกลาง
+                    renderForm('staff'); renderForm('patient');
+                    showModal('ตั้งค่าเริ่มต้นสำเร็จ!', 'บันทึกเป็นค่าเริ่มต้นและอัปเดตแท็บโครงสร้างแบบสอบถามแล้ว' + (USE_SERVER ? ' (ทุกเครื่อง)' : ''), false);
                 }
             });
         });

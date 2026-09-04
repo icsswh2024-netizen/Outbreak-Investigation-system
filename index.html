@@ -264,6 +264,21 @@
         </div>
     </main>
 
+    <!-- Confirm Modal (ยืนยันการทำรายการ) -->
+    <div id="confirm-modal" class="fixed inset-0 z-[70] hidden items-center justify-center bg-slate-900/40 backdrop-blur-sm fade-in p-4">
+        <div class="bg-white border border-slate-200 rounded-2xl shadow-[0_15px_40px_rgba(0,0,0,0.2)] p-8 max-w-sm w-full text-center space-y-6">
+            <div id="confirm-icon" class="mx-auto flex items-center justify-center h-20 w-20 rounded-full bg-amber-100 shadow-inner text-amber-600"></div>
+            <div class="space-y-2">
+                <h3 id="confirm-title" class="text-2xl font-bold text-slate-900">ยืนยัน</h3>
+                <p id="confirm-msg" class="text-lg text-slate-500"></p>
+            </div>
+            <div class="flex gap-3">
+                <button id="confirm-cancel" class="flex-1 rounded-lg border border-slate-300 px-4 py-3 bg-white text-lg font-semibold text-slate-600 hover:bg-slate-50 transition-all">ยกเลิก</button>
+                <button id="confirm-ok" class="flex-1 rounded-lg px-4 py-3 text-lg font-semibold text-white transition-all">ยืนยัน</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Success Modal -->
     <div id="custom-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/40 backdrop-blur-sm fade-in">
         <div class="bg-white border border-slate-200 rounded-2xl shadow-[0_15px_40px_rgba(0,0,0,0.15)] p-8 max-w-sm w-full mx-4 text-center space-y-6">
@@ -648,6 +663,15 @@
             e.preventDefault();
             const form = e.target;
             const formKey = form.getAttribute('data-form');
+            openConfirm({
+                title: 'ยืนยันการบันทึก',
+                message: 'ต้องการบันทึกข้อมูลแบบสอบถามนี้ใช่หรือไม่?',
+                confirmText: 'บันทึก',
+                onConfirm: () => doSaveForm(form, formKey)
+            });
+        }
+
+        function doSaveForm(form, formKey) {
             const { answers, risk } = collectAnswers(form, formKey);
 
             let group;
@@ -669,7 +693,7 @@
             });
             form.reset();
             renderForm(formKey); // ล้างฟอร์มรวมถึงแถวบันทึกการสัมผัสให้กลับสู่ค่าเริ่มต้น
-            showModal('บันทึกข้อมูลสำเร็จ!', 'ระบบได้ทำการบันทึกข้อมูลเรียบร้อยแล้ว');
+            showModal('บันทึกสำเร็จ!', 'ระบบได้ทำการบันทึกข้อมูลเรียบร้อยแล้ว', true);
         }
 
         document.getElementById('form-staff').addEventListener('submit', handleSubmit);
@@ -687,12 +711,25 @@
                 }
                 const delBtn = e.target.closest('.contactlog-del');
                 if (delBtn) {
+                    const row = delBtn.closest('.contactlog-row');
                     const wrap = delBtn.closest('.contactlog-rows');
-                    if (wrap.querySelectorAll('.contactlog-row').length > 1) {
-                        delBtn.closest('.contactlog-row').remove();
+                    const removeRow = () => {
+                        if (wrap.querySelectorAll('.contactlog-row').length > 1) {
+                            row.remove();
+                        } else {
+                            row.querySelectorAll('input,select').forEach(el => { el.value = ''; if (el.dataset) el.dataset.value = ''; });
+                        }
+                    };
+                    // มีข้อมูลในรายการ → ยืนยันก่อนลบ
+                    const hasData = row.querySelector('[data-role="date"]').dataset.value ||
+                        row.querySelector('[data-role="n95"]').value ||
+                        row.querySelector('[data-role="duration"]').value ||
+                        row.querySelector('[data-role="room"]').value ||
+                        row.querySelector('[data-role="activity"]:checked');
+                    if (hasData) {
+                        openConfirm({ title: 'ยืนยันการลบ', danger: true, confirmText: 'ลบ', message: 'ต้องการลบรายการการสัมผัสนี้ใช่หรือไม่?', onConfirm: removeRow });
                     } else {
-                        // เหลือแถวเดียว: ล้างค่าแทนการลบ
-                        delBtn.closest('.contactlog-row').querySelectorAll('input,select').forEach(el => el.value = '');
+                        removeRow();
                     }
                 }
             });
@@ -806,15 +843,44 @@
            8. SUCCESS MODAL
            ============================================================ */
         const modal = document.getElementById('custom-modal');
-        function showModal(title, msg) {
+        let modalReturnHome = false;
+        function showModal(title, msg, returnHome) {
             if (title) document.getElementById('modal-title').textContent = title;
             if (msg) document.getElementById('modal-msg').textContent = msg;
+            modalReturnHome = !!returnHome;
             modal.classList.remove('hidden'); modal.classList.add('flex');
         }
         function closeModal() {
             modal.classList.add('hidden'); modal.classList.remove('flex');
-            document.querySelector('nav .nav-btn[data-target="view-home"]').click();
+            if (modalReturnHome) { modalReturnHome = false; document.querySelector('nav .nav-btn[data-target="view-home"]').click(); }
         }
+
+        /* ===== Confirm Modal (ยืนยัน/ยกเลิก) ===== */
+        const confirmModal = document.getElementById('confirm-modal');
+        const confirmIcon = document.getElementById('confirm-icon');
+        const confirmOk = document.getElementById('confirm-ok');
+        let confirmCb = null;
+
+        function openConfirm(opts) {
+            document.getElementById('confirm-title').textContent = opts.title || 'ยืนยันการทำรายการ';
+            document.getElementById('confirm-msg').textContent = opts.message || '';
+            confirmOk.textContent = opts.confirmText || 'ยืนยัน';
+            confirmOk.className = 'flex-1 rounded-lg px-4 py-3 text-lg font-semibold text-white transition-all ' +
+                (opts.danger
+                    ? 'bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-600 hover:to-red-700 shadow-[0_4px_15px_rgba(244,63,94,0.3)]'
+                    : 'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 shadow-[0_4px_15px_rgba(59,130,246,0.3)]');
+            confirmIcon.className = 'mx-auto flex items-center justify-center h-20 w-20 rounded-full shadow-inner ' +
+                (opts.danger ? 'bg-rose-100 text-rose-600' : 'bg-amber-100 text-amber-600');
+            confirmIcon.innerHTML = `<i data-feather="${opts.danger ? 'trash-2' : 'help-circle'}" class="h-10 w-10"></i>`;
+            confirmCb = opts.onConfirm || null;
+            confirmModal.classList.remove('hidden'); confirmModal.classList.add('flex');
+            feather.replace();
+        }
+        function closeConfirm() { confirmModal.classList.add('hidden'); confirmModal.classList.remove('flex'); confirmCb = null; }
+
+        confirmOk.addEventListener('click', () => { const cb = confirmCb; closeConfirm(); if (cb) cb(); });
+        document.getElementById('confirm-cancel').addEventListener('click', closeConfirm);
+        confirmModal.addEventListener('click', e => { if (e.target === confirmModal) closeConfirm(); });
 
         /* ============================================================
            8.5 CUSTOM DATE PICKER (ปฏิทินป๊อปอัปเต็มจอ)
@@ -1030,12 +1096,20 @@
             const si = +btn.getAttribute('data-si'), fi = +btn.getAttribute('data-fi');
             const secs = draft[builderForm].sections;
             if (act === 'sec-del') {
-                if (confirm('ต้องการลบส่วนนี้และคำถามทั้งหมดในส่วนนี้หรือไม่?')) { secs.splice(si, 1); renderBuilder(); }
+                openConfirm({
+                    title: 'ยืนยันการลบส่วน', danger: true, confirmText: 'ลบ',
+                    message: 'ต้องการลบส่วนนี้และคำถามทั้งหมดในส่วนนี้ใช่หรือไม่?',
+                    onConfirm: () => { secs.splice(si, 1); renderBuilder(); showModal('ลบสำเร็จ!', 'ลบส่วนออกจากแบบสอบถามแล้ว (อย่าลืมกดบันทึกแบบสอบถาม)'); }
+                });
             } else if (act === 'field-add') {
                 secs[si].fields.push({ id: uid(), label: 'คำถามใหม่', type: 'text' });
                 renderBuilder();
             } else if (act === 'field-del') {
-                secs[si].fields.splice(fi, 1); renderBuilder();
+                openConfirm({
+                    title: 'ยืนยันการลบคำถาม', danger: true, confirmText: 'ลบ',
+                    message: 'ต้องการลบคำถามนี้ใช่หรือไม่?',
+                    onConfirm: () => { secs[si].fields.splice(fi, 1); renderBuilder(); showModal('ลบสำเร็จ!', 'ลบคำถามออกจากแบบสอบถามแล้ว (อย่าลืมกดบันทึกแบบสอบถาม)'); }
+                });
             }
         });
 
@@ -1053,19 +1127,28 @@
 
         // Save schema
         document.getElementById('btn-builder-save').addEventListener('click', () => {
-            schema = JSON.parse(JSON.stringify(draft));
-            saveSchema();
-            serverSaveSchema(schema); // อัปเดต schema บนชีต (ถ้าตั้งค่า API_URL)
-            renderForm('staff');
-            renderForm('patient');
-            showModal('บันทึกแบบสอบถามสำเร็จ!', 'แบบสอบถามถูกอัปเดตแล้ว ฟอร์มเจ้าหน้าที่และผู้ป่วยจะใช้รูปแบบใหม่ทันที' + (USE_SERVER ? ' และซิงก์ขึ้นชีตแล้ว' : ''));
+            openConfirm({
+                title: 'ยืนยันการบันทึก',
+                message: 'ต้องการบันทึกการแก้ไขแบบสอบถามนี้ใช่หรือไม่?',
+                confirmText: 'บันทึก',
+                onConfirm: () => {
+                    schema = JSON.parse(JSON.stringify(draft));
+                    saveSchema();
+                    serverSaveSchema(schema); // อัปเดต schema บนชีต (ถ้าตั้งค่า API_URL)
+                    renderForm('staff');
+                    renderForm('patient');
+                    showModal('บันทึกสำเร็จ!', 'แบบสอบถามถูกอัปเดตแล้ว ฟอร์มเจ้าหน้าที่และผู้ป่วยจะใช้รูปแบบใหม่ทันที' + (USE_SERVER ? ' และซิงก์ขึ้นชีตแล้ว' : ''));
+                }
+            });
         });
 
         // Reset to default
         document.getElementById('btn-builder-reset').addEventListener('click', () => {
-            if (!confirm('คืนค่าแบบสอบถามกลับเป็นค่าเริ่มต้น? การแก้ไขที่ยังไม่บันทึกจะหายไป')) return;
-            draft = defaultSchema();
-            renderBuilder();
+            openConfirm({
+                title: 'ยืนยันการคืนค่าเริ่มต้น', danger: true, confirmText: 'คืนค่า',
+                message: 'คืนค่าแบบสอบถามกลับเป็นค่าเริ่มต้น? การแก้ไขที่ยังไม่บันทึกจะหายไป',
+                onConfirm: () => { draft = defaultSchema(); renderBuilder(); showModal('คืนค่าสำเร็จ!', 'กลับเป็นแบบสอบถามเริ่มต้นแล้ว (กดบันทึกแบบสอบถามเพื่อยืนยัน)'); }
+            });
         });
 
         // ซิงก์ข้อมูลข้ามแท็บ/หน้าต่างเมื่อมีการบันทึกที่อื่น

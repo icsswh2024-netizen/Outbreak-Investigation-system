@@ -190,7 +190,13 @@
             <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
                 <h3 class="text-lg font-semibold text-slate-800 flex items-center mb-3"><i data-feather="eye-off" class="w-5 h-5 mr-2 text-purple-500"></i> จัดการเมนู (เลือกซ่อน/แสดง)</h3>
                 <div id="nav-toggle-list" class="flex flex-wrap gap-x-6 gap-y-2"></div>
-                <p class="text-sm text-slate-400 mt-2">ติ๊กออก = ซ่อนเมนูนั้นสำหรับผู้ใช้ (เมนู Admin จะแสดงเสมอ)</p>
+                <div class="flex items-center gap-3 mt-4">
+                    <button id="btn-save-nav" class="bg-gradient-to-r from-purple-500 to-fuchsia-600 hover:from-purple-600 hover:to-fuchsia-700 text-white px-5 py-2 rounded-lg text-base font-semibold flex items-center transition-all shadow-[0_4px_15px_rgba(168,85,247,0.3)]">
+                        <i data-feather="save" class="w-4 h-4 mr-2"></i> บันทึกการตั้งค่าเมนู
+                    </button>
+                    <span id="nav-save-hint" class="text-sm text-amber-600" hidden><i data-feather="alert-circle" class="w-4 h-4 inline mr-1"></i> ยังไม่ได้บันทึก</span>
+                </div>
+                <p class="text-sm text-slate-400 mt-2">ติ๊กออก = ซ่อนเมนูนั้นสำหรับผู้ใช้ แล้วกด "บันทึกการตั้งค่าเมนู" (เมนู Admin จะแสดงเสมอ)</p>
             </div>
 
             <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
@@ -1742,14 +1748,22 @@
                     <input type="checkbox" class="nav-toggle w-5 h-5 text-purple-600 focus:ring-purple-500" data-target="${it.t}" ${hidden.includes(it.t) ? '' : 'checked'}>
                     <span class="text-lg text-slate-700">${it.l}</span>
                 </label>`).join('');
-            wrap.querySelectorAll('.nav-toggle').forEach(cb => cb.addEventListener('change', () => {
-                let hid = getHiddenNav();
-                const t = cb.getAttribute('data-target');
-                if (cb.checked) hid = hid.filter(x => x !== t); else if (!hid.includes(t)) hid.push(t);
-                try { localStorage.setItem(NAV_HIDE_KEY, JSON.stringify(hid)); } catch (e) {}
-                applyNavVisibility();
-            }));
+            const hint = document.getElementById('nav-save-hint');
+            // ติ๊กแล้วโชว์ว่ายังไม่บันทึก (ยังไม่ปรับใช้จริงจนกดบันทึก)
+            wrap.querySelectorAll('.nav-toggle').forEach(cb => cb.addEventListener('change', () => { if (hint) hint.hidden = false; }));
+            if (hint) hint.hidden = true;
+            feather.replace();
         }
+        // ปุ่มบันทึกการตั้งค่าเมนู
+        document.getElementById('btn-save-nav').addEventListener('click', () => {
+            const hid = [];
+            document.querySelectorAll('#nav-toggle-list .nav-toggle').forEach(cb => { if (!cb.checked) hid.push(cb.getAttribute('data-target')); });
+            try { localStorage.setItem(NAV_HIDE_KEY, JSON.stringify(hid)); } catch (e) {}
+            applyNavVisibility();
+            const hint = document.getElementById('nav-save-hint');
+            if (hint) hint.hidden = true;
+            showModal('บันทึกสำเร็จ!', 'บันทึกการตั้งค่าเมนูแล้ว ระบบจะจำค่านี้ไว้', false);
+        });
 
         renderForm('staff');
         renderForm('patient');

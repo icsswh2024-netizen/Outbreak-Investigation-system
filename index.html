@@ -721,8 +721,11 @@
                     </div>
                 </div>
                 <div class="pat-custom ${freq === 'custom' ? '' : 'hidden'} space-y-1">
-                    <label class="text-sm font-medium text-slate-600">ระบุวันที่เอง (คั่นด้วยจุลภาค เช่น 2569-08-01, 2569-08-05)</label>
-                    <input type="text" data-role="customdates" value="${escAttr((data.customDates || []).join(', '))}" placeholder="YYYY-MM-DD, YYYY-MM-DD" class="field-input text-base">
+                    <label class="text-sm font-medium text-slate-600">ระบุวันที่เอง (เลือกจากปฏิทิน)</label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <input type="text" readonly data-datepicker data-role="customdate1" data-value="${escAttr((data.customDates || [])[0] || '')}" value="${(data.customDates || [])[0] ? fmtThaiDate(data.customDates[0]) : ''}" placeholder="วันที่ 1" class="field-input cursor-pointer bg-white text-base">
+                        <input type="text" readonly data-datepicker data-role="customdate2" data-value="${escAttr((data.customDates || [])[1] || '')}" value="${(data.customDates || [])[1] ? fmtThaiDate(data.customDates[1]) : ''}" placeholder="วันที่ 2" class="field-input cursor-pointer bg-white text-base">
+                    </div>
                 </div>
 
                 <div class="space-y-1">
@@ -862,7 +865,7 @@
                                 patterns: Array.from(cont.querySelectorAll('.contactpat-pattern')).map(bl => ({
                                     freq: (bl.querySelector('[data-role="freq"]:checked') || {}).value || '',
                                     weekdays: Array.from(bl.querySelectorAll('[data-role="weekday"]:checked')).map(c => c.value),
-                                    customDates: (bl.querySelector('[data-role="customdates"]').value || '').split(',').map(s => s.trim()).filter(Boolean),
+                                    customDates: [bl.querySelector('[data-role="customdate1"]').dataset.value, bl.querySelector('[data-role="customdate2"]').dataset.value].filter(Boolean),
                                     activities: Array.from(bl.querySelectorAll('[data-role="activity"]:checked')).map(c => c.value),
                                     mask: bl.querySelector('[data-role="mask"]').value,
                                     duration: bl.querySelector('[data-role="duration"]').value,

@@ -616,7 +616,6 @@
                 mask: bl.querySelector('[data-role="mask"]').value,
                 duration: bl.querySelector('[data-role="duration"]').value,
                 room: bl.querySelector('[data-role="room"]').value,
-                location: bl.querySelector('[data-role="location"]').value,
                 exceptions: Array.from(bl.querySelectorAll('.pat-exc')).map(ex => ({
                     date: ex.querySelector('[data-role="excdate"]').dataset.value || '',
                     noContact: ex.querySelector('[data-role="excnocontact"]').checked,
@@ -655,7 +654,6 @@
                     rows.push({
                         pi: pi, date: d, actArr: actArr,
                         activities: actArr.join(', ') || '-',
-                        location: p.location || '-',
                         mask: (ex && ex.mask) ? ex.mask : (p.mask || '-'),
                         duration: (ex && ex.duration) ? ex.duration : (p.duration || '-'),
                         room: p.room || '-',
@@ -704,7 +702,6 @@
                 return `<tr class="border-b border-slate-100">
                 <td class="px-3 py-1.5 whitespace-nowrap align-top">${fmtThaiDate(r.date)}</td>
                 <td class="px-3 py-1.5 align-top">${actCell}</td>
-                <td class="px-3 py-1.5 align-top">${r.location}</td>
                 <td class="px-3 py-1.5 align-top">${r.mask}</td>
                 <td class="px-3 py-1.5 whitespace-nowrap align-top">${r.duration}</td>
                 <td class="px-3 py-1.5 align-top">${r.room}</td>
@@ -748,7 +745,7 @@
                 <div class="overflow-x-auto max-h-72 overflow-y-auto">
                     <table class="w-full text-sm text-left">
                         <thead class="text-xs text-slate-500 bg-slate-50 sticky top-0"><tr>
-                            <th class="px-3 py-2 whitespace-nowrap">วันที่</th><th class="px-3 py-2">กิจกรรม</th><th class="px-3 py-2">สถานที่</th><th class="px-3 py-2">หน้ากาก</th><th class="px-3 py-2 whitespace-nowrap">ระยะเวลา</th><th class="px-3 py-2">ขนาดห้อง</th><th class="px-3 py-2">หมายเหตุ</th>
+                            <th class="px-3 py-2 whitespace-nowrap">วันที่</th><th class="px-3 py-2">กิจกรรม</th><th class="px-3 py-2">หน้ากาก</th><th class="px-3 py-2 whitespace-nowrap">ระยะเวลา</th><th class="px-3 py-2">ขนาดห้อง</th><th class="px-3 py-2">หมายเหตุ</th>
                         </tr></thead>
                         <tbody class="text-slate-700">${body}</tbody>
                     </table>
@@ -767,7 +764,7 @@
                 if (p.freq === 'weekly') s += ' (' + (p.weekdays || []).map(w => (WEEKDAYS.find(x => x.v === w) || {}).l).join(',') + ')';
                 s += ` — ${days.length} วัน`;
                 s += ` | กิจกรรม: ${(p.activities || []).join(', ') || '-'}`;
-                s += ` | หน้ากาก: ${p.mask || '-'} | ระยะเวลา: ${p.duration || '-'} | ห้อง: ${p.room || '-'} | สถานที่: ${p.location || '-'}`;
+                s += ` | หน้ากาก: ${p.mask || '-'} | ระยะเวลา: ${p.duration || '-'} | ห้อง: ${p.room || '-'}`;
                 const exc = (p.exceptions || []).filter(e => e.date);
                 if (exc.length) s += ` | ข้อยกเว้น: ${exc.map(e => e.date + (e.noContact ? '(ไม่สัมผัส)' : '')).join(', ')}`;
                 return s;
@@ -921,7 +918,6 @@
                     ${selOf('mask', opts.n95, data.mask, labels.n95)}
                     ${selOf('duration', opts.duration, data.duration, labels.duration)}
                     ${selOf('room', opts.room, data.room, labels.room)}
-                    ${selOf('location', opts.location || CONTACT_LOCATION, data.location, 'สถานที่')}
                 </div>
 
                 <div class="pat-exceptions space-y-2">
@@ -1774,10 +1770,6 @@
                     <textarea data-act="contact-${key}" data-si="${si}" data-fi="${fi}" rows="3" class="w-full text-base rounded-lg border border-teal-300 bg-teal-50/50 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-400" placeholder="พิมพ์ตัวเลือกทีละบรรทัด">${arr.join('\n')}</textarea>
                 </div>`;
             const isContactType = (f.type === 'contactlog' || f.type === 'contactpattern');
-            const locBox = f.type === 'contactpattern'
-                ? `<div class="space-y-1"><label class="text-xs text-slate-400">สถานที่ — ตัวเลือก (บรรทัดละ 1)</label>
-                    <textarea data-act="contact-location" data-si="${si}" data-fi="${fi}" rows="3" class="w-full text-base rounded-lg border border-teal-300 bg-teal-50/50 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-400" placeholder="พิมพ์ตัวเลือกทีละบรรทัด">${((co.location && co.location.length) ? co.location : CONTACT_LOCATION).join('\n')}</textarea></div>`
-                : '';
             const freqBox = f.type === 'contactpattern'
                 ? `<div class="space-y-1 sm:col-span-2"><label class="text-xs text-slate-400">ความถี่ของการสัมผัส — ข้อความ 4 บรรทัด ตามลำดับ (ทุกวัน / วันทำงาน / เลือกวันในสัปดาห์ / เลือกวันที่เอง)</label>
                     <textarea data-act="contact-freq" data-si="${si}" data-fi="${fi}" rows="4" class="w-full text-base rounded-lg border border-teal-300 bg-teal-50/50 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-400">${((co.freq && co.freq.length) ? co.freq : [FREQ_LABEL.daily, FREQ_LABEL.workdays, FREQ_LABEL.weekly, FREQ_LABEL.custom]).join('\n')}</textarea></div>`
@@ -1790,7 +1782,6 @@
                             ${subBox('n95', (co.n95 && co.n95.length) ? co.n95 : CONTACT_N95, CONTACT_LABELS_DEFAULT.n95)}
                             ${subBox('duration', (co.duration && co.duration.length) ? co.duration : CONTACT_DURATION, CONTACT_LABELS_DEFAULT.duration)}
                             ${subBox('room', (co.room && co.room.length) ? co.room : CONTACT_ROOM, CONTACT_LABELS_DEFAULT.room)}
-                            ${locBox}
                             ${freqBox}
                         </div>
                    </div>`

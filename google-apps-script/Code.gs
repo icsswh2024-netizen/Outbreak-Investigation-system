@@ -108,7 +108,7 @@ function writeSchemaToStruct(schema) {
       sec.fields.forEach(function (f) {
         var opt = '';
         if (f.type === 'select' || f.type === 'radio' || f.type === 'checkbox') opt = (f.options || []).join('\n');
-        else if (f.type === 'contactlog') opt = JSON.stringify({ contactOptions: f.contactOptions || {}, contactLabels: f.contactLabels || {} });
+        else if (f.type === 'contactlog' || f.type === 'contactpattern') opt = JSON.stringify({ contactOptions: f.contactOptions || {}, contactLabels: f.contactLabels || {} });
         rows.push([form, si + 1, sec.title || '', sec.icon || '', f.id, f.label || '', f.type || 'text', !!f.required, opt, (f.fixed !== undefined ? f.fixed : '')]);
       });
     });
@@ -153,7 +153,7 @@ function readSchemaFromStruct() {
     if (required) field.required = true;
     if (hasOpts[type]) {
       field.options = String(optRaw || '').split(/\r?\n|\|/).map(function (s) { return s.trim(); }).filter(function (s) { return s; });
-    } else if (type === 'contactlog') {
+    } else if (type === 'contactlog' || type === 'contactpattern') {
       try { var o = JSON.parse(String(optRaw || '{}')); if (o.contactOptions) field.contactOptions = o.contactOptions; if (o.contactLabels) field.contactLabels = o.contactLabels; } catch (e) {}
     }
     if (fixed !== '') field.fixed = fixed;

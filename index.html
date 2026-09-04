@@ -98,10 +98,6 @@
                         <i data-feather="layout" class="w-5 h-5"></i>
                         <span class="hidden md:inline">Admin</span>
                     </button>
-                    <button class="nav-btn flex items-center space-x-1 px-4 py-2 rounded-lg text-[1.1rem] font-medium transition-all duration-300 text-slate-600 hover:text-blue-700 hover:bg-blue-50 hover:shadow-sm" data-target="view-builder">
-                        <i data-feather="edit-3" class="w-5 h-5"></i>
-                        <span class="hidden md:inline">จัดการแบบสอบถาม</span>
-                    </button>
                 </div>
             </div>
         </div>
@@ -170,9 +166,14 @@
                     <h2 class="text-3xl font-bold text-slate-900 drop-shadow-sm">แผงควบคุม (Admin Dashboard)</h2>
                     <p class="text-slate-600 mt-1 text-lg">ภาพรวมการสอบสวนการระบาดและข้อมูลผู้สัมผัส</p>
                 </div>
-                <button id="btn-export-csv" class="bg-white border border-slate-300 text-slate-700 px-5 py-2.5 rounded-lg text-lg font-medium hover:bg-slate-50 hover:text-slate-900 flex items-center transition-all shadow-sm">
-                    <i data-feather="download-cloud" class="w-5 h-5 mr-2 text-blue-600"></i> ส่งออก CSV
-                </button>
+                <div class="flex items-center gap-3">
+                    <button class="nav-btn bg-white border border-purple-300 text-purple-700 px-5 py-2.5 rounded-lg text-lg font-medium hover:bg-purple-50 flex items-center transition-all shadow-sm" data-target="view-builder">
+                        <i data-feather="edit-3" class="w-5 h-5 mr-2"></i> จัดการแบบสอบถาม
+                    </button>
+                    <button id="btn-export-csv" class="bg-white border border-slate-300 text-slate-700 px-5 py-2.5 rounded-lg text-lg font-medium hover:bg-slate-50 hover:text-slate-900 flex items-center transition-all shadow-sm">
+                        <i data-feather="download-cloud" class="w-5 h-5 mr-2 text-blue-600"></i> ส่งออก CSV
+                    </button>
+                </div>
             </div>
 
             <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
@@ -226,6 +227,9 @@
         <div id="view-builder" class="view-section hidden fade-in space-y-6">
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-end space-y-4 sm:space-y-0">
                 <div>
+                    <button class="nav-btn text-slate-500 hover:text-purple-700 text-base font-medium inline-flex items-center mb-2" data-target="view-admin">
+                        <i data-feather="arrow-left" class="w-4 h-4 mr-1"></i> กลับหน้า Admin
+                    </button>
                     <h2 class="text-3xl font-bold text-slate-900 drop-shadow-sm flex items-center"><i data-feather="edit-3" class="w-7 h-7 mr-2 text-purple-600"></i> จัดการแบบสอบถาม</h2>
                     <p class="text-slate-600 mt-1 text-lg">เพิ่ม / ลบ / แก้ไข ส่วนและคำถาม พร้อมกำหนดตัวเลือก (dropdown, checkbox, radio) ได้เอง</p>
                 </div>
@@ -439,13 +443,10 @@
 
             let html = '';
             schema[formKey].sections.forEach((sec, idx) => {
-                html += `<div class="space-y-4 ${idx > 0 ? 'pt-6 border-t border-slate-200' : ''}">
+                html += `<div class="space-y-5 ${idx > 0 ? 'pt-6 border-t border-slate-200' : ''}">
                     <h3 class="text-lg font-semibold text-slate-800 flex items-center"><i data-feather="${sec.icon || 'chevron-right'}" class="w-5 h-5 mr-2 text-${accent}-500"></i> ${sec.title}</h3>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                        ${sec.fields.map(f => {
-                            const wide = (f.type === 'checkbox' || f.type === 'textarea' || f.type === 'radio');
-                            return `<div class="${wide ? 'sm:col-span-2' : ''}">${fieldHTML(f, accent)}</div>`;
-                        }).join('')}
+                    <div class="space-y-5">
+                        ${sec.fields.map(f => `<div>${fieldHTML(f, accent)}</div>`).join('')}
                     </div>
                 </div>`;
             });

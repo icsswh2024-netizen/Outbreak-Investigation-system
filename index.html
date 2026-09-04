@@ -263,6 +263,8 @@
                                 <th class="px-6 py-4 whitespace-nowrap font-semibold tracking-wider">ชื่อ-นามสกุล</th>
                                 <th class="px-6 py-4 whitespace-nowrap font-semibold tracking-wider">HN</th>
                                 <th class="px-6 py-4 whitespace-nowrap font-semibold tracking-wider">กลุ่ม/ตำแหน่ง</th>
+                                <th class="px-6 py-4 whitespace-nowrap font-semibold tracking-wider">ชม./เดือน</th>
+                                <th class="px-6 py-4 whitespace-nowrap font-semibold tracking-wider">ระดับความเสี่ยง</th>
                                 <th class="px-6 py-4 whitespace-nowrap font-semibold tracking-wider">สถานะ</th>
                                 <th class="px-6 py-4 whitespace-nowrap font-semibold tracking-wider text-right">รายละเอียด</th>
                             </tr>
@@ -1471,6 +1473,24 @@
         /* ============================================================
            6. ADMIN TABLE
            ============================================================ */
+        // สรุปชั่วโมง + ระดับความเสี่ยงของเรกคอร์ด (จากข้อ 6.4)
+        function computeRecordRisk(rec) {
+            const ans = rec.answers || {};
+            let pv = null;
+            Object.keys(ans).forEach(k => { if (isPatternObj(ans[k])) pv = ans[k]; });
+            const tb = getTbDef();
+            let hours = 0, maxDaily = 0, days = 0;
+            if (pv) {
+                (pv.patterns || []).forEach(p => {
+                    const h = durationHours(p.duration);
+                    const d = expandPattern(pv.rangeStart, pv.rangeEnd, p).length;
+                    hours += h * d; days += d; if (h > maxDaily) maxDaily = h;
+                });
+            }
+            const isClose = pv && (maxDaily >= (tb.hrPerDay || 8) || hours > (tb.hrPerMonth || 120));
+            return { hasData: !!pv, hours: Math.round(hours), days: days, isClose: isClose, risk: ageTbRisk(ans.age) };
+        }
+
         function renderAdminTable() {
             const tbody = document.getElementById('table-body');
             tbody.innerHTML = '';
@@ -1481,7 +1501,7 @@
             document.getElementById('stat-risk').textContent = records.filter(r => r.status === 'เฝ้าระวัง').length;
 
             if (records.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-8 text-center text-slate-500 text-lg">ไม่มีข้อมูลการบันทึก</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="8" class="px-6 py-8 text-center text-slate-500 text-lg">ไม่มีข้อมูลการบันทึก</td></tr>`;
                 return;
             }
 
@@ -1492,11 +1512,24 @@
                     ? `<span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-rose-100 text-rose-700 border border-rose-200"><i data-feather="alert-triangle" class="w-4 h-4 mr-1.5"></i> เฝ้าระวัง</span>`
                     : `<span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-emerald-100 text-emerald-700 border border-emerald-200"><i data-feather="check-circle" class="w-4 h-4 mr-1.5"></i> ปกติ</span>`;
 
+                const riskInfo = computeRecordRisk(record);
+                let riskDisplay;
+                if (!riskInfo.hasData) {
+                    riskDisplay = '<span class="text-slate-400 text-sm">-</span>';
+                } else {
+                    const badge = riskInfo.isClose
+                        ? '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-semibold bg-rose-100 text-rose-700">เสี่ยงสูง (Close Contact)</span>'
+                        : '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-semibold bg-amber-100 text-amber-700">เสี่ยงทั่วไป</span>';
+                    riskDisplay = badge + (riskInfo.risk ? `<div class="text-xs text-slate-500 mt-0.5">${riskInfo.risk.g}: ~${riskInfo.risk.r}</div>` : '');
+                }
+
                 tr.innerHTML = `
                     <td class="px-6 py-5 whitespace-nowrap text-slate-600">${record.date}</td>
                     <td class="px-6 py-5 font-medium text-slate-900 whitespace-nowrap">${record.name || '-'}</td>
                     <td class="px-6 py-5 whitespace-nowrap text-slate-500">${record.hn || '-'}</td>
                     <td class="px-6 py-5 whitespace-nowrap">${record.group || '-'}</td>
+                    <td class="px-6 py-5 whitespace-nowrap text-slate-700">${riskInfo.hasData ? riskInfo.hours + ' ชม.' : '-'}</td>
+                    <td class="px-6 py-5 whitespace-nowrap">${riskDisplay}</td>
                     <td class="px-6 py-5 whitespace-nowrap">${statusDisplay}</td>
                     <td class="px-6 py-5 whitespace-nowrap text-right">
                         <div class="inline-flex items-center gap-3">

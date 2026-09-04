@@ -365,8 +365,25 @@
             try {
                 const res = await fetch(API_URL + '?action=load&t=' + Date.now());
                 const data = await res.json();
-                if (data && data.schema) { schema = data.schema; try { localStorage.setItem(SCHEMA_KEY, JSON.stringify(schema)); } catch (e) {} }
-                if (data && Array.isArray(data.records)) { records = data.records; try { localStorage.setItem(STORAGE_KEY, JSON.stringify(records)); } catch (e) {} }
+
+                // แท็บ "การจัดการแบบสอบถาม": มีบนชีต -> ใช้; ยังว่าง -> เติม schema ปัจจุบันขึ้นไป
+                if (data && data.schema) {
+                    schema = data.schema;
+                    try { localStorage.setItem(SCHEMA_KEY, JSON.stringify(schema)); } catch (e) {}
+                } else {
+                    serverSaveSchema(schema); // เติมแท็บการจัดการแบบสอบถามอัตโนมัติ
+                }
+
+                // แท็บ "ข้อมูลแบบสอบถาม": มีบนชีต -> ใช้; ยังว่าง แต่มีข้อมูลในเครื่อง -> ส่งขึ้นเป็นตัวอย่าง
+                if (data && Array.isArray(data.records)) {
+                    if (data.records.length) {
+                        records = data.records;
+                        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(records)); } catch (e) {}
+                    } else if (records.length) {
+                        records.forEach(r => serverSubmit(r)); // เติมแท็บข้อมูลแบบสอบถามอัตโนมัติ
+                    }
+                }
+
                 renderForm('staff'); renderForm('patient');
                 if (!document.getElementById('view-admin').classList.contains('hidden')) renderAdminTable();
             } catch (e) { /* ออฟไลน์: ใช้ข้อมูลใน localStorage ต่อไป */ }

@@ -621,28 +621,40 @@
             };
         }
         function readContactPattern(cont) {
+            const patterns = Array.from(cont.querySelectorAll('.contactpat-pattern')).map(readPatternBlock);
+            // รวมการแก้กิจกรรมรายวันในตาราง (เก็บใน cont.__ov) เข้าเป็นข้อยกเว้น
+            const ov = cont.__ov || {};
+            Object.keys(ov).forEach(pi => {
+                const p = patterns[pi]; if (!p) return;
+                Object.keys(ov[pi]).forEach(date => {
+                    let exc = (p.exceptions || []).find(e => e.date === date);
+                    if (!exc) { exc = { date: date, noContact: false, mask: '', duration: '', activities: ov[pi][date] }; (p.exceptions = p.exceptions || []).push(exc); }
+                    else exc.activities = ov[pi][date];
+                });
+            });
             return {
                 rangeStart: cont.querySelector('[data-role="rangeStart"]').dataset.value || '',
                 rangeEnd: cont.querySelector('[data-role="rangeEnd"]').dataset.value || '',
-                patterns: Array.from(cont.querySelectorAll('.contactpat-pattern')).map(readPatternBlock)
+                patterns: patterns
             };
         }
         // แตกรูปแบบทั้งหมดเป็นแถวรายวัน (สำหรับตารางพรีวิว/สรุป)
         function expandToRows(value) {
             const rows = [];
-            (value.patterns || []).forEach(p => {
+            (value.patterns || []).forEach((p, pi) => {
                 const excMap = {};
                 (p.exceptions || []).forEach(e => { if (e.date) excMap[e.date] = e; });
                 expandPattern(value.rangeStart, value.rangeEnd, p).forEach(d => {
                     const ex = excMap[d];
+                    const actArr = (ex && ex.activities && ex.activities.length) ? ex.activities : (p.activities || []);
                     rows.push({
-                        date: d,
-                        activities: (p.activities || []).join(', ') || '-',
+                        pi: pi, date: d, actArr: actArr,
+                        activities: actArr.join(', ') || '-',
                         location: p.location || '-',
                         mask: (ex && ex.mask) ? ex.mask : (p.mask || '-'),
                         duration: (ex && ex.duration) ? ex.duration : (p.duration || '-'),
                         room: p.room || '-',
-                        note: ex ? 'ต่างจากปกติ' : ''
+                        note: (ex && ((ex.activities && ex.activities.length) || ex.mask || ex.duration)) ? 'ต่างจากปกติ' : ''
                     });
                 });
             });
@@ -677,15 +689,23 @@
             const value = readContactPattern(cont);
             const rows = expandToRows(value);
             if (!rows.length) { box.innerHTML = '<p class="text-sm text-slate-400 mt-2">— ยังไม่มีข้อมูลพอจะสรุป (เลือกช่วงวันและความถี่) —</p>'; return; }
-            const body = rows.map(r => `<tr class="border-b border-slate-100">
-                <td class="px-3 py-1.5 whitespace-nowrap">${fmtThaiDate(r.date)}</td>
-                <td class="px-3 py-1.5">${r.activities}</td>
-                <td class="px-3 py-1.5">${r.location}</td>
-                <td class="px-3 py-1.5">${r.mask}</td>
-                <td class="px-3 py-1.5 whitespace-nowrap">${r.duration}</td>
-                <td class="px-3 py-1.5">${r.room}</td>
-                <td class="px-3 py-1.5 ${r.note ? 'text-amber-600 font-medium' : 'text-slate-400'}">${r.note || '-'}</td>
-            </tr>`).join('');
+            const field = findFieldById(cont.dataset.field);
+            const actOpts = contactOptsFor(field).activities;
+            const editMode = cont.dataset.edit === '1';
+            const body = rows.map(r => {
+                const actCell = editMode
+                    ? `<div class="flex flex-wrap gap-1">${actOpts.map(o => `<label class="inline-flex items-center gap-1 text-xs bg-slate-100 rounded px-1.5 py-0.5 cursor-pointer"><input type="checkbox" class="pat-day-act w-3.5 h-3.5 text-teal-600" data-pi="${r.pi}" data-date="${r.date}" value="${escAttr(o)}" ${r.actArr.includes(o) ? 'checked' : ''}>${o}</label>`).join('')}</div>`
+                    : r.activities;
+                return `<tr class="border-b border-slate-100">
+                <td class="px-3 py-1.5 whitespace-nowrap align-top">${fmtThaiDate(r.date)}</td>
+                <td class="px-3 py-1.5 align-top">${actCell}</td>
+                <td class="px-3 py-1.5 align-top">${r.location}</td>
+                <td class="px-3 py-1.5 align-top">${r.mask}</td>
+                <td class="px-3 py-1.5 whitespace-nowrap align-top">${r.duration}</td>
+                <td class="px-3 py-1.5 align-top">${r.room}</td>
+                <td class="px-3 py-1.5 align-top ${r.note ? 'text-amber-600 font-medium' : 'text-slate-400'}">${r.note || '-'}</td>
+            </tr>`;
+            }).join('');
             // ===== สรุปประมาณการความเสี่ยง (Closed Contact TB) =====
             let totalHours = 0, maxDaily = 0;
             (value.patterns || []).forEach(p => {
@@ -716,7 +736,10 @@
             </div>`;
 
             box.innerHTML = `<div class="mt-3 rounded-xl border border-teal-200 bg-white overflow-hidden">
-                <div class="px-3 py-2 bg-teal-50 text-teal-700 font-semibold text-sm flex items-center"><i data-feather="check-circle" class="w-4 h-4 mr-1.5"></i> ตัวอย่างข้อมูลรายวัน (ระบบสร้างให้อัตโนมัติ) — รวม ${rows.length} วัน</div>
+                <div class="px-3 py-2 bg-teal-50 text-teal-700 font-semibold text-sm flex items-center justify-between">
+                    <span class="flex items-center"><i data-feather="check-circle" class="w-4 h-4 mr-1.5"></i> ตัวอย่างข้อมูลรายวัน — รวม ${rows.length} วัน</span>
+                    <label class="flex items-center gap-1 text-xs font-normal text-slate-600 cursor-pointer"><input type="checkbox" class="pat-edit-toggle w-4 h-4 text-teal-600" ${editMode ? 'checked' : ''}> ✎ แก้กิจกรรมรายวัน</label>
+                </div>
                 <div class="overflow-x-auto max-h-72 overflow-y-auto">
                     <table class="w-full text-sm text-left">
                         <thead class="text-xs text-slate-500 bg-slate-50 sticky top-0"><tr>
@@ -1163,7 +1186,19 @@
                     if (v.rangeEnd) { re.dataset.value = v.rangeEnd; re.value = fmtThaiDate(v.rangeEnd); }
                     const opts = Object.assign({}, contactOptsFor(f), { location: (f.contactOptions && f.contactOptions.location && f.contactOptions.location.length) ? f.contactOptions.location : CONTACT_LOCATION });
                     const arr = (v.patterns && v.patterns.length) ? v.patterns : [null];
-                    cont.querySelector('.contactpat-rows').innerHTML = arr.map((p, i) => patternBlockHTML(p, opts, contactLabelsFor(f), i)).join('');
+                    // แยกข้อยกเว้นชนิด "แก้กิจกรรมรายวัน" ไปเก็บใน __ov (ไม่โชว์เป็นข้อยกเว้นในบล็อก)
+                    cont.__ov = {};
+                    const filtered = arr.map((p, i) => {
+                        if (!p) return p;
+                        const manual = [];
+                        (p.exceptions || []).forEach(e => {
+                            if (e && e.activities && e.activities.length && !e.noContact && !e.mask && !e.duration) {
+                                cont.__ov[i] = cont.__ov[i] || {}; cont.__ov[i][e.date] = e.activities;
+                            } else manual.push(e);
+                        });
+                        return Object.assign({}, p, { exceptions: manual });
+                    });
+                    cont.querySelector('.contactpat-rows').innerHTML = filtered.map((p, i) => patternBlockHTML(p, opts, contactLabelsFor(f), i)).join('');
                 } else if (f.type === 'contactlog') {
                     const cont = form.querySelector(`.contactlog[data-field="${f.id}"]`);
                     if (!cont) return;
@@ -1232,6 +1267,21 @@
         function bindContactLog(form) {
             // toggle วันในสัปดาห์ / วันที่เอง ตามความถี่ + อัปเดตพรีวิว
             form.addEventListener('change', e => {
+                // เปิด/ปิดโหมดแก้ตาราง
+                if (e.target.classList.contains('pat-edit-toggle')) {
+                    const cont = e.target.closest('.contactpattern');
+                    cont.dataset.edit = e.target.checked ? '1' : '';
+                    renderPatternPreview(cont);
+                    return;
+                }
+                // แก้กิจกรรมรายวันในตาราง → เก็บเป็น override (ไม่ re-render กันกระพริบ)
+                if (e.target.classList.contains('pat-day-act')) {
+                    const cont = e.target.closest('.contactpattern');
+                    const pi = e.target.dataset.pi, date = e.target.dataset.date;
+                    const acts = Array.from(cont.querySelectorAll(`.pat-day-act[data-pi="${pi}"][data-date="${date}"]:checked`)).map(c => c.value);
+                    cont.__ov = cont.__ov || {}; cont.__ov[pi] = cont.__ov[pi] || {}; cont.__ov[pi][date] = acts;
+                    return;
+                }
                 const fr = e.target.closest('[data-role="freq"]');
                 if (fr && fr.checked) {
                     const block = fr.closest('.contactpat-pattern');

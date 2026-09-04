@@ -257,6 +257,9 @@
                     <p class="text-slate-600 mt-1 text-lg">เพิ่ม / ลบ / แก้ไข ส่วนและคำถาม พร้อมกำหนดตัวเลือก (dropdown, checkbox, radio) ได้เอง</p>
                 </div>
                 <div class="flex items-center space-x-3">
+                    <button id="btn-builder-setdefault" class="bg-white border border-teal-300 text-teal-700 px-4 py-2.5 rounded-lg text-base font-medium hover:bg-teal-50 flex items-center transition-all shadow-sm">
+                        <i data-feather="bookmark" class="w-4 h-4 mr-2"></i> ตั้งเป็นค่าเริ่มต้น
+                    </button>
                     <button id="btn-builder-reset" class="bg-white border border-slate-300 text-slate-600 px-4 py-2.5 rounded-lg text-base font-medium hover:bg-slate-50 flex items-center transition-all shadow-sm">
                         <i data-feather="rotate-ccw" class="w-4 h-4 mr-2"></i> คืนค่าเริ่มต้น
                     </button>
@@ -410,11 +413,16 @@
                     records.forEach(r => serverSubmit(r));
                 }
             }
-            // การตั้งค่าเมนูจากระบบกลาง (ค่าล่าสุดที่บันทึกไว้ ใช้กับทุกเครื่อง)
-            if (data && data.settings && Array.isArray(data.settings.navHidden)) {
-                try { localStorage.setItem(NAV_HIDE_KEY, JSON.stringify(data.settings.navHidden)); } catch (e) {}
-                if (typeof applyNavVisibility === 'function') applyNavVisibility();
-                if (typeof renderNavToggles === 'function' && !document.getElementById('view-admin').classList.contains('hidden')) renderNavToggles();
+            // การตั้งค่าจากระบบกลาง (ค่าล่าสุดที่บันทึกไว้ ใช้กับทุกเครื่อง)
+            if (data && data.settings) {
+                if (Array.isArray(data.settings.navHidden)) {
+                    try { localStorage.setItem(NAV_HIDE_KEY, JSON.stringify(data.settings.navHidden)); } catch (e) {}
+                    if (typeof applyNavVisibility === 'function') applyNavVisibility();
+                    if (typeof renderNavToggles === 'function' && !document.getElementById('view-admin').classList.contains('hidden')) renderNavToggles();
+                }
+                if (data.settings.defaultSchema) {
+                    try { localStorage.setItem('oi-default-schema', JSON.stringify(data.settings.defaultSchema)); } catch (e) {}
+                }
             }
             renderForm('staff'); renderForm('patient');
             if (!document.getElementById('view-admin').classList.contains('hidden')) renderAdminTable();
@@ -1899,12 +1907,37 @@
             });
         });
 
-        // Reset to default
+        // ค่าเริ่มต้นแบบกำหนดเอง (แอดมินตั้งไว้) — ถ้าไม่มีใช้ค่ามาตรฐานในโค้ด
+        const DEFAULT_SCHEMA_KEY = 'oi-default-schema';
+        function getCustomDefaultSchema() {
+            try { const d = localStorage.getItem(DEFAULT_SCHEMA_KEY); if (d) return JSON.parse(d); } catch (e) {}
+            return defaultSchema();
+        }
+        function currentSettings() {
+            const s = { navHidden: getHiddenNav() };
+            try { const d = localStorage.getItem(DEFAULT_SCHEMA_KEY); if (d) s.defaultSchema = JSON.parse(d); } catch (e) {}
+            return s;
+        }
+
+        // ตั้งแบบสอบถามปัจจุบันเป็นค่าเริ่มต้น
+        document.getElementById('btn-builder-setdefault').addEventListener('click', () => {
+            openConfirm({
+                title: 'ตั้งเป็นค่าเริ่มต้น', confirmText: 'ตั้งค่า',
+                message: 'ใช้แบบสอบถามที่กำลังแก้ไขอยู่นี้เป็น "ค่าเริ่มต้น" ใช่หรือไม่? (ปุ่มคืนค่าเริ่มต้นจะกลับมาที่ชุดนี้)',
+                onConfirm: () => {
+                    try { localStorage.setItem(DEFAULT_SCHEMA_KEY, JSON.stringify(draft)); } catch (e) {}
+                    serverSaveSettings(currentSettings()); // เก็บบนระบบกลาง ใช้ทุกเครื่อง
+                    showModal('ตั้งค่าเริ่มต้นสำเร็จ!', 'บันทึกเป็นค่าเริ่มต้นแล้ว' + (USE_SERVER ? ' (ทุกเครื่อง)' : ''), false);
+                }
+            });
+        });
+
+        // Reset to default (ค่าเริ่มต้นที่แอดมินตั้งไว้ ถ้าไม่มีใช้ค่ามาตรฐาน)
         document.getElementById('btn-builder-reset').addEventListener('click', () => {
             openConfirm({
                 title: 'ยืนยันการคืนค่าเริ่มต้น', danger: true, confirmText: 'คืนค่า',
                 message: 'คืนค่าแบบสอบถามกลับเป็นค่าเริ่มต้น? การแก้ไขที่ยังไม่บันทึกจะหายไป',
-                onConfirm: () => { draft = defaultSchema(); renderBuilder(); showModal('คืนค่าสำเร็จ!', 'กลับเป็นแบบสอบถามเริ่มต้นแล้ว (กดบันทึกแบบสอบถามเพื่อยืนยัน)'); }
+                onConfirm: () => { draft = getCustomDefaultSchema(); renderBuilder(); showModal('คืนค่าสำเร็จ!', 'กลับเป็นแบบสอบถามค่าเริ่มต้นแล้ว (กดบันทึกแบบสอบถามเพื่อยืนยัน)'); }
             });
         });
 
@@ -1965,7 +1998,7 @@
             document.querySelectorAll('#nav-toggle-list .nav-toggle').forEach(cb => { if (!cb.checked) hid.push(cb.getAttribute('data-target')); });
             try { localStorage.setItem(NAV_HIDE_KEY, JSON.stringify(hid)); } catch (e) {}
             applyNavVisibility();
-            serverSaveSettings({ navHidden: hid }); // เก็บบนระบบกลาง ใช้กับทุกเครื่อง
+            serverSaveSettings(currentSettings()); // เก็บบนระบบกลาง ใช้กับทุกเครื่อง (รวมค่าเริ่มต้น)
             const hint = document.getElementById('nav-save-hint');
             if (hint) hint.hidden = true;
             showModal('บันทึกสำเร็จ!', 'บันทึกการตั้งค่าเมนูแล้ว ระบบจะจำค่านี้ไว้' + (USE_SERVER ? ' (ทุกเครื่อง)' : ''), false);

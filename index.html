@@ -757,7 +757,15 @@
                 if (!f.required) return;
                 if (f.fixed !== undefined && f.fixed !== '') return; // มีค่าตายตัวแล้ว
                 let empty = false;
-                if (f.type === 'checkbox') {
+                if (f.type === 'contactlog') {
+                    const cont = form.querySelector(`.contactlog[data-field="${f.id}"]`);
+                    empty = !cont || !Array.from(cont.querySelectorAll('.contactlog-row')).some(row =>
+                        (row.querySelector('[data-role="date"]').dataset.value || '') ||
+                        row.querySelector('[data-role="n95"]').value ||
+                        row.querySelector('[data-role="duration"]').value ||
+                        row.querySelector('[data-role="room"]').value ||
+                        row.querySelector('[data-role="activity"]:checked'));
+                } else if (f.type === 'checkbox') {
                     empty = form.querySelectorAll(`input[name="${f.id}"]:checked`).length === 0;
                 } else if (f.type === 'radio') {
                     empty = !form.querySelector(`input[name="${f.id}"]:checked`);

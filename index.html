@@ -617,8 +617,6 @@
                 duration: bl.querySelector('[data-role="duration"]').value,
                 room: bl.querySelector('[data-role="room"]').value,
                 location: bl.querySelector('[data-role="location"]').value,
-                timeStart: bl.querySelector('[data-role="timeStart"]').value,
-                timeEnd: bl.querySelector('[data-role="timeEnd"]').value,
                 exceptions: Array.from(bl.querySelectorAll('.pat-exc')).map(ex => ({
                     date: ex.querySelector('[data-role="excdate"]').dataset.value || '',
                     noContact: ex.querySelector('[data-role="excnocontact"]').checked,
@@ -768,7 +766,6 @@
                 let s = `รูปแบบที่ ${i + 1}: ${FREQ_LABEL[p.freq] || p.freq || '-'}`;
                 if (p.freq === 'weekly') s += ' (' + (p.weekdays || []).map(w => (WEEKDAYS.find(x => x.v === w) || {}).l).join(',') + ')';
                 s += ` — ${days.length} วัน`;
-                if (p.timeStart || p.timeEnd) s += ` เวลา ${p.timeStart || ''}-${p.timeEnd || ''}`;
                 s += ` | กิจกรรม: ${(p.activities || []).join(', ') || '-'}`;
                 s += ` | หน้ากาก: ${p.mask || '-'} | ระยะเวลา: ${p.duration || '-'} | ห้อง: ${p.room || '-'} | สถานที่: ${p.location || '-'}`;
                 const exc = (p.exceptions || []).filter(e => e.date);
@@ -800,6 +797,10 @@
             duration: '6.12 ระยะเวลาโดยรวมในการสัมผัส/อยู่ใกล้ชิด',
             room: '6.13 ขนาดของห้อง/บริเวณพื้นที่ที่สัมผัส'
         };
+        function freqLabelsFor(field) {
+            const arr = (field && field.contactOptions && Array.isArray(field.contactOptions.freq)) ? field.contactOptions.freq : [];
+            return { daily: arr[0] || FREQ_LABEL.daily, workdays: arr[1] || FREQ_LABEL.workdays, weekly: arr[2] || FREQ_LABEL.weekly, custom: arr[3] || FREQ_LABEL.custom };
+        }
         function contactLabelsFor(field) {
             const c = (field && field.contactLabels) ? field.contactLabels : {};
             return {
@@ -877,6 +878,7 @@
             labels = labels || CONTACT_LABELS_DEFAULT;
             const uid = 'freq' + Date.now() + Math.floor(Math.random() * 1e4);
             const freq = data.freq || 'workdays';
+            const freqLbl = opts.freq || FREQ_LABEL;
             const selOf = (role, arr, cur, label) => `<div class="space-y-1"><label class="text-sm font-medium text-slate-600">${label}</label>
                 <select data-role="${role}" class="field-input appearance-none cursor-pointer"><option value="">— เลือก —</option>${arr.map(o => `<option value="${escAttr(o)}" ${cur === o ? 'selected' : ''}>${o}</option>`).join('')}</select></div>`;
             return `<div class="contactpat-pattern border border-teal-200 rounded-xl p-4 bg-teal-50/40 space-y-3">
@@ -888,7 +890,7 @@
                 <div class="space-y-1">
                     <label class="text-sm font-medium text-slate-600">ความถี่ของการสัมผัส</label>
                     <div class="flex flex-wrap gap-x-5 gap-y-1">
-                        ${Object.keys(FREQ_LABEL).map(fk => `<label class="flex items-center space-x-2 cursor-pointer p-1"><input type="radio" name="${uid}" data-role="freq" value="${fk}" ${freq === fk ? 'checked' : ''} class="w-4 h-4 text-teal-600"><span class="text-base text-slate-700">${FREQ_LABEL[fk]}</span></label>`).join('')}
+                        ${Object.keys(FREQ_LABEL).map(fk => `<label class="flex items-center space-x-2 cursor-pointer p-1"><input type="radio" name="${uid}" data-role="freq" value="${fk}" ${freq === fk ? 'checked' : ''} class="w-4 h-4 text-teal-600"><span class="text-base text-slate-700">${freqLbl[fk]}</span></label>`).join('')}
                     </div>
                 </div>
                 <div class="pat-weekdays ${freq === 'weekly' ? '' : 'hidden'}">
@@ -921,10 +923,6 @@
                     ${selOf('room', opts.room, data.room, labels.room)}
                     ${selOf('location', opts.location || CONTACT_LOCATION, data.location, 'สถานที่')}
                 </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <div class="space-y-1"><label class="text-sm font-medium text-slate-600">ช่วงเวลา (เริ่ม)</label><input type="time" data-role="timeStart" value="${escAttr(data.timeStart || '')}" class="field-input"></div>
-                    <div class="space-y-1"><label class="text-sm font-medium text-slate-600">ช่วงเวลา (ถึง)</label><input type="time" data-role="timeEnd" value="${escAttr(data.timeEnd || '')}" class="field-input"></div>
-                </div>
 
                 <div class="pat-exceptions space-y-2">
                     ${(data.exceptions || []).map(ev => patExceptionHTML(ev)).join('')}
@@ -933,7 +931,7 @@
             </div>`;
         }
         function contactPatternHTML(field) {
-            const opts = Object.assign({}, contactOptsFor(field), { location: (field.contactOptions && field.contactOptions.location && field.contactOptions.location.length) ? field.contactOptions.location : CONTACT_LOCATION });
+            const opts = Object.assign({}, contactOptsFor(field), { location: (field.contactOptions && field.contactOptions.location && field.contactOptions.location.length) ? field.contactOptions.location : CONTACT_LOCATION, freq: freqLabelsFor(field) });
             const labels = contactLabelsFor(field);
             return `<div class="contactpattern space-y-3" data-field="${field.id}">
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1196,7 +1194,7 @@
                     const rs = cont.querySelector('[data-role="rangeStart"]'), re = cont.querySelector('[data-role="rangeEnd"]');
                     if (v.rangeStart) { rs.dataset.value = v.rangeStart; rs.value = fmtThaiDate(v.rangeStart); }
                     if (v.rangeEnd) { re.dataset.value = v.rangeEnd; re.value = fmtThaiDate(v.rangeEnd); }
-                    const opts = Object.assign({}, contactOptsFor(f), { location: (f.contactOptions && f.contactOptions.location && f.contactOptions.location.length) ? f.contactOptions.location : CONTACT_LOCATION });
+                    const opts = Object.assign({}, contactOptsFor(f), { location: (f.contactOptions && f.contactOptions.location && f.contactOptions.location.length) ? f.contactOptions.location : CONTACT_LOCATION, freq: freqLabelsFor(f) });
                     const arr = (v.patterns && v.patterns.length) ? v.patterns : [null];
                     // แยกข้อยกเว้นชนิด "แก้กิจกรรมรายวัน" ไปเก็บใน __ov (ไม่โชว์เป็นข้อยกเว้นในบล็อก)
                     cont.__ov = {};
@@ -1312,7 +1310,7 @@
                     const cont = patAdd.closest('.contactpattern');
                     const rows = cont.querySelector('.contactpat-rows');
                     const cf = findFieldById(cont.dataset.field);
-                    const opts = Object.assign({}, contactOptsFor(cf), { location: (cf.contactOptions && cf.contactOptions.location && cf.contactOptions.location.length) ? cf.contactOptions.location : CONTACT_LOCATION });
+                    const opts = Object.assign({}, contactOptsFor(cf), { location: (cf.contactOptions && cf.contactOptions.location && cf.contactOptions.location.length) ? cf.contactOptions.location : CONTACT_LOCATION, freq: freqLabelsFor(cf) });
                     rows.insertAdjacentHTML('beforeend', patternBlockHTML(null, opts, contactLabelsFor(cf), rows.querySelectorAll('.contactpat-pattern').length));
                     feather.replace(); refreshPatternPreviews(form);
                     return;
@@ -1780,6 +1778,10 @@
                 ? `<div class="space-y-1"><label class="text-xs text-slate-400">สถานที่ — ตัวเลือก (บรรทัดละ 1)</label>
                     <textarea data-act="contact-location" data-si="${si}" data-fi="${fi}" rows="3" class="w-full text-base rounded-lg border border-teal-300 bg-teal-50/50 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-400" placeholder="พิมพ์ตัวเลือกทีละบรรทัด">${((co.location && co.location.length) ? co.location : CONTACT_LOCATION).join('\n')}</textarea></div>`
                 : '';
+            const freqBox = f.type === 'contactpattern'
+                ? `<div class="space-y-1 sm:col-span-2"><label class="text-xs text-slate-400">ความถี่ของการสัมผัส — ข้อความ 4 บรรทัด ตามลำดับ (ทุกวัน / วันทำงาน / เลือกวันในสัปดาห์ / เลือกวันที่เอง)</label>
+                    <textarea data-act="contact-freq" data-si="${si}" data-fi="${fi}" rows="4" class="w-full text-base rounded-lg border border-teal-300 bg-teal-50/50 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-400">${((co.freq && co.freq.length) ? co.freq : [FREQ_LABEL.daily, FREQ_LABEL.workdays, FREQ_LABEL.weekly, FREQ_LABEL.custom]).join('\n')}</textarea></div>`
+                : '';
             const contactBlock = isContactType
                 ? `<div class="mt-3 rounded-xl border border-teal-200 bg-white p-3 space-y-3">
                         <div class="text-sm font-semibold text-teal-700 flex items-center"><i data-feather="sliders" class="w-4 h-4 mr-1"></i> จัดการหัวข้อและตัวเลือกย่อยในข้อนี้</div>
@@ -1789,6 +1791,7 @@
                             ${subBox('duration', (co.duration && co.duration.length) ? co.duration : CONTACT_DURATION, CONTACT_LABELS_DEFAULT.duration)}
                             ${subBox('room', (co.room && co.room.length) ? co.room : CONTACT_ROOM, CONTACT_LABELS_DEFAULT.room)}
                             ${locBox}
+                            ${freqBox}
                         </div>
                    </div>`
                 : '';

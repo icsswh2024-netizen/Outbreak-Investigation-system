@@ -295,65 +295,65 @@
             return {
                 staff: {
                     sections: [
-                        { id: 's1', title: 'ข้อมูลส่วนบุคคล', icon: 'user', fields: [
-                            { id: 'name', label: 'ชื่อ-สกุล', type: 'text', required: true },
-                            { id: 'phone', label: 'เบอร์โทรศัพท์', type: 'tel' },
-                            { id: 'hn', label: 'HN (รพ.ศรีสังวร)', type: 'text' },
-                            { id: 'age', label: 'อายุ (ปี)', type: 'number' },
-                            { id: 'gender', label: 'เพศ', type: 'select', options: ['หญิง', 'ชาย', 'อื่นๆ'] },
-                            { id: 'nationality', label: 'สัญชาติ', type: 'text' },
-                            { id: 'occupation', label: 'อาชีพ', type: 'text' }
+                        { id: 's1', title: 'ส่วนที่ 1: ข้อมูลส่วนบุคคล', icon: 'user', fields: [
+                            { id: 'name', label: '1.1 ชื่อ-สกุล', type: 'text', required: true },
+                            { id: 'phone', label: '1.2 เบอร์โทรศัพท์', type: 'tel' },
+                            { id: 'hn', label: '1.3 HN (รพ.ศรีสังวร)', type: 'text' },
+                            { id: 'age', label: '1.4 อายุ (ปี)', type: 'number' },
+                            { id: 'gender', label: '1.5 เพศ', type: 'select', options: ['หญิง', 'ชาย', 'อื่นๆ'] },
+                            { id: 'nationality', label: '1.6 สัญชาติ', type: 'text' },
+                            { id: 'occupation', label: '1.7 อาชีพ', type: 'text' }
                         ]},
-                        { id: 's2', title: 'ที่อยู่ปัจจุบัน', icon: 'map-pin', fields: [
-                            { id: 'addrNo', label: 'บ้านเลขที่', type: 'text' },
-                            { id: 'addrMoo', label: 'หมู่', type: 'text' },
-                            { id: 'addrTambon', label: 'ตำบล', type: 'text' },
-                            { id: 'addrAmphoe', label: 'อำเภอ', type: 'text' },
-                            { id: 'addrProvince', label: 'จังหวัด', type: 'text' }
+                        { id: 's2', title: 'ส่วนที่ 2: ที่อยู่ปัจจุบัน', icon: 'map-pin', fields: [
+                            { id: 'addrNo', label: '2.1 บ้านเลขที่', type: 'text' },
+                            { id: 'addrMoo', label: '2.2 หมู่', type: 'text' },
+                            { id: 'addrTambon', label: '2.3 ตำบล', type: 'text' },
+                            { id: 'addrAmphoe', label: '2.4 อำเภอ', type: 'text' },
+                            { id: 'addrProvince', label: '2.5 จังหวัด', type: 'text' }
                         ]},
-                        { id: 's3', title: 'ข้อมูลการปฏิบัติงาน', icon: 'briefcase', fields: [
-                            { id: 'unit', label: 'หน่วยงาน / หอผู้ป่วยที่ปฏิบัติงาน', type: 'text' },
-                            { id: 'role', label: 'ตำแหน่งการพยาบาล', type: 'select', required: true, options: ['พยาบาลวิชาชีพ', 'พนักงานช่วยเหลือคนไข้', 'แพทย์', 'นักกายภาพบำบัด', 'พนักงานทำความสะอาด', 'อื่นๆ'] }
+                        { id: 's3', title: 'ส่วนที่ 3: ข้อมูลการปฏิบัติงาน', icon: 'briefcase', fields: [
+                            { id: 'unit', label: '3.1 หน่วยงาน / หอผู้ป่วยที่ปฏิบัติงาน', type: 'text' },
+                            { id: 'role', label: '3.2 ตำแหน่งการพยาบาล', type: 'select', required: true, options: ['พยาบาลวิชาชีพ', 'พนักงานช่วยเหลือคนไข้', 'แพทย์', 'นักกายภาพบำบัด', 'พนักงานทำความสะอาด', 'อื่นๆ'] }
                         ]},
-                        { id: 's4', title: 'การคัดกรองอาการวัณโรค', icon: 'activity', fields: [
-                            { id: 'currentTb', label: 'คุณป่วยเป็นวัณโรคในขณะนี้หรือไม่', type: 'radio', risk: true, options: ['ไม่เป็น', 'เป็น', 'ไม่แน่ใจ'] },
-                            { id: 'symptoms', label: 'คุณมีอาการเหล่านี้หรือไม่', type: 'checkbox', risk: true, options: ['ไข้', 'ไอ', 'เจ็บหน้าอก', 'ไอมีเสมหะปนเลือด', 'อ่อนเพลีย', 'เหงื่อออกกลางคืน'] },
-                            { id: 'symptomOther', label: 'อาการอื่นๆ (ระบุ)', type: 'text' },
-                            { id: 'disease', label: 'โรคประจำตัว', type: 'text' },
-                            { id: 'medicine', label: 'ยาประจำตัว', type: 'text' }
+                        { id: 's4', title: 'ส่วนที่ 4: การคัดกรองอาการและสุขภาพ', icon: 'activity', fields: [
+                            { id: 'currentTb', label: '4.1 คุณป่วยเป็นวัณโรคในขณะนี้หรือไม่', type: 'radio', risk: true, options: ['ไม่เป็น', 'เป็น', 'ไม่แน่ใจ'] },
+                            { id: 'symptoms', label: '4.2 คุณมีอาการเหล่านี้หรือไม่ (เลือกได้มากกว่า 1 ข้อ)', type: 'checkbox', risk: true, options: ['ไข้', 'ไอ', 'เจ็บหน้าอก', 'ไอมีเสมหะปนเลือด', 'อ่อนเพลีย', 'เหงื่อออกกลางคืน'] },
+                            { id: 'symptomOther', label: '4.3 อาการอื่นๆ (ระบุ)', type: 'text' },
+                            { id: 'disease', label: '4.4 โรคประจำตัว', type: 'text' },
+                            { id: 'medicine', label: '4.5 ยาประจำตัว', type: 'text' }
                         ]},
-                        { id: 's5', title: 'ประวัติวัณโรคและวัคซีน BCG', icon: 'clipboard', fields: [
-                            { id: 'oldTb', label: 'ประวัติการเป็นวัณโรคปอดในอดีต (Old Pulmonary TB)', type: 'radio', options: ['ไม่เคย', 'เคย'] },
-                            { id: 'oldTbStart', label: 'กรณีเคยเป็น: รักษาเมื่อวันที่', type: 'date' },
-                            { id: 'oldTbEnd', label: 'สิ้นสุดการรักษาเมื่อวันที่', type: 'date' },
-                            { id: 'bcg', label: 'ประวัติการรับวัคซีนวัณโรค (BCG Vaccine)', type: 'radio', options: ['เคยรับ', 'ไม่เคยรับ', 'ไม่ทราบ'] },
-                            { id: 'bcgDate', label: 'วันที่รับวัคซีน (ถ้าทราบ)', type: 'date' },
-                            { id: 'bcgScar', label: 'แผลเป็น BCG scar', type: 'select', options: ['มี', 'ไม่มี', 'ไม่แน่ใจ'] },
-                            { id: 'bcgScarPos', label: 'ตำแหน่งแผลเป็น BCG', type: 'text' }
+                        { id: 's5', title: 'ส่วนที่ 5: ประวัติวัณโรคและวัคซีน BCG', icon: 'clipboard', fields: [
+                            { id: 'oldTb', label: '5.1 ประวัติการเป็นวัณโรคปอดในอดีต (Old Pulmonary TB)', type: 'radio', options: ['ไม่เคย', 'เคย'] },
+                            { id: 'oldTbStart', label: '5.2 กรณีเคยเป็นวัณโรคปอด: รักษาเมื่อวันที่', type: 'date' },
+                            { id: 'oldTbEnd', label: '5.3 กรณีเคยเป็นวัณโรคปอด: สิ้นสุดการรักษาเมื่อวันที่', type: 'date' },
+                            { id: 'bcg', label: '5.4 ประวัติการรับวัคซีนวัณโรค (BCG Vaccine)', type: 'radio', options: ['เคยรับ', 'ไม่เคยรับ', 'ไม่ทราบ'] },
+                            { id: 'bcgDate', label: '5.5 วันที่รับวัคซีน (ถ้าทราบ)', type: 'date' },
+                            { id: 'bcgScar', label: '5.6 แผลเป็น BCG scar', type: 'select', options: ['มี', 'ไม่มี', 'ไม่แน่ใจ'] },
+                            { id: 'bcgScarPos', label: '5.7 ตำแหน่งแผลเป็น BCG', type: 'text' }
                         ]},
-                        { id: 's6', title: 'ข้อมูลการสัมผัสผู้ป่วยวัณโรคระยะแพร่เชื้อ', icon: 'users', fields: [
-                            { id: 'srcName', label: 'ชื่อผู้ป่วยที่สัมผัส', type: 'text' },
-                            { id: 'srcHn', label: 'HN ผู้ป่วย', type: 'text' },
-                            { id: 'srcWard', label: 'หอผู้ป่วย', type: 'text' },
-                            { id: 'activities', label: 'กิจกรรมที่ท่านได้ทำกับผู้ป่วย', type: 'checkbox', options: ['พูดคุย/ซักประวัติ', 'ตรวจร่างกาย', 'ให้การพยาบาล', 'ดูดเสมหะ/หัตถการทางเดินหายใจ', 'ทำแผล/เจาะเลือด', 'เคลื่อนย้ายผู้ป่วย'] },
-                            { id: 'contactDates', label: 'วันที่สัมผัส (ของกิจกรรมข้างต้น)', type: 'text' },
-                            { id: 'n95', label: '5.1 การใส่หน้ากาก N95 ขณะสัมผัส', type: 'select', options: ['ใส่ตลอดเวลา', 'ใส่บางครั้ง', 'ไม่ได้ใส่'] },
-                            { id: 'duration', label: '5.2 ระยะเวลารวมในการสัมผัส/อยู่ใกล้ชิด', type: 'select', options: ['น้อยกว่า 15 นาที', '15 นาที - 1 ชั่วโมง', '1 - 8 ชั่วโมง', 'มากกว่า 8 ชั่วโมง'] },
-                            { id: 'room', label: '5.3 ขนาดของห้อง/พื้นที่ที่สัมผัส', type: 'select', options: ['ห้องแยก/ห้องความดันลบ', 'ห้องเดี่ยว ระบายอากาศดี', 'ห้องรวม ระบายอากาศดี', 'ห้องรวม ระบายอากาศไม่ดี/แออัด'] },
-                            { id: 'priorContact', label: '6.1 ในระยะ 1-3 เดือนก่อน เคยสัมผัสผู้ป่วยวัณโรคปอด (ครอบครัว/ที่ทำงาน/หมู่บ้าน)', type: 'select', options: ['ไม่มี', 'มี', 'ไม่แน่ใจ'] },
-                            { id: 'priorDetail', label: 'หากตอบว่า "มี" โปรดระบุรายละเอียด (ชื่อผู้ป่วย, อายุ, วันที่เริ่มป่วย, สถานที่รักษา)', type: 'textarea' }
+                        { id: 's6', title: 'ส่วนที่ 6: ข้อมูลการสัมผัสผู้ป่วยวัณโรคระยะแพร่เชื้อ', icon: 'users', fields: [
+                            { id: 'srcName', label: '6.1 ชื่อผู้ป่วยวัณโรคระยะแพร่เชื้อที่สัมผัส', type: 'text' },
+                            { id: 'srcHn', label: '6.2 HN ผู้ป่วย', type: 'text' },
+                            { id: 'srcWard', label: '6.3 หอผู้ป่วย', type: 'text' },
+                            { id: 'activities', label: '6.4 กิจกรรมที่ท่านได้ทำกับผู้ป่วย (เลือกได้มากกว่า 1 ข้อ)', type: 'checkbox', options: ['พูดคุย/ซักประวัติ', 'ตรวจร่างกาย', 'ให้การพยาบาล', 'ดูดเสมหะ/หัตถการทางเดินหายใจ', 'ทำแผล/เจาะเลือด', 'เคลื่อนย้ายผู้ป่วย'] },
+                            { id: 'contactDates', label: '6.5 โปรดระบุ "วันที่สัมผัส" ของกิจกรรมที่ท่านเลือกข้างต้น', type: 'text' },
+                            { id: 'n95', label: '6.6 การใส่หน้ากาก N95 ขณะสัมผัส', type: 'select', options: ['ใส่ตลอดเวลา', 'ใส่บางครั้ง', 'ไม่ได้ใส่'] },
+                            { id: 'duration', label: '6.7 ระยะเวลาโดยรวม (ทุกครั้งที่สัมผัส) ในการสัมผัส/อยู่ร่วมกับผู้ป่วยวัณโรคอย่างใกล้ชิด', type: 'select', options: ['น้อยกว่า 15 นาที', '15 นาที - 1 ชั่วโมง', '1 - 8 ชั่วโมง', 'มากกว่า 8 ชั่วโมง'] },
+                            { id: 'room', label: '6.8 ขนาดของห้อง/บริเวณพื้นที่ที่สัมผัส', type: 'select', options: ['ห้องแยก/ห้องความดันลบ', 'ห้องเดี่ยว ระบายอากาศดี', 'ห้องรวม ระบายอากาศดี', 'ห้องรวม ระบายอากาศไม่ดี/แออัด'] },
+                            { id: 'priorContact', label: '6.9 ในระยะ 1-3 เดือนก่อน ท่านเคยสัมผัสผู้ป่วยวัณโรคปอด หรืออาการคล้ายวัณโรคปอด ในครอบครัว/ที่ทำงาน/หมู่บ้าน หรือไม่', type: 'select', options: ['ไม่มี', 'มี', 'ไม่แน่ใจ'] },
+                            { id: 'priorDetail', label: '6.10 หากตอบว่า "มี" โปรดระบุรายละเอียด (ชื่อผู้ป่วย, อายุ, วันที่เริ่มป่วย, สถานที่รักษา)', type: 'textarea' }
                         ]}
                     ]
                 },
                 patient: {
                     sections: [
-                        { id: 'p1', title: 'ข้อมูลผู้ป่วย', icon: 'user', fields: [
-                            { id: 'name', label: 'ชื่อ-นามสกุล ผู้ป่วย', type: 'text', required: true },
-                            { id: 'hn', label: 'HN', type: 'text', required: true },
-                            { id: 'bed', label: 'หมายเลขเตียง / หอผู้ป่วย', type: 'text', required: true }
+                        { id: 'p1', title: 'ส่วนที่ 1: ข้อมูลผู้ป่วย', icon: 'user', fields: [
+                            { id: 'name', label: '1.1 ชื่อ-นามสกุล ผู้ป่วย', type: 'text', required: true },
+                            { id: 'hn', label: '1.2 HN', type: 'text', required: true },
+                            { id: 'bed', label: '1.3 หมายเลขเตียง / หอผู้ป่วย', type: 'text', required: true }
                         ]},
-                        { id: 'p2', title: 'การประเมินอาการเบื้องต้น', icon: 'activity', fields: [
-                            { id: 'symptoms', label: 'ผู้ป่วยมีอาการเหล่านี้หรือไม่?', type: 'select', risk: true, options: ['ไม่มี', 'ไอ / มีเสมหะ', 'มีไข้'] }
+                        { id: 'p2', title: 'ส่วนที่ 2: การประเมินอาการเบื้องต้น', icon: 'activity', fields: [
+                            { id: 'symptoms', label: '2.1 ผู้ป่วยมีอาการเหล่านี้หรือไม่?', type: 'select', risk: true, options: ['ไม่มี', 'ไอ / มีเสมหะ', 'มีไข้'] }
                         ]}
                     ]
                 }

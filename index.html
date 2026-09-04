@@ -4,53 +4,41 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ระบบสอบสวนการระบาด (Outbreak Investigation)</title>
-    
+
     <!-- Load Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
+
     <!-- Load Feather Icons for UI icons -->
     <script src="https://unpkg.com/feather-icons"></script>
 
     <!-- Load Google Fonts (Sarabun) -->
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
+
     <style>
         body {
             font-family: 'Sarabun', sans-serif;
-            font-size: 16px; 
+            font-size: 16px;
         }
 
-        /* Simple fade-in animation for view transitions */
-        .fade-in {
-            animation: fadeIn 0.4s ease-in-out;
-        }
+        .fade-in { animation: fadeIn 0.4s ease-in-out; }
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(15px); }
             to { opacity: 1; transform: translateY(0); }
         }
 
-        /* Effect เรืองแสง (Glow) ปรับให้เข้ากับพื้นหลังสีขาว */
-        .glow-effect {
-            transition: all 0.3s ease;
-        }
+        .glow-effect { transition: all 0.3s ease; }
         .glow-effect:hover {
             box-shadow: 0 10px 25px -5px rgba(20, 184, 166, 0.4), 0 0 15px rgba(20, 184, 166, 0.2);
             border-color: rgba(20, 184, 166, 0.4);
             transform: translateY(-4px);
         }
-        
-        .glow-effect-blue {
-            transition: all 0.3s ease;
-        }
+        .glow-effect-blue { transition: all 0.3s ease; }
         .glow-effect-blue:hover {
             box-shadow: 0 10px 25px -5px rgba(59, 130, 246, 0.4), 0 0 15px rgba(59, 130, 246, 0.2);
             border-color: rgba(59, 130, 246, 0.4);
             transform: translateY(-4px);
         }
-        
-        .glow-effect-purple {
-            transition: all 0.3s ease;
-        }
+        .glow-effect-purple { transition: all 0.3s ease; }
         .glow-effect-purple:hover {
             box-shadow: 0 10px 25px -5px rgba(168, 85, 247, 0.4), 0 0 15px rgba(168, 85, 247, 0.2);
             border-color: rgba(168, 85, 247, 0.4);
@@ -63,12 +51,23 @@
             -webkit-text-fill-color: transparent;
         }
 
-        /* ปรับแต่งปุ่ม Nav เมื่อ Active */
         .nav-active {
             background: linear-gradient(135deg, #1e3a8a, #3b82f6);
             box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
             color: white !important;
         }
+
+        .field-input {
+            width: 100%;
+            font-size: 1.125rem;
+            border-radius: 0.5rem;
+            border: 1px solid #cbd5e1;
+            background: #f8fafc;
+            color: #0f172a;
+            padding: 0.625rem 1rem;
+            transition: all 0.2s;
+        }
+        .field-input:focus { outline: none; box-shadow: 0 0 0 2px #14b8a6; border-color: transparent; }
     </style>
 </head>
 <body class="min-h-screen bg-slate-50 text-slate-800">
@@ -78,7 +77,6 @@
             <div class="flex justify-between h-16">
                 <div class="flex items-center space-x-3 cursor-pointer nav-btn" data-target="view-home">
                     <i data-feather="shield" class="text-blue-600 drop-shadow-[0_0_5px_rgba(37,99,235,0.4)]"></i>
-                    <!-- เปลี่ยนข้อความเป็น SSWH : Outbreak Investigation system -->
                     <span class="font-bold text-[1.15rem] sm:text-xl tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-700 to-cyan-500">
                         SSWH : Outbreak Investigation system
                     </span>
@@ -96,10 +94,13 @@
                         <i data-feather="users" class="w-5 h-5"></i>
                         <span class="hidden md:inline">ผู้ป่วย</span>
                     </button>
-                    <!-- นำปุ่ม Admin กลับมาแสดงที่แถบเมนู -->
                     <button class="nav-btn flex items-center space-x-1 px-4 py-2 rounded-lg text-[1.1rem] font-medium transition-all duration-300 text-slate-600 hover:text-blue-700 hover:bg-blue-50 hover:shadow-sm" data-target="view-admin">
                         <i data-feather="layout" class="w-5 h-5"></i>
                         <span class="hidden md:inline">Admin</span>
+                    </button>
+                    <button class="nav-btn flex items-center space-x-1 px-4 py-2 rounded-lg text-[1.1rem] font-medium transition-all duration-300 text-slate-600 hover:text-blue-700 hover:bg-blue-50 hover:shadow-sm" data-target="view-builder">
+                        <i data-feather="edit-3" class="w-5 h-5"></i>
+                        <span class="hidden md:inline">จัดการแบบสอบถาม</span>
                     </button>
                 </div>
             </div>
@@ -107,12 +108,11 @@
     </nav>
 
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        
+
         <!-- ================= HOME VIEW ================= -->
         <div id="view-home" class="view-section fade-in space-y-10">
             <div class="text-center space-y-5 max-w-3xl mx-auto">
                 <h1 class="text-4xl font-extrabold text-slate-900 drop-shadow-sm pb-1">ระบบสอบสวนการระบาดทางระบาดวิทยา</h1>
-                <!-- เพิ่มข้อความ IPC & ICN SSWH -->
                 <div class="flex justify-center">
                     <span class="inline-flex items-center px-6 py-2 rounded-full bg-gradient-to-r from-blue-100 to-cyan-100 border border-blue-200 text-blue-800 font-bold text-xl shadow-sm drop-shadow-[0_2px_8px_rgba(59,130,246,0.2)]">
                         <i data-feather="activity" class="w-5 h-5 mr-2 text-blue-600"></i>
@@ -125,8 +125,6 @@
             </div>
 
             <div class="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto mt-12 justify-center">
-                <!-- Staff Card -->
-                <!-- STREAMING_CHUNK:อัปเดตการ์ดเจ้าหน้าที่เป็นสีเข้ม 3 สี (Emerald -> Teal -> Cyan) -->
                 <div class="nav-btn cursor-pointer rounded-2xl p-7 bg-gradient-to-br from-emerald-900 via-teal-900 to-cyan-950 border border-teal-700/50 glow-effect flex flex-col items-center text-center space-y-5 relative overflow-hidden group transition-all duration-300 shadow-[0_10px_25px_rgba(15,118,110,0.4)] hover:shadow-none" data-target="view-staff">
                     <div class="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                     <div class="relative p-4 bg-white/5 backdrop-blur-md rounded-2xl border border-white/10 shadow-inner text-teal-300 group-hover:scale-110 group-hover:bg-white/10 transition-all duration-300">
@@ -136,8 +134,6 @@
                     <p class="relative text-base text-teal-100/80 font-light leading-relaxed">สำหรับบุคลากรทางการแพทย์ พยาบาล และเจ้าหน้าที่ที่ปฏิบัติงานในพื้นที่เสี่ยง</p>
                 </div>
 
-                <!-- Patient Card -->
-                <!-- STREAMING_CHUNK:อัปเดตการ์ดผู้ป่วยเป็นสีเข้ม 3 สี (Blue -> Indigo -> Violet) -->
                 <div class="nav-btn cursor-pointer rounded-2xl p-7 bg-gradient-to-br from-blue-900 via-indigo-900 to-violet-950 border border-blue-700/50 glow-effect-blue flex flex-col items-center text-center space-y-5 relative overflow-hidden group transition-all duration-300 shadow-[0_10px_25px_rgba(30,64,175,0.4)] hover:shadow-none" data-target="view-patient">
                     <div class="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                     <div class="relative p-4 bg-white/5 backdrop-blur-md rounded-2xl border border-white/10 shadow-inner text-blue-300 group-hover:scale-110 group-hover:bg-white/10 transition-all duration-300">
@@ -145,17 +141,6 @@
                     </div>
                     <h3 class="relative text-2xl font-bold text-white tracking-wide">แบบบันทึกสำหรับผู้ป่วย</h3>
                     <p class="relative text-base text-blue-100/80 font-light leading-relaxed">สำหรับผู้ป่วยที่พักรักษาตัวร่วมหอผู้ป่วย หรือเตียงข้างเคียงผู้ติดเชื้อ</p>
-                </div>
-
-                <!-- ซ่อน Admin Card -->
-                <!-- STREAMING_CHUNK:อัปเดตการ์ด Admin (ที่ซ่อนไว้) เป็นสีเข้ม 3 สี (Purple -> Fuchsia -> Pink) -->
-                <div class="nav-btn hidden cursor-pointer rounded-2xl p-7 bg-gradient-to-br from-purple-900 via-fuchsia-900 to-pink-950 border border-purple-700/50 glow-effect-purple flex flex-col items-center text-center space-y-5 relative overflow-hidden group transition-all duration-300 shadow-[0_10px_25px_rgba(107,33,168,0.4)] hover:shadow-none" data-target="view-admin">
-                    <div class="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                    <div class="relative p-4 bg-white/5 backdrop-blur-md rounded-2xl border border-white/10 shadow-inner text-purple-300 group-hover:scale-110 group-hover:bg-white/10 transition-all duration-300">
-                        <i data-feather="layout" class="w-12 h-12 drop-shadow-[0_0_10px_rgba(216,180,254,0.5)]"></i>
-                    </div>
-                    <h3 class="relative text-2xl font-bold text-white tracking-wide">แผงควบคุม (Admin)</h3>
-                    <p class="relative text-base text-purple-100/80 font-light leading-relaxed">สำหรับผู้ดูแลระบบและทีมควบคุมโรคติดเชื้อ (IC) เพื่อดูภาพรวมและวิเคราะห์ข้อมูล</p>
                 </div>
             </div>
         </div>
@@ -166,284 +151,7 @@
                 <i data-feather="user-plus" class="drop-shadow-md"></i>
                 <h2 class="text-2xl font-bold drop-shadow-sm">แบบสอบสวนโรค - สำหรับเจ้าหน้าที่</h2>
             </div>
-            <form id="form-staff" class="p-8 space-y-8">
-
-                <!-- ===== ส่วนที่ 1: ข้อมูลส่วนบุคคล ===== -->
-                <div class="space-y-5">
-                    <h3 class="text-lg font-semibold text-slate-800 flex items-center"><i data-feather="user" class="w-5 h-5 mr-2 text-teal-500"></i> ส่วนที่ 1: ข้อมูลส่วนบุคคล</h3>
-
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                        <div class="space-y-2">
-                            <label class="text-base font-medium text-slate-700">ชื่อ-สกุล <span class="text-rose-500">*</span></label>
-                            <input type="text" id="staff-name" required class="w-full text-lg rounded-lg border border-slate-300 bg-slate-50 text-slate-900 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all placeholder-slate-400" placeholder="ระบุชื่อเต็ม">
-                        </div>
-                        <div class="space-y-2">
-                            <label class="text-base font-medium text-slate-700">เบอร์โทรศัพท์</label>
-                            <input type="tel" id="staff-phone" class="w-full text-lg rounded-lg border border-slate-300 bg-slate-50 text-slate-900 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all placeholder-slate-400" placeholder="เช่น 08x-xxx-xxxx">
-                        </div>
-                        <div class="space-y-2">
-                            <label class="text-base font-medium text-slate-700">HN (รพ.ศรีสังวร)</label>
-                            <input type="text" id="staff-hn" class="w-full text-lg rounded-lg border border-slate-300 bg-slate-50 text-slate-900 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all placeholder-slate-400" placeholder="ระบุ HN (ถ้ามี)">
-                        </div>
-                        <div class="space-y-2">
-                            <label class="text-base font-medium text-slate-700">อายุ (ปี)</label>
-                            <input type="number" id="staff-age" min="0" max="120" class="w-full text-lg rounded-lg border border-slate-300 bg-slate-50 text-slate-900 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all placeholder-slate-400" placeholder="ระบุอายุ">
-                        </div>
-                        <div class="space-y-2">
-                            <label class="text-base font-medium text-slate-700">เพศ</label>
-                            <select id="staff-gender" class="w-full text-lg rounded-lg border border-slate-300 bg-slate-50 text-slate-900 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all appearance-none cursor-pointer">
-                                <option value="หญิง">หญิง</option>
-                                <option value="ชาย">ชาย</option>
-                                <option value="อื่นๆ">อื่นๆ</option>
-                            </select>
-                        </div>
-                        <div class="space-y-2">
-                            <label class="text-base font-medium text-slate-700">สัญชาติ</label>
-                            <input type="text" id="staff-nationality" value="ไทย" class="w-full text-lg rounded-lg border border-slate-300 bg-slate-50 text-slate-900 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all placeholder-slate-400" placeholder="ระบุสัญชาติ">
-                        </div>
-                        <div class="space-y-2 sm:col-span-2">
-                            <label class="text-base font-medium text-slate-700">อาชีพ</label>
-                            <input type="text" id="staff-occupation" class="w-full text-lg rounded-lg border border-slate-300 bg-slate-50 text-slate-900 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all placeholder-slate-400" placeholder="เช่น บุคลากรทางการแพทย์">
-                        </div>
-                    </div>
-                </div>
-
-                <!-- ===== ส่วนที่ 2: ที่อยู่ปัจจุบัน ===== -->
-                <div class="space-y-5 pt-6 border-t border-slate-200">
-                    <h3 class="text-lg font-semibold text-slate-800 flex items-center"><i data-feather="map-pin" class="w-5 h-5 mr-2 text-teal-500"></i> ที่อยู่ปัจจุบัน</h3>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                        <div class="space-y-2">
-                            <label class="text-base font-medium text-slate-700">บ้านเลขที่</label>
-                            <input type="text" id="staff-addr-no" class="w-full text-lg rounded-lg border border-slate-300 bg-slate-50 text-slate-900 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all placeholder-slate-400" placeholder="บ้านเลขที่">
-                        </div>
-                        <div class="space-y-2">
-                            <label class="text-base font-medium text-slate-700">หมู่</label>
-                            <input type="text" id="staff-addr-moo" class="w-full text-lg rounded-lg border border-slate-300 bg-slate-50 text-slate-900 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all placeholder-slate-400" placeholder="หมู่ที่">
-                        </div>
-                        <div class="space-y-2">
-                            <label class="text-base font-medium text-slate-700">ตำบล</label>
-                            <input type="text" id="staff-addr-tambon" class="w-full text-lg rounded-lg border border-slate-300 bg-slate-50 text-slate-900 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all placeholder-slate-400" placeholder="ตำบล">
-                        </div>
-                        <div class="space-y-2">
-                            <label class="text-base font-medium text-slate-700">อำเภอ</label>
-                            <input type="text" id="staff-addr-amphoe" class="w-full text-lg rounded-lg border border-slate-300 bg-slate-50 text-slate-900 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all placeholder-slate-400" placeholder="อำเภอ">
-                        </div>
-                        <div class="space-y-2 sm:col-span-2">
-                            <label class="text-base font-medium text-slate-700">จังหวัด</label>
-                            <input type="text" id="staff-addr-province" value="สุโขทัย" class="w-full text-lg rounded-lg border border-slate-300 bg-slate-50 text-slate-900 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all placeholder-slate-400" placeholder="จังหวัด">
-                        </div>
-                    </div>
-                </div>
-
-                <!-- ===== ส่วนที่ 3: ข้อมูลการปฏิบัติงาน ===== -->
-                <div class="space-y-5 pt-6 border-t border-slate-200">
-                    <h3 class="text-lg font-semibold text-slate-800 flex items-center"><i data-feather="briefcase" class="w-5 h-5 mr-2 text-teal-500"></i> ข้อมูลการปฏิบัติงาน</h3>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                        <div class="space-y-2">
-                            <label class="text-base font-medium text-slate-700">หน่วยงาน / หอผู้ป่วยที่ปฏิบัติงาน</label>
-                            <input type="text" id="staff-unit" class="w-full text-lg rounded-lg border border-slate-300 bg-slate-50 text-slate-900 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all placeholder-slate-400" placeholder="เช่น หอผู้ป่วยศัลยกรรม">
-                        </div>
-                        <div class="space-y-2">
-                            <label class="text-base font-medium text-slate-700">ตำแหน่งการพยาบาล <span class="text-rose-500">*</span></label>
-                            <select id="staff-role" class="w-full text-lg rounded-lg border border-slate-300 bg-slate-50 text-slate-900 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all appearance-none cursor-pointer">
-                                <option value="พยาบาลวิชาชีพ">พยาบาลวิชาชีพ</option>
-                                <option value="พนักงานช่วยเหลือคนไข้">พนักงานช่วยเหลือคนไข้</option>
-                                <option value="แพทย์">แพทย์</option>
-                                <option value="นักกายภาพบำบัด">นักกายภาพบำบัด</option>
-                                <option value="พนักงานทำความสะอาด">พนักงานทำความสะอาด</option>
-                                <option value="อื่นๆ">อื่นๆ</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- ===== ส่วนที่ 4: การคัดกรองอาการวัณโรค ===== -->
-                <div class="space-y-5 pt-6 border-t border-slate-200">
-                    <h3 class="text-lg font-semibold text-slate-800 flex items-center"><i data-feather="activity" class="w-5 h-5 mr-2 text-teal-500"></i> การคัดกรองอาการวัณโรค</h3>
-
-                    <div class="space-y-2">
-                        <label class="text-base font-medium text-slate-700">คุณป่วยเป็นวัณโรคในขณะนี้หรือไม่</label>
-                        <div class="flex flex-wrap gap-x-6 gap-y-2 mt-2">
-                            <label class="flex items-center space-x-3 cursor-pointer p-2 rounded-lg hover:bg-slate-100 transition-colors">
-                                <input type="radio" name="staff-current-tb" value="ไม่เป็น" checked class="text-teal-600 focus:ring-teal-500 w-5 h-5">
-                                <span class="text-lg text-slate-700">ไม่เป็น</span>
-                            </label>
-                            <label class="flex items-center space-x-3 cursor-pointer p-2 rounded-lg hover:bg-slate-100 transition-colors">
-                                <input type="radio" name="staff-current-tb" value="เป็น" class="text-teal-600 focus:ring-teal-500 w-5 h-5">
-                                <span class="text-lg text-slate-700">เป็น</span>
-                            </label>
-                            <label class="flex items-center space-x-3 cursor-pointer p-2 rounded-lg hover:bg-slate-100 transition-colors">
-                                <input type="radio" name="staff-current-tb" value="ไม่แน่ใจ" class="text-teal-600 focus:ring-teal-500 w-5 h-5">
-                                <span class="text-lg text-slate-700">ไม่แน่ใจ</span>
-                            </label>
-                        </div>
-                    </div>
-
-                    <div class="space-y-2">
-                        <label class="text-base font-medium text-slate-700">คุณมีอาการเหล่านี้หรือไม่ (เลือกได้มากกว่า 1 ข้อ)</label>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
-                            <label class="flex items-center space-x-3 cursor-pointer p-2 rounded-lg hover:bg-slate-100 transition-colors"><input type="checkbox" class="staff-symptom text-teal-600 focus:ring-teal-500 w-5 h-5" value="ไข้"><span class="text-lg text-slate-700">ไข้</span></label>
-                            <label class="flex items-center space-x-3 cursor-pointer p-2 rounded-lg hover:bg-slate-100 transition-colors"><input type="checkbox" class="staff-symptom text-teal-600 focus:ring-teal-500 w-5 h-5" value="ไอ"><span class="text-lg text-slate-700">ไอ</span></label>
-                            <label class="flex items-center space-x-3 cursor-pointer p-2 rounded-lg hover:bg-slate-100 transition-colors"><input type="checkbox" class="staff-symptom text-teal-600 focus:ring-teal-500 w-5 h-5" value="เจ็บหน้าอก"><span class="text-lg text-slate-700">เจ็บหน้าอก</span></label>
-                            <label class="flex items-center space-x-3 cursor-pointer p-2 rounded-lg hover:bg-slate-100 transition-colors"><input type="checkbox" class="staff-symptom text-teal-600 focus:ring-teal-500 w-5 h-5" value="ไอมีเสมหะปนเลือด"><span class="text-lg text-slate-700">ไอมีเสมหะปนเลือด</span></label>
-                            <label class="flex items-center space-x-3 cursor-pointer p-2 rounded-lg hover:bg-slate-100 transition-colors"><input type="checkbox" class="staff-symptom text-teal-600 focus:ring-teal-500 w-5 h-5" value="อ่อนเพลีย"><span class="text-lg text-slate-700">อ่อนเพลีย</span></label>
-                            <label class="flex items-center space-x-3 cursor-pointer p-2 rounded-lg hover:bg-slate-100 transition-colors"><input type="checkbox" class="staff-symptom text-teal-600 focus:ring-teal-500 w-5 h-5" value="เหงื่อออกกลางคืน"><span class="text-lg text-slate-700">เหงื่อออกกลางคืน</span></label>
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                        <div class="space-y-2">
-                            <label class="text-base font-medium text-slate-700">อาการอื่นๆ (ระบุ)</label>
-                            <input type="text" id="staff-symptom-other" class="w-full text-lg rounded-lg border border-slate-300 bg-slate-50 text-slate-900 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all placeholder-slate-400" placeholder="ถ้ามี">
-                        </div>
-                        <div class="space-y-2">
-                            <label class="text-base font-medium text-slate-700">โรคประจำตัว</label>
-                            <input type="text" id="staff-disease" class="w-full text-lg rounded-lg border border-slate-300 bg-slate-50 text-slate-900 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all placeholder-slate-400" placeholder="ถ้ามี / ไม่มี">
-                        </div>
-                        <div class="space-y-2 sm:col-span-2">
-                            <label class="text-base font-medium text-slate-700">ยาประจำตัว</label>
-                            <input type="text" id="staff-medicine" class="w-full text-lg rounded-lg border border-slate-300 bg-slate-50 text-slate-900 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all placeholder-slate-400" placeholder="ถ้ามี / ไม่มี">
-                        </div>
-                    </div>
-                </div>
-
-                <!-- ===== ส่วนที่ 5: ประวัติวัณโรคและวัคซีน ===== -->
-                <div class="space-y-5 pt-6 border-t border-slate-200">
-                    <h3 class="text-lg font-semibold text-slate-800 flex items-center"><i data-feather="clipboard" class="w-5 h-5 mr-2 text-teal-500"></i> ประวัติวัณโรคและวัคซีน BCG</h3>
-
-                    <div class="space-y-2">
-                        <label class="text-base font-medium text-slate-700">ประวัติการเป็นวัณโรคปอดในอดีต (Old Pulmonary TB)</label>
-                        <div class="flex flex-wrap gap-x-6 gap-y-2 mt-2">
-                            <label class="flex items-center space-x-3 cursor-pointer p-2 rounded-lg hover:bg-slate-100 transition-colors"><input type="radio" name="staff-old-tb" value="ไม่เคย" checked class="text-teal-600 focus:ring-teal-500 w-5 h-5"><span class="text-lg text-slate-700">ไม่เคย</span></label>
-                            <label class="flex items-center space-x-3 cursor-pointer p-2 rounded-lg hover:bg-slate-100 transition-colors"><input type="radio" name="staff-old-tb" value="เคย" class="text-teal-600 focus:ring-teal-500 w-5 h-5"><span class="text-lg text-slate-700">เคย</span></label>
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                        <div class="space-y-2">
-                            <label class="text-base font-medium text-slate-700">กรณีเคยเป็น: รักษาเมื่อวันที่</label>
-                            <input type="date" id="staff-old-tb-start" class="w-full text-lg rounded-lg border border-slate-300 bg-slate-50 text-slate-900 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all">
-                        </div>
-                        <div class="space-y-2">
-                            <label class="text-base font-medium text-slate-700">สิ้นสุดการรักษาเมื่อวันที่</label>
-                            <input type="date" id="staff-old-tb-end" class="w-full text-lg rounded-lg border border-slate-300 bg-slate-50 text-slate-900 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all">
-                        </div>
-                    </div>
-
-                    <div class="space-y-2">
-                        <label class="text-base font-medium text-slate-700">ประวัติการรับวัคซีนวัณโรค (BCG Vaccine)</label>
-                        <div class="flex flex-wrap gap-x-6 gap-y-2 mt-2">
-                            <label class="flex items-center space-x-3 cursor-pointer p-2 rounded-lg hover:bg-slate-100 transition-colors"><input type="radio" name="staff-bcg" value="เคยรับ" checked class="text-teal-600 focus:ring-teal-500 w-5 h-5"><span class="text-lg text-slate-700">เคยรับ</span></label>
-                            <label class="flex items-center space-x-3 cursor-pointer p-2 rounded-lg hover:bg-slate-100 transition-colors"><input type="radio" name="staff-bcg" value="ไม่เคยรับ" class="text-teal-600 focus:ring-teal-500 w-5 h-5"><span class="text-lg text-slate-700">ไม่เคยรับ</span></label>
-                            <label class="flex items-center space-x-3 cursor-pointer p-2 rounded-lg hover:bg-slate-100 transition-colors"><input type="radio" name="staff-bcg" value="ไม่ทราบ" class="text-teal-600 focus:ring-teal-500 w-5 h-5"><span class="text-lg text-slate-700">ไม่ทราบ</span></label>
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                        <div class="space-y-2">
-                            <label class="text-base font-medium text-slate-700">วันที่รับวัคซีน (ถ้าทราบ)</label>
-                            <input type="date" id="staff-bcg-date" class="w-full text-lg rounded-lg border border-slate-300 bg-slate-50 text-slate-900 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all">
-                        </div>
-                        <div class="space-y-2">
-                            <label class="text-base font-medium text-slate-700">แผลเป็น BCG scar</label>
-                            <select id="staff-bcg-scar" class="w-full text-lg rounded-lg border border-slate-300 bg-slate-50 text-slate-900 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all appearance-none cursor-pointer">
-                                <option value="มี">มี</option>
-                                <option value="ไม่มี">ไม่มี</option>
-                                <option value="ไม่แน่ใจ">ไม่แน่ใจ</option>
-                            </select>
-                        </div>
-                        <div class="space-y-2 sm:col-span-2">
-                            <label class="text-base font-medium text-slate-700">ตำแหน่งแผลเป็น BCG</label>
-                            <input type="text" id="staff-bcg-scar-pos" class="w-full text-lg rounded-lg border border-slate-300 bg-slate-50 text-slate-900 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all placeholder-slate-400" placeholder="เช่น ต้นแขนซ้าย">
-                        </div>
-                    </div>
-                </div>
-
-                <!-- ===== ส่วนที่ 6: ข้อมูลการสัมผัสผู้ป่วยวัณโรค ===== -->
-                <div class="space-y-5 pt-6 border-t border-slate-200">
-                    <h3 class="text-lg font-semibold text-slate-800 flex items-center"><i data-feather="users" class="w-5 h-5 mr-2 text-teal-500"></i> ข้อมูลการสัมผัสผู้ป่วยวัณโรคระยะแพร่เชื้อ</h3>
-
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                        <div class="space-y-2 sm:col-span-1">
-                            <label class="text-base font-medium text-slate-700">ชื่อผู้ป่วยที่สัมผัส</label>
-                            <input type="text" id="staff-src-name" class="w-full text-lg rounded-lg border border-slate-300 bg-slate-50 text-slate-900 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all placeholder-slate-400" placeholder="ชื่อผู้ป่วยต้นเชื้อ">
-                        </div>
-                        <div class="space-y-2">
-                            <label class="text-base font-medium text-slate-700">HN ผู้ป่วย</label>
-                            <input type="text" id="staff-src-hn" class="w-full text-lg rounded-lg border border-slate-300 bg-slate-50 text-slate-900 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all placeholder-slate-400" placeholder="HN ผู้ป่วย">
-                        </div>
-                        <div class="space-y-2">
-                            <label class="text-base font-medium text-slate-700">หอผู้ป่วย</label>
-                            <input type="text" id="staff-src-ward" class="w-full text-lg rounded-lg border border-slate-300 bg-slate-50 text-slate-900 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all placeholder-slate-400" placeholder="หอผู้ป่วย">
-                        </div>
-                    </div>
-
-                    <div class="space-y-2">
-                        <label class="text-base font-medium text-slate-700">กิจกรรมที่ท่านได้ทำกับผู้ป่วย (เลือกได้มากกว่า 1 ข้อ)</label>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
-                            <label class="flex items-center space-x-3 cursor-pointer p-2 rounded-lg hover:bg-slate-100 transition-colors"><input type="checkbox" class="staff-activity text-teal-600 focus:ring-teal-500 w-5 h-5" value="พูดคุย/ซักประวัติ"><span class="text-lg text-slate-700">พูดคุย / ซักประวัติ</span></label>
-                            <label class="flex items-center space-x-3 cursor-pointer p-2 rounded-lg hover:bg-slate-100 transition-colors"><input type="checkbox" class="staff-activity text-teal-600 focus:ring-teal-500 w-5 h-5" value="ตรวจร่างกาย"><span class="text-lg text-slate-700">ตรวจร่างกาย</span></label>
-                            <label class="flex items-center space-x-3 cursor-pointer p-2 rounded-lg hover:bg-slate-100 transition-colors"><input type="checkbox" class="staff-activity text-teal-600 focus:ring-teal-500 w-5 h-5" value="ให้การพยาบาล"><span class="text-lg text-slate-700">ให้การพยาบาล</span></label>
-                            <label class="flex items-center space-x-3 cursor-pointer p-2 rounded-lg hover:bg-slate-100 transition-colors"><input type="checkbox" class="staff-activity text-teal-600 focus:ring-teal-500 w-5 h-5" value="ดูดเสมหะ/หัตถการทางเดินหายใจ"><span class="text-lg text-slate-700">ดูดเสมหะ / หัตถการทางเดินหายใจ</span></label>
-                            <label class="flex items-center space-x-3 cursor-pointer p-2 rounded-lg hover:bg-slate-100 transition-colors"><input type="checkbox" class="staff-activity text-teal-600 focus:ring-teal-500 w-5 h-5" value="ทำแผล/เจาะเลือด"><span class="text-lg text-slate-700">ทำแผล / เจาะเลือด</span></label>
-                            <label class="flex items-center space-x-3 cursor-pointer p-2 rounded-lg hover:bg-slate-100 transition-colors"><input type="checkbox" class="staff-activity text-teal-600 focus:ring-teal-500 w-5 h-5" value="เคลื่อนย้ายผู้ป่วย"><span class="text-lg text-slate-700">เคลื่อนย้ายผู้ป่วย</span></label>
-                        </div>
-                    </div>
-
-                    <div class="space-y-2">
-                        <label class="text-base font-medium text-slate-700">วันที่สัมผัส (ของกิจกรรมข้างต้น)</label>
-                        <input type="text" id="staff-contact-dates" class="w-full text-lg rounded-lg border border-slate-300 bg-slate-50 text-slate-900 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all placeholder-slate-400" placeholder="เช่น 15 ก.พ. 2569, 16 ก.พ. 2569">
-                    </div>
-
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                        <div class="space-y-2">
-                            <label class="text-base font-medium text-slate-700">5.1 การใส่หน้ากาก N95 ขณะสัมผัส</label>
-                            <select id="staff-n95" class="w-full text-lg rounded-lg border border-slate-300 bg-slate-50 text-slate-900 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all appearance-none cursor-pointer">
-                                <option value="ใส่ตลอดเวลา">ใส่ตลอดเวลา</option>
-                                <option value="ใส่บางครั้ง">ใส่บางครั้ง</option>
-                                <option value="ไม่ได้ใส่">ไม่ได้ใส่ (หรือใส่หน้ากากอนามัยปกติ)</option>
-                            </select>
-                        </div>
-                        <div class="space-y-2">
-                            <label class="text-base font-medium text-slate-700">5.2 ระยะเวลารวมในการสัมผัส/อยู่ใกล้ชิด</label>
-                            <select id="staff-duration" class="w-full text-lg rounded-lg border border-slate-300 bg-slate-50 text-slate-900 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all appearance-none cursor-pointer">
-                                <option value="น้อยกว่า 15 นาที">น้อยกว่า 15 นาที</option>
-                                <option value="15 นาที - 1 ชั่วโมง">15 นาที - 1 ชั่วโมง</option>
-                                <option value="1 - 8 ชั่วโมง">1 - 8 ชั่วโมง</option>
-                                <option value="มากกว่า 8 ชั่วโมง">มากกว่า 8 ชั่วโมง</option>
-                            </select>
-                        </div>
-                        <div class="space-y-2">
-                            <label class="text-base font-medium text-slate-700">5.3 ขนาดของห้อง/พื้นที่ที่สัมผัส</label>
-                            <select id="staff-room" class="w-full text-lg rounded-lg border border-slate-300 bg-slate-50 text-slate-900 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all appearance-none cursor-pointer">
-                                <option value="ห้องแยก/ห้องความดันลบ">ห้องแยก / ห้องความดันลบ</option>
-                                <option value="ห้องเดี่ยว ระบายอากาศดี">ห้องเดี่ยว ระบายอากาศดี</option>
-                                <option value="ห้องรวม ระบายอากาศดี">ห้องรวม ระบายอากาศดี</option>
-                                <option value="ห้องรวม ระบายอากาศไม่ดี/แออัด">ห้องรวม ระบายอากาศไม่ดี / แออัด</option>
-                            </select>
-                        </div>
-                        <div class="space-y-2">
-                            <label class="text-base font-medium text-slate-700">6.1 ในระยะ 1-3 เดือนก่อน เคยสัมผัสผู้ป่วยวัณโรคปอด (ครอบครัว/ที่ทำงาน/หมู่บ้าน)</label>
-                            <select id="staff-prior-contact" class="w-full text-lg rounded-lg border border-slate-300 bg-slate-50 text-slate-900 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all appearance-none cursor-pointer">
-                                <option value="ไม่มี">ไม่มี</option>
-                                <option value="มี">มี</option>
-                                <option value="ไม่แน่ใจ">ไม่แน่ใจ</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="space-y-2">
-                        <label class="text-base font-medium text-slate-700">หากตอบว่า "มี" โปรดระบุรายละเอียด (ชื่อผู้ป่วย, อายุ, วันที่เริ่มป่วย, สถานที่รักษา)</label>
-                        <textarea id="staff-prior-detail" rows="2" class="w-full text-lg rounded-lg border border-slate-300 bg-slate-50 text-slate-900 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all placeholder-slate-400" placeholder="ระบุรายละเอียด (ถ้ามี)"></textarea>
-                    </div>
-                </div>
-
-                <div class="pt-6 flex justify-end">
-                    <button type="submit" class="bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-600 hover:to-emerald-600 text-white text-lg font-semibold py-2.5 px-8 rounded-lg shadow-[0_4px_15px_rgba(16,185,129,0.3)] transition-all transform hover:-translate-y-0.5">
-                        บันทึกข้อมูล
-                    </button>
-                </div>
-            </form>
+            <form id="form-staff" data-form="staff" class="p-8 space-y-8"></form>
         </div>
 
         <!-- ================= PATIENT FORM VIEW ================= -->
@@ -452,41 +160,7 @@
                 <i data-feather="users" class="drop-shadow-md"></i>
                 <h2 class="text-2xl font-bold drop-shadow-sm">แบบบันทึกข้อมูล - สำหรับผู้ป่วยสัมผัสโรค</h2>
             </div>
-            <form id="form-patient" class="p-8 space-y-6">
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                    <div class="space-y-2">
-                        <label class="text-base font-medium text-slate-700">ชื่อ-นามสกุล ผู้ป่วย <span class="text-rose-500">*</span></label>
-                        <input type="text" id="patient-name" required class="w-full text-lg rounded-lg border border-slate-300 bg-slate-50 text-slate-900 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all placeholder-slate-400" placeholder="ระบุชื่อเต็ม">
-                    </div>
-                    <div class="space-y-2">
-                        <label class="text-base font-medium text-slate-700">HN <span class="text-rose-500">*</span></label>
-                        <input type="text" id="patient-hn" required class="w-full text-lg rounded-lg border border-slate-300 bg-slate-50 text-slate-900 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all placeholder-slate-400" placeholder="ระบุ HN">
-                    </div>
-                </div>
-
-                <div class="space-y-2">
-                    <label class="text-base font-medium text-slate-700">หมายเลขเตียง / หอผู้ป่วย <span class="text-rose-500">*</span></label>
-                    <input type="text" id="patient-bed" required class="w-full text-lg rounded-lg border border-slate-300 bg-slate-50 text-slate-900 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all placeholder-slate-400" placeholder="เช่น SU02, SU05">
-                </div>
-
-                <div class="space-y-4 pt-6 border-t border-slate-200">
-                    <h3 class="text-lg font-semibold text-slate-800 flex items-center"><i data-feather="activity" class="w-5 h-5 mr-2 text-blue-500"></i> การประเมินอาการเบื้องต้น</h3>
-                    <div class="space-y-2 mt-4">
-                        <label class="text-base font-medium text-slate-700">ผู้ป่วยมีอาการเหล่านี้หรือไม่?</label>
-                        <select id="patient-symptoms" class="w-full text-lg rounded-lg border border-slate-300 bg-slate-50 text-slate-900 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all appearance-none cursor-pointer">
-                            <option value="ไม่มี">ไม่มีอาการ</option>
-                            <option value="ไอ">ไอ / มีเสมหะ</option>
-                            <option value="ไข้">มีไข้</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="pt-6 flex justify-end">
-                    <button type="submit" class="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white text-lg font-semibold py-2.5 px-8 rounded-lg shadow-[0_4px_15px_rgba(59,130,246,0.3)] transition-all transform hover:-translate-y-0.5">
-                        บันทึกข้อมูล
-                    </button>
-                </div>
-            </form>
+            <form id="form-patient" data-form="patient" class="p-8 space-y-8"></form>
         </div>
 
         <!-- ================= ADMIN DASHBOARD VIEW ================= -->
@@ -501,7 +175,6 @@
                 </button>
             </div>
 
-            <!-- Stats Cards with Neon Glow for Light Theme -->
             <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
                 <div class="rounded-2xl border p-5 flex flex-col bg-white border-blue-200 shadow-[0_4px_15px_rgba(59,130,246,0.1)] transition-transform hover:-translate-y-1">
                     <span class="text-base font-medium mb-1 text-slate-500">ผู้สัมผัสทั้งหมด</span>
@@ -525,7 +198,6 @@
                 </div>
             </div>
 
-            <!-- Data Table -->
             <div class="bg-white rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.05)] border border-slate-200 overflow-hidden mt-8">
                 <div class="px-6 py-5 border-b border-slate-200 bg-slate-50/80 flex justify-between items-center">
                     <h3 class="text-xl font-bold text-slate-800 flex items-center">
@@ -540,323 +212,599 @@
                                 <th class="px-6 py-4 whitespace-nowrap font-semibold tracking-wider">ชื่อ-นามสกุล</th>
                                 <th class="px-6 py-4 whitespace-nowrap font-semibold tracking-wider">HN</th>
                                 <th class="px-6 py-4 whitespace-nowrap font-semibold tracking-wider">กลุ่ม/ตำแหน่ง</th>
-                                <th class="px-6 py-4 whitespace-nowrap font-semibold tracking-wider">การสวม N95</th>
-                                <th class="px-6 py-4 whitespace-nowrap font-semibold tracking-wider">อาการ</th>
                                 <th class="px-6 py-4 whitespace-nowrap font-semibold tracking-wider">สถานะ</th>
+                                <th class="px-6 py-4 whitespace-nowrap font-semibold tracking-wider text-right">รายละเอียด</th>
                             </tr>
                         </thead>
-                        <tbody id="table-body" class="divide-y divide-slate-100 text-slate-700">
-                            <!-- Rows will be populated by JavaScript -->
-                        </tbody>
+                        <tbody id="table-body" class="divide-y divide-slate-100 text-slate-700"></tbody>
                     </table>
                 </div>
             </div>
         </div>
+
+        <!-- ================= FORM BUILDER VIEW ================= -->
+        <div id="view-builder" class="view-section hidden fade-in space-y-6">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-end space-y-4 sm:space-y-0">
+                <div>
+                    <h2 class="text-3xl font-bold text-slate-900 drop-shadow-sm flex items-center"><i data-feather="edit-3" class="w-7 h-7 mr-2 text-purple-600"></i> จัดการแบบสอบถาม</h2>
+                    <p class="text-slate-600 mt-1 text-lg">เพิ่ม / ลบ / แก้ไข ส่วนและคำถาม พร้อมกำหนดตัวเลือก (dropdown, checkbox, radio) ได้เอง</p>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <button id="btn-builder-reset" class="bg-white border border-slate-300 text-slate-600 px-4 py-2.5 rounded-lg text-base font-medium hover:bg-slate-50 flex items-center transition-all shadow-sm">
+                        <i data-feather="rotate-ccw" class="w-4 h-4 mr-2"></i> คืนค่าเริ่มต้น
+                    </button>
+                    <button id="btn-builder-save" class="bg-gradient-to-r from-purple-500 to-fuchsia-600 hover:from-purple-600 hover:to-fuchsia-700 text-white px-6 py-2.5 rounded-lg text-base font-semibold flex items-center transition-all shadow-[0_4px_15px_rgba(168,85,247,0.3)] transform hover:-translate-y-0.5">
+                        <i data-feather="save" class="w-4 h-4 mr-2"></i> บันทึกแบบสอบถาม
+                    </button>
+                </div>
+            </div>
+
+            <!-- Form selector tabs -->
+            <div class="flex space-x-2 bg-slate-100 p-1.5 rounded-xl w-fit">
+                <button class="builder-tab px-5 py-2 rounded-lg text-base font-medium transition-all bg-white shadow-sm text-purple-700" data-formtab="staff">แบบเจ้าหน้าที่</button>
+                <button class="builder-tab px-5 py-2 rounded-lg text-base font-medium transition-all text-slate-600 hover:text-purple-700" data-formtab="patient">แบบผู้ป่วย</button>
+            </div>
+
+            <div id="builder-body" class="space-y-6"></div>
+
+            <button id="btn-add-section" class="w-full border-2 border-dashed border-purple-300 text-purple-600 rounded-xl py-4 text-lg font-medium hover:bg-purple-50 hover:border-purple-400 transition-all flex items-center justify-center">
+                <i data-feather="plus-circle" class="w-5 h-5 mr-2"></i> เพิ่มส่วนใหม่
+            </button>
+        </div>
     </main>
 
-    <!-- Custom Alert/Modal -->
+    <!-- Success Modal -->
     <div id="custom-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/40 backdrop-blur-sm fade-in">
-        <div class="bg-white border border-slate-200 rounded-2xl shadow-[0_15px_40px_rgba(0,0,0,0.15)] p-8 max-w-sm w-full mx-4 text-center space-y-6 transform scale-100 transition-all">
+        <div class="bg-white border border-slate-200 rounded-2xl shadow-[0_15px_40px_rgba(0,0,0,0.15)] p-8 max-w-sm w-full mx-4 text-center space-y-6">
             <div class="mx-auto flex items-center justify-center h-20 w-20 rounded-full bg-emerald-100 shadow-inner">
                 <i data-feather="check" class="h-10 w-10 text-emerald-600 drop-shadow-[0_2px_4px_rgba(16,185,129,0.3)]"></i>
             </div>
             <div class="space-y-2">
-                <h3 class="text-2xl font-bold text-slate-900">บันทึกข้อมูลสำเร็จ!</h3>
-                <p class="text-lg text-slate-500">ระบบได้ทำการบันทึกข้อมูลเข้าสู่ฐานข้อมูลเรียบร้อยแล้ว</p>
+                <h3 class="text-2xl font-bold text-slate-900" id="modal-title">บันทึกข้อมูลสำเร็จ!</h3>
+                <p class="text-lg text-slate-500" id="modal-msg">ระบบได้ทำการบันทึกข้อมูลเรียบร้อยแล้ว</p>
             </div>
-            <button onclick="closeModal()" class="w-full inline-flex justify-center rounded-lg border border-transparent shadow-[0_4px_15px_rgba(59,130,246,0.3)] px-4 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-lg font-semibold text-white hover:from-blue-600 hover:to-blue-700 focus:outline-none transition-all transform hover:-translate-y-0.5">
+            <button onclick="closeModal()" class="w-full inline-flex justify-center rounded-lg border border-transparent shadow-[0_4px_15px_rgba(59,130,246,0.3)] px-4 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-lg font-semibold text-white hover:from-blue-600 hover:to-blue-700 focus:outline-none transition-all">
                 ตกลง
             </button>
         </div>
     </div>
 
+    <!-- Detail Modal -->
+    <div id="detail-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/40 backdrop-blur-sm fade-in p-4">
+        <div class="bg-white border border-slate-200 rounded-2xl shadow-[0_15px_40px_rgba(0,0,0,0.15)] max-w-lg w-full max-h-[85vh] flex flex-col overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+                <h3 class="text-xl font-bold text-slate-800 flex items-center"><i data-feather="file-text" class="w-5 h-5 mr-2 text-blue-600"></i> รายละเอียดการบันทึก</h3>
+                <button onclick="closeDetail()" class="text-slate-400 hover:text-slate-700"><i data-feather="x" class="w-6 h-6"></i></button>
+            </div>
+            <div id="detail-body" class="p-6 overflow-y-auto space-y-3"></div>
+        </div>
+    </div>
+
     <script>
-        // Initialize Feather Icons
         feather.replace();
 
-        // 1. Initial State Data (Mock Data)
+        /* ============================================================
+           1. DEFAULT FORM SCHEMA
+           field.type: text | tel | number | date | textarea | select | radio | checkbox
+           field.options: array (สำหรับ select/radio/checkbox)
+           field.risk: true = ใช้ประเมินสถานะ "เฝ้าระวัง"
+           ============================================================ */
+        const NORMAL_VALUES = ['', 'ไม่มี', 'ไม่เป็น', 'ปกติ', 'ไม่เคย', 'ไม่', 'ไม่ทราบ', 'ไม่แน่ใจ', 'N/A'];
+
+        function defaultSchema() {
+            return {
+                staff: {
+                    sections: [
+                        { id: 's1', title: 'ข้อมูลส่วนบุคคล', icon: 'user', fields: [
+                            { id: 'name', label: 'ชื่อ-สกุล', type: 'text', required: true },
+                            { id: 'phone', label: 'เบอร์โทรศัพท์', type: 'tel' },
+                            { id: 'hn', label: 'HN (รพ.ศรีสังวร)', type: 'text' },
+                            { id: 'age', label: 'อายุ (ปี)', type: 'number' },
+                            { id: 'gender', label: 'เพศ', type: 'select', options: ['หญิง', 'ชาย', 'อื่นๆ'] },
+                            { id: 'nationality', label: 'สัญชาติ', type: 'text' },
+                            { id: 'occupation', label: 'อาชีพ', type: 'text' }
+                        ]},
+                        { id: 's2', title: 'ที่อยู่ปัจจุบัน', icon: 'map-pin', fields: [
+                            { id: 'addrNo', label: 'บ้านเลขที่', type: 'text' },
+                            { id: 'addrMoo', label: 'หมู่', type: 'text' },
+                            { id: 'addrTambon', label: 'ตำบล', type: 'text' },
+                            { id: 'addrAmphoe', label: 'อำเภอ', type: 'text' },
+                            { id: 'addrProvince', label: 'จังหวัด', type: 'text' }
+                        ]},
+                        { id: 's3', title: 'ข้อมูลการปฏิบัติงาน', icon: 'briefcase', fields: [
+                            { id: 'unit', label: 'หน่วยงาน / หอผู้ป่วยที่ปฏิบัติงาน', type: 'text' },
+                            { id: 'role', label: 'ตำแหน่งการพยาบาล', type: 'select', required: true, options: ['พยาบาลวิชาชีพ', 'พนักงานช่วยเหลือคนไข้', 'แพทย์', 'นักกายภาพบำบัด', 'พนักงานทำความสะอาด', 'อื่นๆ'] }
+                        ]},
+                        { id: 's4', title: 'การคัดกรองอาการวัณโรค', icon: 'activity', fields: [
+                            { id: 'currentTb', label: 'คุณป่วยเป็นวัณโรคในขณะนี้หรือไม่', type: 'radio', risk: true, options: ['ไม่เป็น', 'เป็น', 'ไม่แน่ใจ'] },
+                            { id: 'symptoms', label: 'คุณมีอาการเหล่านี้หรือไม่', type: 'checkbox', risk: true, options: ['ไข้', 'ไอ', 'เจ็บหน้าอก', 'ไอมีเสมหะปนเลือด', 'อ่อนเพลีย', 'เหงื่อออกกลางคืน'] },
+                            { id: 'symptomOther', label: 'อาการอื่นๆ (ระบุ)', type: 'text' },
+                            { id: 'disease', label: 'โรคประจำตัว', type: 'text' },
+                            { id: 'medicine', label: 'ยาประจำตัว', type: 'text' }
+                        ]},
+                        { id: 's5', title: 'ประวัติวัณโรคและวัคซีน BCG', icon: 'clipboard', fields: [
+                            { id: 'oldTb', label: 'ประวัติการเป็นวัณโรคปอดในอดีต (Old Pulmonary TB)', type: 'radio', options: ['ไม่เคย', 'เคย'] },
+                            { id: 'oldTbStart', label: 'กรณีเคยเป็น: รักษาเมื่อวันที่', type: 'date' },
+                            { id: 'oldTbEnd', label: 'สิ้นสุดการรักษาเมื่อวันที่', type: 'date' },
+                            { id: 'bcg', label: 'ประวัติการรับวัคซีนวัณโรค (BCG Vaccine)', type: 'radio', options: ['เคยรับ', 'ไม่เคยรับ', 'ไม่ทราบ'] },
+                            { id: 'bcgDate', label: 'วันที่รับวัคซีน (ถ้าทราบ)', type: 'date' },
+                            { id: 'bcgScar', label: 'แผลเป็น BCG scar', type: 'select', options: ['มี', 'ไม่มี', 'ไม่แน่ใจ'] },
+                            { id: 'bcgScarPos', label: 'ตำแหน่งแผลเป็น BCG', type: 'text' }
+                        ]},
+                        { id: 's6', title: 'ข้อมูลการสัมผัสผู้ป่วยวัณโรคระยะแพร่เชื้อ', icon: 'users', fields: [
+                            { id: 'srcName', label: 'ชื่อผู้ป่วยที่สัมผัส', type: 'text' },
+                            { id: 'srcHn', label: 'HN ผู้ป่วย', type: 'text' },
+                            { id: 'srcWard', label: 'หอผู้ป่วย', type: 'text' },
+                            { id: 'activities', label: 'กิจกรรมที่ท่านได้ทำกับผู้ป่วย', type: 'checkbox', options: ['พูดคุย/ซักประวัติ', 'ตรวจร่างกาย', 'ให้การพยาบาล', 'ดูดเสมหะ/หัตถการทางเดินหายใจ', 'ทำแผล/เจาะเลือด', 'เคลื่อนย้ายผู้ป่วย'] },
+                            { id: 'contactDates', label: 'วันที่สัมผัส (ของกิจกรรมข้างต้น)', type: 'text' },
+                            { id: 'n95', label: '5.1 การใส่หน้ากาก N95 ขณะสัมผัส', type: 'select', options: ['ใส่ตลอดเวลา', 'ใส่บางครั้ง', 'ไม่ได้ใส่'] },
+                            { id: 'duration', label: '5.2 ระยะเวลารวมในการสัมผัส/อยู่ใกล้ชิด', type: 'select', options: ['น้อยกว่า 15 นาที', '15 นาที - 1 ชั่วโมง', '1 - 8 ชั่วโมง', 'มากกว่า 8 ชั่วโมง'] },
+                            { id: 'room', label: '5.3 ขนาดของห้อง/พื้นที่ที่สัมผัส', type: 'select', options: ['ห้องแยก/ห้องความดันลบ', 'ห้องเดี่ยว ระบายอากาศดี', 'ห้องรวม ระบายอากาศดี', 'ห้องรวม ระบายอากาศไม่ดี/แออัด'] },
+                            { id: 'priorContact', label: '6.1 ในระยะ 1-3 เดือนก่อน เคยสัมผัสผู้ป่วยวัณโรคปอด (ครอบครัว/ที่ทำงาน/หมู่บ้าน)', type: 'select', options: ['ไม่มี', 'มี', 'ไม่แน่ใจ'] },
+                            { id: 'priorDetail', label: 'หากตอบว่า "มี" โปรดระบุรายละเอียด (ชื่อผู้ป่วย, อายุ, วันที่เริ่มป่วย, สถานที่รักษา)', type: 'textarea' }
+                        ]}
+                    ]
+                },
+                patient: {
+                    sections: [
+                        { id: 'p1', title: 'ข้อมูลผู้ป่วย', icon: 'user', fields: [
+                            { id: 'name', label: 'ชื่อ-นามสกุล ผู้ป่วย', type: 'text', required: true },
+                            { id: 'hn', label: 'HN', type: 'text', required: true },
+                            { id: 'bed', label: 'หมายเลขเตียง / หอผู้ป่วย', type: 'text', required: true }
+                        ]},
+                        { id: 'p2', title: 'การประเมินอาการเบื้องต้น', icon: 'activity', fields: [
+                            { id: 'symptoms', label: 'ผู้ป่วยมีอาการเหล่านี้หรือไม่?', type: 'select', risk: true, options: ['ไม่มี', 'ไอ / มีเสมหะ', 'มีไข้'] }
+                        ]}
+                    ]
+                }
+            };
+        }
+
+        /* ============================================================
+           2. STATE (schema + records) with localStorage
+           ============================================================ */
+        const SCHEMA_KEY = 'oi-schema';
         const STORAGE_KEY = 'oi-records';
+
+        let schema;
+        try {
+            const s = localStorage.getItem(SCHEMA_KEY);
+            schema = s ? JSON.parse(s) : defaultSchema();
+        } catch (e) { schema = defaultSchema(); }
+
         const defaultRecords = [
-            { id: 1, type: 'staff', name: 'จินดารัตน์ นาคคุ้ม', hn: '0158243', role: 'พยาบาลวิชาชีพ', symptoms: 'ไม่มี', n95: 'ไม่ได้ใส่', date: '2026-02-19', status: 'ปกติ' },
-            { id: 2, type: 'staff', name: 'ปนัดดา ขีดขั้น', hn: '0107049', role: 'พยาบาลวิชาชีพ', symptoms: 'ไอ', n95: 'ไม่ได้ใส่', date: '2026-02-19', status: 'เฝ้าระวัง' },
-            { id: 3, type: 'patient', name: 'เอนก เจริญมาก', hn: '332346', role: 'ผู้ป่วย (SU05)', symptoms: 'ไม่มี', n95: 'N/A', date: '2026-02-16', status: 'ปกติ' },
+            { id: 1, type: 'staff', name: 'จินดารัตน์ นาคคุ้ม', hn: '0158243', group: 'พยาบาลวิชาชีพ', status: 'ปกติ', date: '2026-02-19', answers: { name: 'จินดารัตน์ นาคคุ้ม', hn: '0158243', role: 'พยาบาลวิชาชีพ', currentTb: 'ไม่เป็น', symptoms: [], n95: 'ไม่ได้ใส่' } },
+            { id: 2, type: 'staff', name: 'ปนัดดา ขีดขั้น', hn: '0107049', group: 'พยาบาลวิชาชีพ', status: 'เฝ้าระวัง', date: '2026-02-19', answers: { name: 'ปนัดดา ขีดขั้น', hn: '0107049', role: 'พยาบาลวิชาชีพ', currentTb: 'ไม่เป็น', symptoms: ['ไอ'], n95: 'ไม่ได้ใส่' } },
+            { id: 3, type: 'patient', name: 'เอนก เจริญมาก', hn: '332346', group: 'ผู้ป่วย (SU05)', status: 'ปกติ', date: '2026-02-16', answers: { name: 'เอนก เจริญมาก', hn: '332346', bed: 'SU05', symptoms: 'ไม่มี' } }
         ];
 
         let records;
         try {
-            const saved = localStorage.getItem(STORAGE_KEY);
-            records = saved ? JSON.parse(saved) : defaultRecords.slice();
-        } catch (err) {
-            records = defaultRecords.slice();
+            const r = localStorage.getItem(STORAGE_KEY);
+            records = r ? JSON.parse(r) : defaultRecords.slice();
+        } catch (e) { records = defaultRecords.slice(); }
+
+        function saveRecords() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(records)); } catch (e) {} }
+        function saveSchema() { try { localStorage.setItem(SCHEMA_KEY, JSON.stringify(schema)); } catch (e) {} }
+
+        /* ============================================================
+           3. RENDER FORMS FROM SCHEMA
+           ============================================================ */
+        function escAttr(s) { return String(s).replace(/"/g, '&quot;'); }
+
+        function fieldHTML(field, accent) {
+            const req = field.required ? ' <span class="text-rose-500">*</span>' : '';
+            const reqAttr = field.required ? 'required' : '';
+            let control = '';
+
+            if (field.type === 'select') {
+                const opts = (field.options || []).map(o => `<option value="${escAttr(o)}">${o}</option>`).join('');
+                control = `<select name="${field.id}" class="field-input appearance-none cursor-pointer" ${reqAttr}>${opts}</select>`;
+            } else if (field.type === 'radio') {
+                control = '<div class="flex flex-wrap gap-x-6 gap-y-2 mt-1">' + (field.options || []).map((o, i) =>
+                    `<label class="flex items-center space-x-3 cursor-pointer p-2 rounded-lg hover:bg-slate-100 transition-colors">
+                        <input type="radio" name="${field.id}" value="${escAttr(o)}" ${i === 0 ? 'checked' : ''} class="w-5 h-5 text-${accent}-600 focus:ring-${accent}-500">
+                        <span class="text-lg text-slate-700">${o}</span>
+                    </label>`).join('') + '</div>';
+            } else if (field.type === 'checkbox') {
+                control = '<div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-1">' + (field.options || []).map(o =>
+                    `<label class="flex items-center space-x-3 cursor-pointer p-2 rounded-lg hover:bg-slate-100 transition-colors">
+                        <input type="checkbox" name="${field.id}" value="${escAttr(o)}" class="w-5 h-5 text-${accent}-600 focus:ring-${accent}-500">
+                        <span class="text-lg text-slate-700">${o}</span>
+                    </label>`).join('') + '</div>';
+            } else if (field.type === 'textarea') {
+                control = `<textarea name="${field.id}" rows="2" class="field-input" ${reqAttr}></textarea>`;
+            } else {
+                control = `<input type="${field.type}" name="${field.id}" class="field-input" ${reqAttr}>`;
+            }
+
+            return `<div class="space-y-2">
+                <label class="text-base font-medium text-slate-700">${field.label}${req}</label>
+                ${control}
+            </div>`;
         }
 
-        function saveRecords() {
-            try {
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
-            } catch (err) { /* localStorage อาจถูกปิด - ข้ามไป */ }
+        function renderForm(formKey) {
+            const form = document.getElementById('form-' + formKey);
+            if (!form) return;
+            const accent = formKey === 'patient' ? 'blue' : 'teal';
+            const btnGrad = formKey === 'patient'
+                ? 'from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 shadow-[0_4px_15px_rgba(59,130,246,0.3)]'
+                : 'from-teal-500 to-emerald-500 hover:from-teal-600 hover:to-emerald-600 shadow-[0_4px_15px_rgba(16,185,129,0.3)]';
+
+            let html = '';
+            schema[formKey].sections.forEach((sec, idx) => {
+                html += `<div class="space-y-4 ${idx > 0 ? 'pt-6 border-t border-slate-200' : ''}">
+                    <h3 class="text-lg font-semibold text-slate-800 flex items-center"><i data-feather="${sec.icon || 'chevron-right'}" class="w-5 h-5 mr-2 text-${accent}-500"></i> ${sec.title}</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        ${sec.fields.map(f => {
+                            const wide = (f.type === 'checkbox' || f.type === 'textarea' || f.type === 'radio');
+                            return `<div class="${wide ? 'sm:col-span-2' : ''}">${fieldHTML(f, accent)}</div>`;
+                        }).join('')}
+                    </div>
+                </div>`;
+            });
+            html += `<div class="pt-6 flex justify-end">
+                <button type="submit" class="bg-gradient-to-r ${btnGrad} text-white text-lg font-semibold py-2.5 px-8 rounded-lg transition-all transform hover:-translate-y-0.5">บันทึกข้อมูล</button>
+            </div>`;
+
+            form.innerHTML = html;
+            feather.replace();
         }
 
-        // 2. Navigation Logic
+        /* ============================================================
+           4. FORM SUBMISSION (generic)
+           ============================================================ */
+        function collectAnswers(form, formKey) {
+            const answers = {};
+            let risk = false;
+            schema[formKey].sections.forEach(sec => {
+                sec.fields.forEach(f => {
+                    let value;
+                    if (f.type === 'checkbox') {
+                        value = Array.from(form.querySelectorAll(`input[name="${f.id}"]:checked`)).map(c => c.value);
+                    } else if (f.type === 'radio') {
+                        const c = form.querySelector(`input[name="${f.id}"]:checked`);
+                        value = c ? c.value : '';
+                    } else {
+                        const el = form.querySelector(`[name="${f.id}"]`);
+                        value = el ? el.value.trim() : '';
+                    }
+                    answers[f.id] = value;
+
+                    if (f.risk) {
+                        if (Array.isArray(value)) {
+                            if (value.some(v => !NORMAL_VALUES.includes(v))) risk = true;
+                        } else if (value && !NORMAL_VALUES.includes(value)) {
+                            risk = true;
+                        }
+                    }
+                });
+            });
+            return { answers, risk };
+        }
+
+        function handleSubmit(e) {
+            e.preventDefault();
+            const form = e.target;
+            const formKey = form.getAttribute('data-form');
+            const { answers, risk } = collectAnswers(form, formKey);
+
+            let group;
+            if (formKey === 'patient') {
+                group = 'ผู้ป่วย' + (answers.bed ? ` (${answers.bed})` : '');
+            } else {
+                group = answers.role || 'เจ้าหน้าที่';
+            }
+
+            records.unshift({
+                id: Date.now(),
+                type: formKey,
+                name: answers.name || '(ไม่ระบุชื่อ)',
+                hn: answers.hn || '',
+                group: group,
+                status: risk ? 'เฝ้าระวัง' : 'ปกติ',
+                date: new Date().toISOString().split('T')[0],
+                answers: answers
+            });
+            saveRecords();
+            form.reset();
+            showModal('บันทึกข้อมูลสำเร็จ!', 'ระบบได้ทำการบันทึกข้อมูลเรียบร้อยแล้ว');
+        }
+
+        document.getElementById('form-staff').addEventListener('submit', handleSubmit);
+        document.getElementById('form-patient').addEventListener('submit', handleSubmit);
+
+        /* ============================================================
+           5. NAVIGATION
+           ============================================================ */
         const navButtons = document.querySelectorAll('.nav-btn');
         const viewSections = document.querySelectorAll('.view-section');
 
         navButtons.forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                // Determine target
-                let targetId = btn.getAttribute('data-target');
-                if(!targetId) {
-                    targetId = btn.closest('.nav-btn').getAttribute('data-target');
-                }
-                
-                // Hide all views
-                viewSections.forEach(section => section.classList.add('hidden'));
-                
-                // Show target view
-                const targetElement = document.getElementById(targetId);
-                if(targetElement) {
-                    targetElement.classList.remove('hidden');
-                }
+            btn.addEventListener('click', () => {
+                let targetId = btn.getAttribute('data-target') || btn.closest('.nav-btn')?.getAttribute('data-target');
+                if (!targetId) return;
 
-                // Update navbar active states
-                document.querySelectorAll('nav .nav-btn').forEach(navLink => {
-                    if (navLink.getAttribute('data-target') === targetId && !navLink.querySelector('.text-transparent')) {
-                        // For regular buttons (not logo)
-                        navLink.classList.remove('text-slate-600', 'hover:bg-blue-50', 'hover:text-blue-700', 'hover:shadow-sm');
-                        navLink.classList.add('nav-active');
-                    } else if (navLink.hasAttribute('data-target') && !navLink.querySelector('.text-transparent')) {
-                        // Reset non-active buttons (excluding the brand logo area)
-                        navLink.classList.remove('nav-active');
-                        navLink.classList.add('text-slate-600', 'hover:bg-blue-50', 'hover:text-blue-700', 'hover:shadow-sm');
+                viewSections.forEach(s => s.classList.add('hidden'));
+                document.getElementById(targetId)?.classList.remove('hidden');
+
+                document.querySelectorAll('nav .nav-btn').forEach(link => {
+                    if (link.querySelector('.text-transparent') || !link.hasAttribute('data-target')) return;
+                    if (link.getAttribute('data-target') === targetId) {
+                        link.classList.remove('text-slate-600', 'hover:bg-blue-50', 'hover:text-blue-700', 'hover:shadow-sm');
+                        link.classList.add('nav-active');
+                    } else {
+                        link.classList.remove('nav-active');
+                        link.classList.add('text-slate-600', 'hover:bg-blue-50', 'hover:text-blue-700', 'hover:shadow-sm');
                     }
                 });
 
-                // If Admin view is clicked, re-render data
-                if(targetId === 'view-admin') {
-                    renderAdminTable();
-                }
+                if (targetId === 'view-admin') renderAdminTable();
+                if (targetId === 'view-builder') renderBuilder();
             });
         });
 
-        // 3. Form Submission Logic
-        
-        // Staff Form
-        document.getElementById('form-staff').addEventListener('submit', function(e) {
-            e.preventDefault();
-
-            const val = id => (document.getElementById(id)?.value || '').trim();
-            const radio = name => document.querySelector(`input[name="${name}"]:checked`)?.value || '';
-            const checks = sel => Array.from(document.querySelectorAll(sel)).filter(c => c.checked).map(c => c.value);
-
-            const symptomList = checks('.staff-symptom');
-            const symptomOther = val('staff-symptom-other');
-            const currentTb = radio('staff-current-tb');
-            const n95 = val('staff-n95');
-
-            // สรุปอาการเพื่อแสดงในตาราง
-            let symptomsSummary = symptomList.slice();
-            if (symptomOther) symptomsSummary.push(symptomOther);
-            const symptomsText = symptomsSummary.length ? symptomsSummary.join(', ') : 'ไม่มี';
-
-            // ประเมินสถานะเฝ้าระวัง
-            const hasSymptom = symptomList.length > 0 || symptomOther !== '';
-            const status = (currentTb === 'เป็น' || hasSymptom) ? 'เฝ้าระวัง' : 'ปกติ';
-
-            const newRecord = {
-                id: Date.now(),
-                type: 'staff',
-                name: val('staff-name'),
-                phone: val('staff-phone'),
-                hn: val('staff-hn'),
-                age: val('staff-age'),
-                gender: val('staff-gender'),
-                nationality: val('staff-nationality'),
-                occupation: val('staff-occupation'),
-                addrNo: val('staff-addr-no'),
-                addrMoo: val('staff-addr-moo'),
-                addrTambon: val('staff-addr-tambon'),
-                addrAmphoe: val('staff-addr-amphoe'),
-                addrProvince: val('staff-addr-province'),
-                unit: val('staff-unit'),
-                role: val('staff-role'),
-                currentTb: currentTb,
-                symptomList: symptomList,
-                symptomOther: symptomOther,
-                symptoms: symptomsText,
-                disease: val('staff-disease'),
-                medicine: val('staff-medicine'),
-                oldTb: radio('staff-old-tb'),
-                oldTbStart: val('staff-old-tb-start'),
-                oldTbEnd: val('staff-old-tb-end'),
-                bcg: radio('staff-bcg'),
-                bcgDate: val('staff-bcg-date'),
-                bcgScar: val('staff-bcg-scar'),
-                bcgScarPos: val('staff-bcg-scar-pos'),
-                srcName: val('staff-src-name'),
-                srcHn: val('staff-src-hn'),
-                srcWard: val('staff-src-ward'),
-                activities: checks('.staff-activity'),
-                contactDates: val('staff-contact-dates'),
-                n95: n95,
-                duration: val('staff-duration'),
-                room: val('staff-room'),
-                priorContact: val('staff-prior-contact'),
-                priorDetail: val('staff-prior-detail'),
-                date: new Date().toISOString().split('T')[0],
-                status: status
-            };
-
-            records.unshift(newRecord); // Add to beginning of array
-            saveRecords();
-            this.reset(); // Clear form
-            showModal();
-        });
-
-        // Patient Form
-        document.getElementById('form-patient').addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const name = document.getElementById('patient-name').value;
-            const hn = document.getElementById('patient-hn').value;
-            const bed = document.getElementById('patient-bed').value;
-            const symptoms = document.getElementById('patient-symptoms').value;
-            const status = symptoms !== 'ไม่มี' ? 'เฝ้าระวัง' : 'ปกติ';
-            
-            const newRecord = {
-                id: Date.now(),
-                type: 'patient',
-                name: name,
-                hn: hn,
-                role: `ผู้ป่วย (${bed})`,
-                symptoms: symptoms,
-                n95: 'N/A', // Patients usually don't wear N95 in this context
-                date: new Date().toISOString().split('T')[0],
-                status: status
-            };
-
-            records.unshift(newRecord);
-            saveRecords();
-            this.reset();
-            showModal();
-        });
-
-        // 4. Update Admin Dashboard
+        /* ============================================================
+           6. ADMIN TABLE
+           ============================================================ */
         function renderAdminTable() {
-            const tableBody = document.getElementById('table-body');
-            tableBody.innerHTML = ''; // Clear current rows
-
-            // Update Statistics
-            const staffCount = records.filter(r => r.type === 'staff').length;
-            const patientCount = records.filter(r => r.type === 'patient').length;
-            const riskCount = records.filter(r => r.status === 'เฝ้าระวัง').length;
+            const tbody = document.getElementById('table-body');
+            tbody.innerHTML = '';
 
             document.getElementById('stat-total').textContent = records.length;
-            document.getElementById('stat-staff').textContent = staffCount;
-            document.getElementById('stat-patient').textContent = patientCount;
-            document.getElementById('stat-risk').textContent = riskCount;
+            document.getElementById('stat-staff').textContent = records.filter(r => r.type === 'staff').length;
+            document.getElementById('stat-patient').textContent = records.filter(r => r.type === 'patient').length;
+            document.getElementById('stat-risk').textContent = records.filter(r => r.status === 'เฝ้าระวัง').length;
 
-            // Render Rows
             if (records.length === 0) {
-                tableBody.innerHTML = `<tr><td colspan="7" class="px-6 py-8 text-center text-slate-500 text-lg">ไม่มีข้อมูลการบันทึก</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-8 text-center text-slate-500 text-lg">ไม่มีข้อมูลการบันทึก</td></tr>`;
                 return;
             }
 
             records.forEach(record => {
                 const tr = document.createElement('tr');
                 tr.className = 'hover:bg-slate-50 transition-colors border-b border-slate-100 last:border-0';
-                
-                // N95 Styling
-                let n95Display = `<span class="text-slate-600">${record.n95}</span>`;
-                if (record.n95 === 'ไม่ได้ใส่') {
-                    n95Display = `<span class="text-rose-600 font-semibold drop-shadow-[0_1px_2px_rgba(225,29,72,0.2)]">ไม่ได้ใส่</span>`;
-                }
-
-                // Status Styling
-                let statusDisplay = `
-                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-emerald-100 text-emerald-700 border border-emerald-200">
-                        <i data-feather="check-circle" class="w-4 h-4 mr-1.5"></i> ปกติ
-                    </span>`;
-                if (record.status === 'เฝ้าระวัง') {
-                    statusDisplay = `
-                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-rose-100 text-rose-700 border border-rose-200">
-                        <i data-feather="alert-triangle" class="w-4 h-4 mr-1.5"></i> เฝ้าระวัง
-                    </span>`;
-                }
+                const statusDisplay = record.status === 'เฝ้าระวัง'
+                    ? `<span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-rose-100 text-rose-700 border border-rose-200"><i data-feather="alert-triangle" class="w-4 h-4 mr-1.5"></i> เฝ้าระวัง</span>`
+                    : `<span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-emerald-100 text-emerald-700 border border-emerald-200"><i data-feather="check-circle" class="w-4 h-4 mr-1.5"></i> ปกติ</span>`;
 
                 tr.innerHTML = `
                     <td class="px-6 py-5 whitespace-nowrap text-slate-600">${record.date}</td>
-                    <td class="px-6 py-5 font-medium text-slate-900 whitespace-nowrap">${record.name}</td>
+                    <td class="px-6 py-5 font-medium text-slate-900 whitespace-nowrap">${record.name || '-'}</td>
                     <td class="px-6 py-5 whitespace-nowrap text-slate-500">${record.hn || '-'}</td>
-                    <td class="px-6 py-5 whitespace-nowrap">${record.role}</td>
-                    <td class="px-6 py-5 whitespace-nowrap">${n95Display}</td>
-                    <td class="px-6 py-5 whitespace-nowrap">${record.symptoms}</td>
+                    <td class="px-6 py-5 whitespace-nowrap">${record.group || '-'}</td>
                     <td class="px-6 py-5 whitespace-nowrap">${statusDisplay}</td>
-                `;
-                tableBody.appendChild(tr);
+                    <td class="px-6 py-5 whitespace-nowrap text-right">
+                        <button class="btn-detail text-blue-600 hover:text-blue-800 font-medium inline-flex items-center" data-id="${record.id}"><i data-feather="eye" class="w-4 h-4 mr-1"></i> ดู</button>
+                    </td>`;
+                tbody.appendChild(tr);
             });
 
-            // Re-initialize icons for dynamically created elements
+            tbody.querySelectorAll('.btn-detail').forEach(b => b.addEventListener('click', () => showDetail(b.getAttribute('data-id'))));
             feather.replace();
         }
 
-        // 5. Custom Modal Handling
-        const modal = document.getElementById('custom-modal');
-        
-        function showModal() {
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
+        /* ============================================================
+           7. DETAIL MODAL
+           ============================================================ */
+        function labelFor(formKey, fieldId) {
+            const f = schema[formKey]?.sections.flatMap(s => s.fields).find(f => f.id === fieldId);
+            return f ? f.label : fieldId;
         }
 
+        function showDetail(id) {
+            const rec = records.find(r => String(r.id) === String(id));
+            if (!rec) return;
+            const body = document.getElementById('detail-body');
+            const ans = rec.answers || {};
+            let rows = `<div class="flex justify-between py-1.5 border-b border-slate-100"><span class="text-slate-500">ประเภท</span><span class="font-medium text-slate-800">${rec.type === 'patient' ? 'ผู้ป่วย' : 'เจ้าหน้าที่'}</span></div>
+                <div class="flex justify-between py-1.5 border-b border-slate-100"><span class="text-slate-500">วันที่บันทึก</span><span class="font-medium text-slate-800">${rec.date}</span></div>`;
+            Object.keys(ans).forEach(k => {
+                let v = ans[k];
+                if (Array.isArray(v)) v = v.length ? v.join(', ') : '-';
+                if (v === '' || v === undefined || v === null) v = '-';
+                rows += `<div class="flex justify-between gap-4 py-1.5 border-b border-slate-100"><span class="text-slate-500 flex-shrink-0">${labelFor(rec.type, k)}</span><span class="font-medium text-slate-800 text-right">${v}</span></div>`;
+            });
+            body.innerHTML = rows;
+            const m = document.getElementById('detail-modal');
+            m.classList.remove('hidden'); m.classList.add('flex');
+            feather.replace();
+        }
+        function closeDetail() {
+            const m = document.getElementById('detail-modal');
+            m.classList.add('hidden'); m.classList.remove('flex');
+        }
+
+        /* ============================================================
+           8. SUCCESS MODAL
+           ============================================================ */
+        const modal = document.getElementById('custom-modal');
+        function showModal(title, msg) {
+            if (title) document.getElementById('modal-title').textContent = title;
+            if (msg) document.getElementById('modal-msg').textContent = msg;
+            modal.classList.remove('hidden'); modal.classList.add('flex');
+        }
         function closeModal() {
-            modal.classList.add('hidden');
-            modal.classList.remove('flex');
-            // Go back to home screen after closing modal
+            modal.classList.add('hidden'); modal.classList.remove('flex');
             document.querySelector('nav .nav-btn[data-target="view-home"]').click();
         }
 
-        // 6. Export CSV
+        /* ============================================================
+           9. CSV EXPORT (dynamic columns from schema)
+           ============================================================ */
         function exportCSV() {
-            const headers = [
-                'วันที่บันทึก','ประเภท','ชื่อ-สกุล','เบอร์โทรศัพท์','HN','อายุ','เพศ','สัญชาติ','อาชีพ',
-                'บ้านเลขที่','หมู่','ตำบล','อำเภอ','จังหวัด','หน่วยงาน/หอผู้ป่วย','ตำแหน่ง',
-                'ป่วยวัณโรคขณะนี้','อาการ','อาการอื่นๆ','โรคประจำตัว','ยาประจำตัว',
-                'ประวัติวัณโรคปอดในอดีต','รักษาเมื่อ','สิ้นสุดเมื่อ','ประวัติ BCG','วันที่รับ BCG','แผลเป็น BCG','ตำแหน่งแผลเป็น BCG',
-                'ชื่อผู้ป่วยที่สัมผัส','HN ผู้ป่วย','หอผู้ป่วย','กิจกรรมที่ทำ','วันที่สัมผัส',
-                'การใส่ N95','ระยะเวลาสัมผัส','ขนาดห้อง','เคยสัมผัสวัณโรค 1-3 เดือนก่อน','รายละเอียดการสัมผัสก่อนหน้า','สถานะ'
-            ];
-
             const esc = v => {
-                let s = (v === undefined || v === null) ? '' : String(v);
-                if (Array.isArray(v)) s = v.join(' | ');
+                let s = Array.isArray(v) ? v.join(' | ') : (v === undefined || v === null ? '' : String(v));
                 if (/[",\n]/.test(s)) s = '"' + s.replace(/"/g, '""') + '"';
                 return s;
             };
+            // รวมคอลัมน์จากทั้งสองแบบฟอร์ม
+            const cols = []; // {key, label}
+            const seen = new Set();
+            ['staff', 'patient'].forEach(fk => {
+                schema[fk].sections.forEach(sec => sec.fields.forEach(f => {
+                    if (!seen.has(f.id)) { seen.add(f.id); cols.push({ key: f.id, label: f.label }); }
+                }));
+            });
 
-            const rows = records.map(r => [
-                r.date, r.type === 'patient' ? 'ผู้ป่วย' : 'เจ้าหน้าที่', r.name, r.phone, r.hn, r.age, r.gender, r.nationality, r.occupation,
-                r.addrNo, r.addrMoo, r.addrTambon, r.addrAmphoe, r.addrProvince, r.unit, r.role,
-                r.currentTb, r.symptoms, r.symptomOther, r.disease, r.medicine,
-                r.oldTb, r.oldTbStart, r.oldTbEnd, r.bcg, r.bcgDate, r.bcgScar, r.bcgScarPos,
-                r.srcName, r.srcHn, r.srcWard, r.activities, r.contactDates,
-                r.n95, r.duration, r.room, r.priorContact, r.priorDetail, r.status
-            ].map(esc).join(','));
+            const headers = ['วันที่บันทึก', 'ประเภท', 'สถานะ', ...cols.map(c => c.label)];
+            const rows = records.map(r => {
+                const a = r.answers || {};
+                return [r.date, r.type === 'patient' ? 'ผู้ป่วย' : 'เจ้าหน้าที่', r.status, ...cols.map(c => a[c.key])].map(esc).join(',');
+            });
 
-            const csv = '﻿' + headers.join(',') + '\n' + rows.join('\n');
+            const csv = '﻿' + headers.map(esc).join(',') + '\n' + rows.join('\n');
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
             a.download = `outbreak-contacts-${new Date().toISOString().split('T')[0]}.csv`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
+            document.body.appendChild(a); a.click(); document.body.removeChild(a);
             URL.revokeObjectURL(url);
         }
-
         document.getElementById('btn-export-csv').addEventListener('click', exportCSV);
 
-        // Initialize first view rendering
-        renderAdminTable();
+        /* ============================================================
+           10. FORM BUILDER
+           ============================================================ */
+        let builderForm = 'staff';           // แบบฟอร์มที่กำลังแก้ไข
+        let draft = JSON.parse(JSON.stringify(schema)); // สำเนาสำหรับแก้ไข
+        const TYPE_LABELS = {
+            text: 'ข้อความสั้น', tel: 'เบอร์โทร', number: 'ตัวเลข', date: 'วันที่',
+            textarea: 'ข้อความยาว', select: 'ดรอปดาวน์ (เลือก 1)', radio: 'ตัวเลือก (เลือก 1)', checkbox: 'เลือกได้หลายข้อ'
+        };
+        const HAS_OPTIONS = ['select', 'radio', 'checkbox'];
 
+        function uid() { return 'f' + Date.now().toString(36) + Math.floor(Math.random() * 1000); }
+
+        function renderBuilder() {
+            // sync tab styles
+            document.querySelectorAll('.builder-tab').forEach(t => {
+                const active = t.getAttribute('data-formtab') === builderForm;
+                t.classList.toggle('bg-white', active);
+                t.classList.toggle('shadow-sm', active);
+                t.classList.toggle('text-purple-700', active);
+                t.classList.toggle('text-slate-600', !active);
+            });
+
+            const body = document.getElementById('builder-body');
+            const secs = draft[builderForm].sections;
+            body.innerHTML = secs.map((sec, si) => `
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
+                    <div class="flex items-center gap-3">
+                        <i data-feather="${sec.icon || 'chevron-right'}" class="w-5 h-5 text-purple-500 flex-shrink-0"></i>
+                        <input class="flex-1 text-lg font-semibold text-slate-800 border-b border-slate-200 focus:border-purple-500 focus:outline-none py-1 bg-transparent" value="${escAttr(sec.title)}" data-act="sec-title" data-si="${si}" placeholder="ชื่อส่วน">
+                        <button data-act="sec-del" data-si="${si}" class="text-rose-500 hover:text-rose-700 p-1" title="ลบส่วนนี้"><i data-feather="trash-2" class="w-5 h-5"></i></button>
+                    </div>
+                    <div class="space-y-3 pl-2">
+                        ${sec.fields.map((f, fi) => fieldEditorHTML(f, si, fi)).join('')}
+                    </div>
+                    <button data-act="field-add" data-si="${si}" class="text-purple-600 hover:text-purple-800 text-base font-medium inline-flex items-center mt-2"><i data-feather="plus" class="w-4 h-4 mr-1"></i> เพิ่มคำถาม</button>
+                </div>
+            `).join('');
+            feather.replace();
+        }
+
+        function fieldEditorHTML(f, si, fi) {
+            const typeOpts = Object.keys(TYPE_LABELS).map(t => `<option value="${t}" ${f.type === t ? 'selected' : ''}>${TYPE_LABELS[t]}</option>`).join('');
+            const optionsBlock = HAS_OPTIONS.includes(f.type)
+                ? `<div class="mt-2">
+                        <label class="text-sm text-slate-500">ตัวเลือก (บรรทัดละ 1 รายการ)</label>
+                        <textarea data-act="field-options" data-si="${si}" data-fi="${fi}" rows="3" class="w-full text-base rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-400 mt-1" placeholder="พิมพ์ตัวเลือกทีละบรรทัด">${(f.options || []).join('\n')}</textarea>
+                   </div>`
+                : '';
+            return `<div class="rounded-xl border border-slate-200 bg-slate-50/60 p-4">
+                <div class="flex flex-col sm:flex-row gap-3 sm:items-center">
+                    <input class="flex-1 text-base rounded-lg border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-400" value="${escAttr(f.label)}" data-act="field-label" data-si="${si}" data-fi="${fi}" placeholder="ข้อความคำถาม">
+                    <select data-act="field-type" data-si="${si}" data-fi="${fi}" class="text-base rounded-lg border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-400 cursor-pointer">${typeOpts}</select>
+                    <label class="flex items-center space-x-2 text-sm text-slate-600 cursor-pointer whitespace-nowrap">
+                        <input type="checkbox" data-act="field-required" data-si="${si}" data-fi="${fi}" ${f.required ? 'checked' : ''} class="w-4 h-4 text-purple-600"> <span>บังคับตอบ</span>
+                    </label>
+                    <button data-act="field-del" data-si="${si}" data-fi="${fi}" class="text-rose-500 hover:text-rose-700 p-1" title="ลบคำถาม"><i data-feather="trash-2" class="w-5 h-5"></i></button>
+                </div>
+                ${optionsBlock}
+            </div>`;
+        }
+
+        // Builder: input (text edits, no re-render to keep focus)
+        document.getElementById('builder-body').addEventListener('input', e => {
+            const el = e.target, act = el.getAttribute('data-act');
+            if (!act) return;
+            const si = +el.getAttribute('data-si'), fi = +el.getAttribute('data-fi');
+            const secs = draft[builderForm].sections;
+            if (act === 'sec-title') secs[si].title = el.value;
+            else if (act === 'field-label') secs[si].fields[fi].label = el.value;
+            else if (act === 'field-options') secs[si].fields[fi].options = el.value.split('\n').map(s => s.trim()).filter(Boolean);
+        });
+
+        // Builder: change (type/required)
+        document.getElementById('builder-body').addEventListener('change', e => {
+            const el = e.target, act = el.getAttribute('data-act');
+            if (!act) return;
+            const si = +el.getAttribute('data-si'), fi = +el.getAttribute('data-fi');
+            const secs = draft[builderForm].sections;
+            if (act === 'field-type') {
+                const field = secs[si].fields[fi];
+                field.type = el.value;
+                if (HAS_OPTIONS.includes(field.type) && !field.options) field.options = ['ตัวเลือก 1', 'ตัวเลือก 2'];
+                renderBuilder();
+            } else if (act === 'field-required') {
+                secs[si].fields[fi].required = el.checked;
+            }
+        });
+
+        // Builder: click (add/delete)
+        document.getElementById('builder-body').addEventListener('click', e => {
+            const btn = e.target.closest('[data-act]');
+            if (!btn) return;
+            const act = btn.getAttribute('data-act');
+            const si = +btn.getAttribute('data-si'), fi = +btn.getAttribute('data-fi');
+            const secs = draft[builderForm].sections;
+            if (act === 'sec-del') {
+                if (confirm('ต้องการลบส่วนนี้และคำถามทั้งหมดในส่วนนี้หรือไม่?')) { secs.splice(si, 1); renderBuilder(); }
+            } else if (act === 'field-add') {
+                secs[si].fields.push({ id: uid(), label: 'คำถามใหม่', type: 'text' });
+                renderBuilder();
+            } else if (act === 'field-del') {
+                secs[si].fields.splice(fi, 1); renderBuilder();
+            }
+        });
+
+        // Tabs
+        document.querySelectorAll('.builder-tab').forEach(t => t.addEventListener('click', () => {
+            builderForm = t.getAttribute('data-formtab');
+            renderBuilder();
+        }));
+
+        // Add section
+        document.getElementById('btn-add-section').addEventListener('click', () => {
+            draft[builderForm].sections.push({ id: uid(), title: 'ส่วนใหม่', icon: 'chevron-right', fields: [] });
+            renderBuilder();
+        });
+
+        // Save schema
+        document.getElementById('btn-builder-save').addEventListener('click', () => {
+            schema = JSON.parse(JSON.stringify(draft));
+            saveSchema();
+            renderForm('staff');
+            renderForm('patient');
+            showModal('บันทึกแบบสอบถามสำเร็จ!', 'แบบสอบถามถูกอัปเดตแล้ว ฟอร์มเจ้าหน้าที่และผู้ป่วยจะใช้รูปแบบใหม่ทันที');
+        });
+
+        // Reset to default
+        document.getElementById('btn-builder-reset').addEventListener('click', () => {
+            if (!confirm('คืนค่าแบบสอบถามกลับเป็นค่าเริ่มต้น? การแก้ไขที่ยังไม่บันทึกจะหายไป')) return;
+            draft = defaultSchema();
+            renderBuilder();
+        });
+
+        /* ============================================================
+           11. INIT
+           ============================================================ */
+        renderForm('staff');
+        renderForm('patient');
+        renderAdminTable();
     </script>
 </body>
 </html>

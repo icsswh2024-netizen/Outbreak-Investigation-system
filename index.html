@@ -649,11 +649,33 @@
             rows.sort((a, b) => a.date.localeCompare(b.date));
             return rows;
         }
+        // ประมาณชั่วโมงต่อวันจากข้อความช่วงเวลา เช่น "8-16 ชม." → 12
+        function durationHours(str) {
+            if (!str) return 0;
+            const nums = (String(str).match(/\d+/g) || []).map(Number);
+            if (!nums.length) return 0;
+            if (/</.test(str)) return nums[0] / 2;
+            if (/>/.test(str)) return nums[0];
+            if (nums.length >= 2) return (nums[0] + nums[1]) / 2;
+            return nums[0];
+        }
+        // โอกาสเป็นวัณโรคในช่วงชีวิตตามอายุ (Closed Contact TB)
+        function ageTbRisk(age) {
+            age = parseInt(age, 10);
+            if (isNaN(age)) return null;
+            if (age < 1) return { g: 'อายุ < 1 ปี', r: '43%' };
+            if (age <= 5) return { g: 'อายุ 1–5 ปี', r: '24%' };
+            if (age <= 10) return { g: 'อายุ 6–10 ปี', r: 'ประมาณ 15–24%' };
+            if (age <= 15) return { g: 'อายุ 11–15 ปี', r: '15%' };
+            return { g: 'ผู้ใหญ่ (Adult)', r: '5–10%' };
+        }
+
         // เรนเดอร์ตารางสรุปเรียลไทม์ใต้ข้อ 6.4
         function renderPatternPreview(cont) {
             const box = cont.querySelector('.pat-preview');
             if (!box) return;
-            const rows = expandToRows(readContactPattern(cont));
+            const value = readContactPattern(cont);
+            const rows = expandToRows(value);
             if (!rows.length) { box.innerHTML = '<p class="text-sm text-slate-400 mt-2">— ยังไม่มีข้อมูลพอจะสรุป (เลือกช่วงวันและความถี่) —</p>'; return; }
             const body = rows.map(r => `<tr class="border-b border-slate-100">
                 <td class="px-3 py-1.5 whitespace-nowrap">${fmtThaiDate(r.date)}</td>
@@ -664,6 +686,35 @@
                 <td class="px-3 py-1.5">${r.room}</td>
                 <td class="px-3 py-1.5 ${r.note ? 'text-amber-600 font-medium' : 'text-slate-400'}">${r.note || '-'}</td>
             </tr>`).join('');
+            // ===== สรุปประมาณการความเสี่ยง (Closed Contact TB) =====
+            let totalHours = 0, maxDaily = 0;
+            (value.patterns || []).forEach(p => {
+                const h = durationHours(p.duration);
+                const d = expandPattern(value.rangeStart, value.rangeEnd, p).length;
+                totalHours += h * d;
+                if (h > maxDaily) maxDaily = h;
+            });
+            const isClose = maxDaily >= 8 || totalHours > 120;
+            const form = cont.closest('form');
+            const ageEl = form && form.querySelector('[name="age"]');
+            const risk = ageEl ? ageTbRisk(ageEl.value) : null;
+            const closeBadge = isClose
+                ? `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-semibold bg-rose-100 text-rose-700"><i data-feather="alert-triangle" class="w-4 h-4 mr-1"></i> เข้าเกณฑ์ Close/Household Contact</span>`
+                : `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-semibold bg-emerald-100 text-emerald-700"><i data-feather="check" class="w-4 h-4 mr-1"></i> ยังไม่เข้าเกณฑ์ Close Contact</span>`;
+
+            const summary = `<div class="mt-3 rounded-xl border ${isClose ? 'border-rose-200 bg-rose-50/40' : 'border-emerald-200 bg-emerald-50/40'} p-4 space-y-2">
+                <div class="font-semibold text-slate-800 flex items-center"><i data-feather="shield" class="w-4 h-4 mr-1.5 text-slate-600"></i> สรุปประมาณการความเสี่ยง (Closed Contact TB)</div>
+                <div class="flex flex-wrap gap-x-6 gap-y-1 text-base text-slate-700">
+                    <span>รวมวันสัมผัส: <b>${rows.length}</b> วัน</span>
+                    <span>ชั่วโมงสัมผัสรวม (ประมาณ): <b>${Math.round(totalHours)}</b> ชม./เดือน</span>
+                </div>
+                <div>${closeBadge}</div>
+                ${risk ? `<div class="text-base text-slate-700">${risk.g} → โอกาสเป็นวัณโรคในช่วงชีวิต (ถ้าติดเชื้อ): <b class="text-rose-600">~${risk.r}</b></div>` : `<div class="text-sm text-slate-400">* กรอกอายุในข้อ 1.4 เพื่อประเมินโอกาสเป็นวัณโรคตามช่วงอายุ</div>`}
+                <div class="text-xs text-slate-500 leading-relaxed pt-1 border-t border-slate-200">
+                    <b>นิยาม Closed Contact / Household Contact:</b> ผู้ที่อยู่สถานที่เดียวกัน (บ้าน/ห้องนอน/ห้องเรียน/ที่ทำงานเดียวกัน) สัมผัสใกล้ชิดต่อเนื่อง <b>≥ 8 ชม./วัน</b> หรือสะสม <b>&gt; 120 ชม./เดือน</b>
+                </div>
+            </div>`;
+
             box.innerHTML = `<div class="mt-3 rounded-xl border border-teal-200 bg-white overflow-hidden">
                 <div class="px-3 py-2 bg-teal-50 text-teal-700 font-semibold text-sm flex items-center"><i data-feather="check-circle" class="w-4 h-4 mr-1.5"></i> ตัวอย่างข้อมูลรายวัน (ระบบสร้างให้อัตโนมัติ) — รวม ${rows.length} วัน</div>
                 <div class="overflow-x-auto max-h-72 overflow-y-auto">
@@ -674,7 +725,7 @@
                         <tbody class="text-slate-700">${body}</tbody>
                     </table>
                 </div>
-            </div>`;
+            </div>${summary}`;
             feather.replace();
         }
 
@@ -1191,7 +1242,7 @@
                 if (e.target.closest('.contactpattern')) refreshPatternPreviews(form);
             });
             // พิมพ์/เลือกวันที่ → อัปเดตพรีวิวเรียลไทม์
-            form.addEventListener('input', e => { if (e.target.closest('.contactpattern')) refreshPatternPreviews(form); });
+            form.addEventListener('input', e => { if (e.target.closest('.contactpattern') || e.target.getAttribute('name') === 'age') refreshPatternPreviews(form); });
             form.addEventListener('click', e => {
                 // ===== contactpattern (6.4 แบบใหม่) =====
                 const patAdd = e.target.closest('.contactpat-add');

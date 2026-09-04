@@ -199,6 +199,30 @@
                 <p class="text-sm text-slate-400 mt-2">ติ๊กออก = ซ่อนเมนูนั้นสำหรับผู้ใช้ แล้วกด "บันทึกการตั้งค่าเมนู" (เมนู Admin จะแสดงเสมอ)</p>
             </div>
 
+            <!-- จัดการนิยาม / เกณฑ์ความเสี่ยง (Closed Contact TB) -->
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-3">
+                <h3 class="text-lg font-semibold text-slate-800 flex items-center"><i data-feather="book-open" class="w-5 h-5 mr-2 text-rose-500"></i> จัดการนิยาม / เกณฑ์ความเสี่ยง (Closed Contact TB)</h3>
+                <div class="space-y-1">
+                    <label class="text-base font-medium text-slate-700">ข้อความนิยาม Closed / Household Contact</label>
+                    <textarea id="tb-text" rows="2" class="w-full text-base rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-rose-400"></textarea>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="space-y-1"><label class="text-base font-medium text-slate-700">เกณฑ์ ชม./วัน (ต่อเนื่อง)</label><input id="tb-hrday" type="number" class="w-full text-base rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-rose-400"></div>
+                    <div class="space-y-1"><label class="text-base font-medium text-slate-700">เกณฑ์ ชม./เดือน (สะสม)</label><input id="tb-hrmonth" type="number" class="w-full text-base rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-rose-400"></div>
+                </div>
+                <div class="space-y-1">
+                    <label class="text-base font-medium text-slate-700">โอกาสเป็นวัณโรคในช่วงชีวิต ตามช่วงอายุ</label>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <div class="flex items-center gap-2"><span class="text-slate-500 w-24">อายุ &lt; 1 ปี</span><input id="tb-r-u1" class="flex-1 text-base rounded-lg border border-slate-300 bg-slate-50 px-2 py-1.5"></div>
+                        <div class="flex items-center gap-2"><span class="text-slate-500 w-24">อายุ 1–5 ปี</span><input id="tb-r-a15" class="flex-1 text-base rounded-lg border border-slate-300 bg-slate-50 px-2 py-1.5"></div>
+                        <div class="flex items-center gap-2"><span class="text-slate-500 w-24">อายุ 6–10 ปี</span><input id="tb-r-a610" class="flex-1 text-base rounded-lg border border-slate-300 bg-slate-50 px-2 py-1.5"></div>
+                        <div class="flex items-center gap-2"><span class="text-slate-500 w-24">อายุ 11–15 ปี</span><input id="tb-r-a1115" class="flex-1 text-base rounded-lg border border-slate-300 bg-slate-50 px-2 py-1.5"></div>
+                        <div class="flex items-center gap-2"><span class="text-slate-500 w-24">ผู้ใหญ่</span><input id="tb-r-adult" class="flex-1 text-base rounded-lg border border-slate-300 bg-slate-50 px-2 py-1.5"></div>
+                    </div>
+                </div>
+                <button id="btn-save-tbdef" class="bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-600 hover:to-red-700 text-white px-5 py-2 rounded-lg text-base font-semibold flex items-center transition-all shadow-[0_4px_15px_rgba(244,63,94,0.3)]"><i data-feather="save" class="w-4 h-4 mr-2"></i> บันทึกนิยาม</button>
+            </div>
+
             <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
                 <div class="rounded-2xl border p-5 flex flex-col bg-white border-blue-200 shadow-[0_4px_15px_rgba(59,130,246,0.1)] transition-transform hover:-translate-y-1">
                     <span class="text-base font-medium mb-1 text-slate-500">ผู้สัมผัสทั้งหมด</span>
@@ -422,6 +446,10 @@
                 }
                 if (data.settings.defaultSchema) {
                     try { localStorage.setItem('oi-default-schema', JSON.stringify(data.settings.defaultSchema)); } catch (e) {}
+                }
+                if (data.settings.tbDef) {
+                    try { localStorage.setItem('oi-tbdef', JSON.stringify(data.settings.tbDef)); } catch (e) {}
+                    if (typeof renderTbDefForm === 'function' && !document.getElementById('view-admin').classList.contains('hidden')) renderTbDefForm();
                 }
             }
             renderForm('staff'); renderForm('patient');
@@ -687,11 +715,12 @@
         function ageTbRisk(age) {
             age = parseInt(age, 10);
             if (isNaN(age)) return null;
-            if (age < 1) return { g: 'อายุ < 1 ปี', r: '43%' };
-            if (age <= 5) return { g: 'อายุ 1–5 ปี', r: '24%' };
-            if (age <= 10) return { g: 'อายุ 6–10 ปี', r: 'ประมาณ 15–24%' };
-            if (age <= 15) return { g: 'อายุ 11–15 ปี', r: '15%' };
-            return { g: 'ผู้ใหญ่ (Adult)', r: '5–10%' };
+            const rk = (typeof getTbDef === 'function' ? getTbDef() : defaultTbDef()).risks;
+            if (age < 1) return { g: 'อายุ < 1 ปี', r: rk.u1 };
+            if (age <= 5) return { g: 'อายุ 1–5 ปี', r: rk.a1_5 };
+            if (age <= 10) return { g: 'อายุ 6–10 ปี', r: rk.a6_10 };
+            if (age <= 15) return { g: 'อายุ 11–15 ปี', r: rk.a11_15 };
+            return { g: 'ผู้ใหญ่ (Adult)', r: rk.adult };
         }
 
         // เรนเดอร์ตารางสรุปเรียลไทม์ใต้ข้อ 6.4
@@ -725,7 +754,8 @@
                 totalHours += h * d;
                 if (h > maxDaily) maxDaily = h;
             });
-            const isClose = maxDaily >= 8 || totalHours > 120;
+            const tb = getTbDef();
+            const isClose = maxDaily >= (tb.hrPerDay || 8) || totalHours > (tb.hrPerMonth || 120);
             const form = cont.closest('form');
             const ageEl = form && form.querySelector('[name="age"]');
             const risk = ageEl ? ageTbRisk(ageEl.value) : null;
@@ -742,7 +772,7 @@
                 <div>${closeBadge}</div>
                 ${risk ? `<div class="text-base text-slate-700">${risk.g} → โอกาสเป็นวัณโรคในช่วงชีวิต (ถ้าติดเชื้อ): <b class="text-rose-600">~${risk.r}</b></div>` : `<div class="text-sm text-slate-400">* กรอกอายุในข้อ 1.4 เพื่อประเมินโอกาสเป็นวัณโรคตามช่วงอายุ</div>`}
                 <div class="text-xs text-slate-500 leading-relaxed pt-1 border-t border-slate-200">
-                    <b>นิยาม Closed Contact / Household Contact:</b> ผู้ที่อยู่สถานที่เดียวกัน (บ้าน/ห้องนอน/ห้องเรียน/ที่ทำงานเดียวกัน) สัมผัสใกล้ชิดต่อเนื่อง <b>≥ 8 ชม./วัน</b> หรือสะสม <b>&gt; 120 ชม./เดือน</b>
+                    <b>นิยาม Closed Contact / Household Contact:</b> ${tb.text}
                 </div>
             </div>`;
 
@@ -1427,7 +1457,7 @@
                     }
                 });
 
-                if (targetId === 'view-admin') { renderAdminTable(); renderNavToggles(); serverLoad(); }
+                if (targetId === 'view-admin') { renderAdminTable(); renderNavToggles(); renderTbDefForm(); serverLoad(); }
                 if (targetId === 'view-builder') renderBuilder();
             });
         });
@@ -1628,6 +1658,25 @@
         loginModal.addEventListener('click', e => { if (e.target === loginModal) closeLogin(); });
         loginPass.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
         loginUser.addEventListener('keydown', e => { if (e.key === 'Enter') loginPass.focus(); });
+        // บันทึกนิยาม / เกณฑ์ความเสี่ยง
+        document.getElementById('btn-save-tbdef').addEventListener('click', () => {
+            const val = id => (document.getElementById(id) || {}).value || '';
+            const obj = {
+                text: val('tb-text').trim() || defaultTbDef().text,
+                hrPerDay: parseFloat(val('tb-hrday')) || 8,
+                hrPerMonth: parseFloat(val('tb-hrmonth')) || 120,
+                risks: {
+                    u1: val('tb-r-u1').trim(), a1_5: val('tb-r-a15').trim(), a6_10: val('tb-r-a610').trim(),
+                    a11_15: val('tb-r-a1115').trim(), adult: val('tb-r-adult').trim()
+                }
+            };
+            confirmSave('บันทึกนิยาม/เกณฑ์ความเสี่ยงนี้ใช่หรือไม่?', () => {
+                try { localStorage.setItem(TBDEF_KEY, JSON.stringify(obj)); } catch (e) {}
+                serverSaveSettings(currentSettings());
+                document.querySelectorAll('form[data-form]').forEach(f => refreshPatternPreviews(f));
+            }, 'บันทึกนิยาม/เกณฑ์แล้ว' + (USE_SERVER ? ' (ทุกเครื่อง)' : ''));
+        });
+
         document.getElementById('btn-logout').addEventListener('click', () => {
             try { sessionStorage.removeItem('oi-admin'); } catch (e) {}
             document.querySelector('nav .nav-btn[data-target="view-home"]').click();
@@ -1942,7 +1991,7 @@
             return defaultSchema();
         }
         function currentSettings() {
-            const s = { navHidden: getHiddenNav() };
+            const s = { navHidden: getHiddenNav(), tbDef: getTbDef() };
             try { const d = localStorage.getItem(DEFAULT_SCHEMA_KEY); if (d) s.defaultSchema = JSON.parse(d); } catch (e) {}
             return s;
         }
@@ -1996,6 +2045,27 @@
             { t: 'view-patient', l: 'ผู้ป่วย' }
         ];
         function getHiddenNav() { try { return JSON.parse(localStorage.getItem(NAV_HIDE_KEY) || '[]'); } catch (e) { return []; } }
+
+        /* ===== นิยาม / เกณฑ์ความเสี่ยง (Closed Contact TB) ===== */
+        const TBDEF_KEY = 'oi-tbdef';
+        function defaultTbDef() {
+            return {
+                text: 'ผู้ที่อยู่สถานที่เดียวกัน (บ้าน/ห้องนอน/ห้องเรียน/ที่ทำงานเดียวกัน) สัมผัสใกล้ชิดต่อเนื่อง ≥ 8 ชม./วัน หรือสะสม > 120 ชม./เดือน',
+                hrPerDay: 8, hrPerMonth: 120,
+                risks: { u1: '43%', a1_5: '24%', a6_10: 'ประมาณ 15–24%', a11_15: '15%', adult: '5–10%' }
+            };
+        }
+        function getTbDef() {
+            try { const d = localStorage.getItem(TBDEF_KEY); if (d) return Object.assign(defaultTbDef(), JSON.parse(d)); } catch (e) {}
+            return defaultTbDef();
+        }
+        function renderTbDefForm() {
+            const t = getTbDef();
+            const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
+            set('tb-text', t.text); set('tb-hrday', t.hrPerDay); set('tb-hrmonth', t.hrPerMonth);
+            set('tb-r-u1', t.risks.u1); set('tb-r-a15', t.risks.a1_5); set('tb-r-a610', t.risks.a6_10);
+            set('tb-r-a1115', t.risks.a11_15); set('tb-r-adult', t.risks.adult);
+        }
         function applyNavVisibility() {
             const hidden = getHiddenNav();
             // ปุ่มบนแถบเมนู

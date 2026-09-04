@@ -919,7 +919,7 @@
             opts = opts || { activities: CONTACT_ACTIVITIES, n95: CONTACT_N95, duration: CONTACT_DURATION, room: CONTACT_ROOM, location: CONTACT_LOCATION };
             labels = labels || CONTACT_LABELS_DEFAULT;
             const uid = 'freq' + Date.now() + Math.floor(Math.random() * 1e4);
-            const freq = data.freq || 'workdays';
+            const freq = data.freq || 'daily';
             const freqLbl = opts.freq || FREQ_LABEL;
             const selOf = (role, arr, cur, label) => `<div class="space-y-1"><label class="text-sm font-medium text-slate-600">${hlLabel(label)}</label>
                 <select data-role="${role}" class="field-input appearance-none cursor-pointer"><option value="">— เลือก —</option>${arr.map(o => `<option value="${escAttr(o)}" ${cur === o ? 'selected' : ''}>${o}</option>`).join('')}</select></div>`;

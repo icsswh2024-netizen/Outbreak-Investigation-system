@@ -186,6 +186,7 @@ function matchRoster() {
   var dPreCol   = _findCol(dh, [COL_PREFIX]);
   var dFCol     = _findCol(dh, [COL_FNAME]);
   var dLCol     = _findCol(dh, [COL_LNAME]);
+  var dJsonCol  = _findCol(dh, ['_JSON']);  // ก้อน JSON ที่เว็บแอปอ่านกลับ (ต้องแก้ด้วย)
   var dMatchCol = _findCol(dh, [COL_MATCH]);
   var appended = [];
   if (dPreCol < 0)   { dPreCol = dh.length + appended.length; appended.push(COL_PREFIX); }
@@ -199,7 +200,7 @@ function matchRoster() {
   var regKeys = Object.keys(reg);
   var matched = 0, fuzzy = 0, unmatched = 0;
   var lastRow = dv.length;               // จำนวนแถวข้อมูล (รวม header)
-  var maxCol = Math.max(dNameCol, dPosCol, dUnitCol, dPreCol, dFCol, dLCol, dMatchCol) + 1;
+  var maxCol = Math.max(dNameCol, dPosCol, dUnitCol, dPreCol, dFCol, dLCol, dJsonCol, dMatchCol) + 1;
 
   var block = ds.getRange(2, 1, lastRow - 1, maxCol).getValues();
   var bgClear = [];
@@ -220,6 +221,20 @@ function matchRoster() {
       brow[dPreCol]   = m.prefix;
       brow[dFCol]     = m.first;
       brow[dLCol]     = m.last;
+      // อัปเดตก้อน _JSON ที่เว็บแอป/รายงานอ่านกลับ ให้ชื่อ/ตำแหน่ง/หน่วยงานเปลี่ยนตามทะเบียน
+      if (dJsonCol >= 0 && brow[dJsonCol]) {
+        try {
+          var rec = JSON.parse(brow[dJsonCol]);
+          var fullName = _norm((m.prefix ? m.prefix + ' ' : '') + m.full);
+          rec.name = fullName;
+          rec.group = m.pos || rec.group;
+          rec.answers = rec.answers || {};
+          rec.answers.name = fullName;
+          if (m.pos)  rec.answers.role = m.pos;
+          if (m.unit) rec.answers.unit = m.unit;
+          brow[dJsonCol] = JSON.stringify(rec);
+        } catch (e) {}
+      }
       if (isFuzzy) { brow[dMatchCol] = 'แมตใกล้เคียง-ตรวจสอบ'; fuzzy++; bgClear.push('#ffe8cc'); }
       else { brow[dMatchCol] = 'ตรงกับทะเบียน'; matched++; bgClear.push(null); }
     } else {

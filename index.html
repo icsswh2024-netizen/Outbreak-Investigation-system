@@ -2069,7 +2069,7 @@
                 ${headBlock}
                 ${ci === 0 ? kpis : ''}
                 <div class="sech">รายชื่อเจ้าหน้าที่ผู้สัมผัส (${staff.length} ราย)${contd}</div>
-                <table class="grid">${tHead}<tbody>${body}</tbody></table>
+                <table class="rtab">${tHead}<tbody>${body}</tbody></table>
                 <div class="foot">รพ.ศรีสังวรสุโขทัย • IPC/ICN</div>
                 <div class="pgno">หน้า ${ci + 1}/${totalPages}</div>
               </section>`;
@@ -2088,7 +2088,7 @@
                 <div class="cols">
                     <div class="col card">
                         <div class="lbl">1. จำนวนเจ้าหน้าที่ผู้สัมผัส จำแนกตามตำแหน่ง</div>
-                        <table class="grid"><thead><tr><th>ตำแหน่ง</th><th style="width:90px">จำนวน</th></tr></thead>
+                        <table class="rtab"><thead><tr><th>ตำแหน่ง</th><th style="width:90px">จำนวน</th></tr></thead>
                         <tbody>${groupRows}</tbody></table>
                     </div>
                     <div class="col card">
@@ -2166,15 +2166,15 @@
                   display:inline-block; background:#f0fdfa; border:1px solid #99f6e4; border-radius:999px; padding:4px 16px; }
             .sech { font-size:16px; font-weight:700; color:#0f766e; margin:4px 0 10px; padding:6px 12px;
                   background:linear-gradient(90deg,#f0fdfa,transparent); border-left:4px solid #0d9488; border-radius:0 6px 6px 0; }
-            table.grid { width:100%; border-collapse:collapse; font-size:13px; table-layout:fixed; }
-            table.grid th, table.grid td { border:1px solid #e2e8f0; padding:5px 8px; vertical-align:middle;
+            table.rtab { width:100%; border-collapse:collapse; font-size:13px; table-layout:fixed; }
+            table.rtab th, table.rtab td { border:1px solid #e2e8f0; padding:5px 8px; vertical-align:middle;
                   overflow-wrap:anywhere; word-break:break-word; }
-            table.grid th.nowrap { white-space:nowrap; }
-            table.grid thead th { background:#0f766e; color:#fff; font-weight:600; text-align:center;
+            table.rtab th.nowrap { white-space:nowrap; }
+            table.rtab thead th { background:#0f766e; color:#fff; font-weight:600; text-align:center;
                   border-color:#0f766e; }
-            table.grid tbody tr:nth-child(even) td { background:#f8fafc; }
-            table.grid td.c { text-align:center; }
-            table.grid tr.sum td { background:#ccfbf1 !important; font-weight:700; color:#134e4a; }
+            table.rtab tbody tr:nth-child(even) td { background:#f8fafc; }
+            table.rtab td.c { text-align:center; }
+            table.rtab tr.sum td { background:#ccfbf1 !important; font-weight:700; color:#134e4a; }
             .badge-hi { display:inline-block; padding:1px 9px; border-radius:999px; font-weight:700;
                   background:#ffe4e6; color:#be123c; }
             .badge-lo { display:inline-block; padding:1px 9px; border-radius:999px; font-weight:600;

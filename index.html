@@ -308,9 +308,18 @@
                         <select id="flt-unit" class="text-base rounded-lg border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 cursor-pointer">
                             <option value="">หน่วยงาน: ทั้งหมด</option>
                         </select>
+                        <select id="flt-risk" class="text-base rounded-lg border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 cursor-pointer">
+                            <option value="">ระดับความเสี่ยง: ทั้งหมด</option><option value="high">เสี่ยงสูง</option><option value="normal">เสี่ยงทั่วไป</option>
+                        </select>
+                        <select id="flt-activity" class="text-base rounded-lg border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 cursor-pointer">
+                            <option value="">กิจกรรม: ทั้งหมด</option>
+                        </select>
+                        <select id="flt-duration" class="text-base rounded-lg border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 cursor-pointer">
+                            <option value="">ระยะเวลา: ทั้งหมด</option>
+                        </select>
                         <div class="flex gap-2">
-                            <select id="flt-risk" class="flex-1 text-base rounded-lg border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 cursor-pointer">
-                                <option value="">ระดับความเสี่ยง: ทั้งหมด</option><option value="high">เสี่ยงสูง</option><option value="normal">เสี่ยงทั่วไป</option>
+                            <select id="flt-room" class="flex-1 text-base rounded-lg border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 cursor-pointer">
+                                <option value="">ขนาดห้อง: ทั้งหมด</option>
                             </select>
                             <button id="btn-flt-clear" class="px-3 py-2 rounded-lg border border-slate-300 bg-white text-slate-500 hover:bg-slate-50" title="ล้างตัวกรอง"><i data-feather="x" class="w-5 h-5"></i></button>
                         </div>
@@ -1701,6 +1710,7 @@
         }
         function recordHasActivity(rec, v) { return contactSets(rec).activities.indexOf(v) >= 0; }
         function recordHasDuration(rec, v) { return contactSets(rec).durations.indexOf(v) >= 0; }
+        function recordHasRoom(rec, v) { return contactSets(rec).rooms.indexOf(v) >= 0; }
         function recordOnDate(rec, iso) {
             const ans = rec.answers || {}; let pv = null;
             Object.keys(ans).forEach(k => { if (isPatternObj(ans[k])) pv = ans[k]; });
@@ -1722,9 +1732,15 @@
             const fgroup = (document.getElementById('flt-group') || {}).value || '';
             const funit = (document.getElementById('flt-unit') || {}).value || '';
             const frisk = (document.getElementById('flt-risk') || {}).value || '';
+            const fact = (document.getElementById('flt-activity') || {}).value || '';
+            const fdur = (document.getElementById('flt-duration') || {}).value || '';
+            const froom = (document.getElementById('flt-room') || {}).value || '';
             if (fgroup && r.group !== fgroup) return false;
             if (funit && unitOfRec(r) !== funit) return false;
             if (frisk) { const c = computeRecordRisk(r).isClose; if (frisk === 'high' && !c) return false; if (frisk === 'normal' && c) return false; }
+            if (fact && !recordHasActivity(r, fact)) return false;
+            if (fdur && !recordHasDuration(r, fdur)) return false;
+            if (froom && !recordHasRoom(r, froom)) return false;
             if (q) { const hay = ((r.name || '') + ' ' + (r.hn || '')).toLowerCase(); if (hay.indexOf(q) < 0) return false; }
             if (chartFilter) {
                 const cf = chartFilter;
@@ -1769,9 +1785,9 @@
             const pts = pairs.map((p, i) => `${xAt(i).toFixed(1)},${yAt(p.y).toFixed(1)}`).join(' ');
             const area = `${padL},${yAt(0)} ${pts} ${xAt(n - 1)},${yAt(0)}`;
             const dots = pairs.map((p, i) => `<circle class="chart-clk" data-kind="date" data-value="${p.x}" style="cursor:pointer" cx="${xAt(i).toFixed(1)}" cy="${yAt(p.y).toFixed(1)}" r="${p.y > 0 ? 5 : 3}" fill="#0d9488"><title>${fmtThaiDate(p.x)} — ${Math.round(p.y)} ชม. (คลิกดูรายชื่อ)</title></circle>`).join('');
-            // ตัวเลขกำกับแต่ละจุด (ซ่อนค่า 0 เพื่อไม่ให้รก)
-            const step = Math.ceil(n / 12);
-            const vlab = pairs.map((p, i) => (p.y > 0 && (i % step === 0 || i === n - 1)) ? `<text x="${xAt(i).toFixed(1)}" y="${(yAt(p.y) - 6).toFixed(1)}" text-anchor="middle" font-size="9" fill="#0f766e" font-weight="600">${Math.round(p.y)}</text>` : '').join('');
+            // ตัวเลขกำกับทุกจุด (ซ่อนค่า 0 เพื่อไม่ให้รก)
+            const vfs = n > 20 ? 8 : 9;
+            const vlab = pairs.map((p, i) => (p.y > 0) ? `<text x="${xAt(i).toFixed(1)}" y="${(yAt(p.y) - 6).toFixed(1)}" text-anchor="middle" font-size="${vfs}" fill="#0f766e" font-weight="600">${Math.round(p.y)}</text>` : '').join('');
             const gy = [0, 0.5, 1].map(f => { const v = maxY * f, y = yAt(v); return `<line x1="${padL}" y1="${y}" x2="${W - padR}" y2="${y}" stroke="#e2e8f0"/><text x="${padL - 8}" y="${y + 3}" text-anchor="end" font-size="10" fill="#94a3b8">${Math.round(v)}</text>`; }).join('');
             // แสดงป้ายวันที่ทุกวัน (เอียงเพื่อไม่ให้ซ้อน; ย่อฟอนต์เมื่อวันเยอะ)
             const dfs = n > 20 ? 7 : 9;
@@ -1910,6 +1926,10 @@
             };
             fillSelect('flt-group', Array.from(new Set(records.map(r => r.group).filter(Boolean))).sort());
             fillSelect('flt-unit', Array.from(new Set(records.map(unitOf).filter(Boolean))).sort());
+            const collectSet = pick => { const s = new Set(); records.forEach(r => pick(contactSets(r)).forEach(v => { if (v) s.add(v); })); return Array.from(s).sort(); };
+            fillSelect('flt-activity', collectSet(c => c.activities));
+            fillSelect('flt-duration', collectSet(c => c.durations));
+            fillSelect('flt-room', collectSet(c => c.rooms));
 
             // ตัวกรอง
             const q = (document.getElementById('flt-search') || {}).value || '';
@@ -3058,13 +3078,13 @@
         });
 
         // ผูกตัวกรองตารางรายชื่อ
-        ['flt-search', 'flt-group', 'flt-unit', 'flt-risk'].forEach(id => {
+        ['flt-search', 'flt-group', 'flt-unit', 'flt-risk', 'flt-activity', 'flt-duration', 'flt-room'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.addEventListener('input', renderAdminTable);
         });
         const fltClear = document.getElementById('btn-flt-clear');
         if (fltClear) fltClear.addEventListener('click', () => {
-            ['flt-search', 'flt-group', 'flt-unit', 'flt-risk'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+            ['flt-search', 'flt-group', 'flt-unit', 'flt-risk', 'flt-activity', 'flt-duration', 'flt-room'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
             chartFilter = null;
             renderAdminTable();
         });

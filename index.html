@@ -484,7 +484,10 @@
             <div class="px-5 py-3 border-b border-slate-300 flex flex-wrap justify-between items-center gap-3 bg-white shadow-sm no-print">
                 <h3 class="text-xl font-bold text-slate-800 flex items-center"><i data-feather="file-text" class="w-5 h-5 mr-2 text-emerald-600"></i> รายงานสรุป Contact case TB (A4 แนวนอน)</h3>
                 <div class="flex flex-wrap items-center gap-3">
-                    <label class="flex items-center gap-2 text-base text-slate-600"><span>หน่วยงาน:</span><select id="rep-unit" class="text-base rounded-lg border border-slate-300 px-3 py-1.5 w-64"><option value="">— ทุกหน่วยงาน —</option></select></label>
+                    <details id="rep-unit-dd" class="relative text-base text-slate-600">
+                        <summary class="list-none cursor-pointer rounded-lg border border-slate-300 px-3 py-1.5 bg-white select-none flex items-center gap-2"><span>หน่วยงาน:</span> <span id="rep-unit-sum" class="font-medium text-slate-800">ทุกหน่วยงาน</span> <i data-feather="chevron-down" class="w-4 h-4"></i></summary>
+                        <div id="rep-unit-list" class="absolute z-10 mt-1 right-0 bg-white border border-slate-200 rounded-lg shadow-lg p-3 max-h-72 overflow-auto w-72 space-y-1"></div>
+                    </details>
                     <button id="btn-report-pdf" class="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-5 py-2 rounded-lg text-base font-semibold flex items-center transition-all shadow-sm"><i data-feather="download" class="w-4 h-4 mr-2"></i> บันทึก PDF</button>
                     <button id="btn-report-print" class="bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 px-5 py-2 rounded-lg text-base font-semibold flex items-center transition-all shadow-sm"><i data-feather="printer" class="w-4 h-4 mr-2"></i> พิมพ์</button>
                     <button onclick="closeReport()" class="text-slate-400 hover:text-slate-700"><i data-feather="x" class="w-6 h-6"></i></button>
@@ -1672,6 +1675,27 @@
         }
         function clearChartFilter() { chartFilter = null; renderAdminTable(); }
 
+        // ตัวกรองร่วม: ใช้ทั้ง Contact List และรายงานสรุป ให้ได้ชุดข้อมูลตรงกันเป๊ะ
+        function unitOfRec(r) { return (r.answers && (r.answers.unit || r.answers.ward)) || ''; }
+        function passAdminFilters(r) {
+            const q = ((document.getElementById('flt-search') || {}).value || '').trim().toLowerCase();
+            const fgroup = (document.getElementById('flt-group') || {}).value || '';
+            const funit = (document.getElementById('flt-unit') || {}).value || '';
+            const frisk = (document.getElementById('flt-risk') || {}).value || '';
+            if (fgroup && r.group !== fgroup) return false;
+            if (funit && unitOfRec(r) !== funit) return false;
+            if (frisk) { const c = computeRecordRisk(r).isClose; if (frisk === 'high' && !c) return false; if (frisk === 'normal' && c) return false; }
+            if (q) { const hay = ((r.name || '') + ' ' + (r.hn || '')).toLowerCase(); if (hay.indexOf(q) < 0) return false; }
+            if (chartFilter) {
+                const cf = chartFilter;
+                if (cf.kind === 'unit' && unitOfRec(r) !== cf.value) return false;
+                if (cf.kind === 'activity' && !recordHasActivity(r, cf.value)) return false;
+                if (cf.kind === 'duration' && !recordHasDuration(r, cf.value)) return false;
+                if (cf.kind === 'date' && !recordOnDate(r, cf.value)) return false;
+            }
+            return true;
+        }
+
         /* ===== แดชบอร์ดวิเคราะห์การตอบแบบสอบถาม + กราฟ ===== */
         const OI_PREFIXES = ['นางสาว', 'น.ส.', 'นส.', 'นาย', 'นาง', 'ดร.', 'ดร', 'นพ.', 'พญ.', 'ทพ.', 'ทพญ.', 'ภก.', 'ภญ.', 'ว่าที่ร้อยตรี', 'ว่าที่ ร.ต.'];
         function oiNameKey(s) {
@@ -1852,20 +1876,7 @@
             const frisk = (document.getElementById('flt-risk') || {}).value || '';
             const qq = q.trim().toLowerCase();
             buildContactCodes();
-            const filtered = records.filter(r => {
-                if (fgroup && r.group !== fgroup) return false;
-                if (funit && unitOf(r) !== funit) return false;
-                if (frisk) { const c = computeRecordRisk(r).isClose; if (frisk === 'high' && !c) return false; if (frisk === 'normal' && c) return false; }
-                if (qq) { const hay = ((r.name || '') + ' ' + (r.hn || '')).toLowerCase(); if (hay.indexOf(qq) < 0) return false; }
-                if (chartFilter) {
-                    const cf = chartFilter;
-                    if (cf.kind === 'unit' && unitOf(r) !== cf.value) return false;
-                    if (cf.kind === 'activity' && !recordHasActivity(r, cf.value)) return false;
-                    if (cf.kind === 'duration' && !recordHasDuration(r, cf.value)) return false;
-                    if (cf.kind === 'date' && !recordOnDate(r, cf.value)) return false;
-                }
-                return true;
-            });
+            const filtered = records.filter(passAdminFilters);
             // ป้ายตัวกรองจากกราฟ (ลบได้)
             const chipBox = document.getElementById('chart-filter-chip');
             if (chipBox) {
@@ -2302,20 +2313,8 @@
 
         // รวมสถิติจากรายการที่ผ่านตัวกรองปัจจุบัน
         function repCollect() {
-            const q = (document.getElementById('flt-search') || {}).value || '';
-            const fgroup = (document.getElementById('flt-group') || {}).value || '';
-            const funit = (document.getElementById('flt-unit') || {}).value || '';
-            const frisk = (document.getElementById('flt-risk') || {}).value || '';
-            const unitOf = r => (r.answers && (r.answers.unit || r.answers.ward)) || '';
-            const qq = q.trim().toLowerCase();
-            const rows = records.filter(r => {
-                if (fgroup && r.group !== fgroup) return false;
-                if (funit && unitOf(r) !== funit) return false;
-                if (frisk) { const c = computeRecordRisk(r).isClose; if (frisk === 'high' && !c) return false; if (frisk === 'normal' && c) return false; }
-                if (qq) { const hay = ((r.name || '') + ' ' + (r.hn || '')).toLowerCase(); if (hay.indexOf(qq) < 0) return false; }
-                return true;
-            });
-            return rows;
+            // ใช้ตัวกรองชุดเดียวกับ Contact List (ให้ได้ข้อมูลเป๊ะเดียวกัน)
+            return records.filter(passAdminFilters);
         }
 
         // แถวรายงานเจ้าหน้าที่แต่ละคน
@@ -2341,11 +2340,10 @@
         }
 
         function buildReport() {
-            const selUnit = (document.getElementById('rep-unit') || {}).value || '';
-            const unit = selUnit || 'ทุกหน่วยงาน';
-            const unitOfR = r => (r.answers && (r.answers.unit || r.answers.ward)) || '';
+            const selUnits = (typeof repSelectedUnits === 'function') ? repSelectedUnits() : [];
+            const unit = selUnits.length ? selUnits.join(' / ') : 'ทุกหน่วยงาน';
             let rows = repCollect();
-            if (selUnit) rows = rows.filter(r => unitOfR(r) === selUnit);
+            if (selUnits.length) rows = rows.filter(r => selUnits.indexOf(unitOfRec(r)) >= 0);
             const staff = rows.filter(r => r.type !== 'patient');
             const patient = rows.filter(r => r.type === 'patient');
 
@@ -2469,17 +2467,28 @@
             return tablePages + page2;
         }
 
+        function repSelectedUnits() {
+            return Array.from(document.querySelectorAll('.rep-unit-cb')).filter(c => c.checked).map(c => c.value);
+        }
+        function repRefresh() {
+            const sel = repSelectedUnits();
+            const sum = document.getElementById('rep-unit-sum');
+            if (sum) sum.textContent = sel.length ? (sel.length <= 2 ? sel.join(', ') : sel.length + ' หน่วยงาน') : 'ทุกหน่วยงาน';
+            document.getElementById('report-pages').innerHTML = buildReport();
+            feather.replace();
+        }
         function openReport() {
-            // เติมตัวเลือกหน่วยงานในตัวกรองรายงาน
-            const usel = document.getElementById('rep-unit');
-            if (usel) {
-                const unitOf = r => (r.answers && (r.answers.unit || r.answers.ward)) || '';
-                const units = Array.from(new Set(records.map(unitOf).filter(Boolean))).sort();
-                const cur = usel.value;
-                usel.innerHTML = '<option value="">— ทุกหน่วยงาน —</option>' + units.map(u => `<option value="${escAttr(u)}">${u}</option>`).join('');
-                usel.value = units.indexOf(cur) >= 0 ? cur : '';
-                usel.onchange = () => { document.getElementById('report-pages').innerHTML = buildReport(); feather.replace(); };
+            // เติมตัวเลือกหน่วยงาน (เลือกได้หลายตัว) ในตัวกรองรายงาน — จากชุดเดียวกับ Contact List
+            const list = document.getElementById('rep-unit-list');
+            if (list) {
+                const base = records.filter(passAdminFilters);
+                const units = Array.from(new Set(base.map(unitOfRec).filter(Boolean))).sort();
+                const prev = new Set(repSelectedUnits());
+                list.innerHTML = units.length ? units.map(u => `<label class="flex items-center gap-2 cursor-pointer text-sm py-0.5"><input type="checkbox" class="rep-unit-cb w-4 h-4 text-teal-600" value="${escAttr(u)}" ${prev.has(u) ? 'checked' : ''}> ${u}</label>`).join('')
+                    : '<div class="text-slate-400 text-sm">— ไม่มีหน่วยงาน —</div>';
+                list.querySelectorAll('.rep-unit-cb').forEach(cb => cb.addEventListener('change', repRefresh));
             }
+            const sum = document.getElementById('rep-unit-sum'); if (sum) sum.textContent = 'ทุกหน่วยงาน';
             const box = document.getElementById('report-pages');
             box.innerHTML = buildReport();
             document.getElementById('report-modal').classList.remove('hidden');

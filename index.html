@@ -141,13 +141,13 @@
                     <p class="relative text-base text-teal-100/80 font-light leading-relaxed">สำหรับบุคลากรทางการแพทย์ พยาบาล และเจ้าหน้าที่ที่ปฏิบัติงานในพื้นที่เสี่ยง</p>
                 </div>
 
-                <div class="nav-btn cursor-pointer rounded-2xl p-7 bg-gradient-to-br from-blue-900 via-indigo-900 to-violet-950 border border-blue-700/50 glow-effect-blue flex flex-col items-center text-center space-y-5 relative overflow-hidden group transition-all duration-300 shadow-[0_10px_25px_rgba(30,64,175,0.4)] hover:shadow-none" data-target="view-patient">
+                <div class="nav-btn cursor-pointer rounded-2xl p-7 bg-gradient-to-br from-teal-900 via-emerald-900 to-green-950 border border-emerald-700/50 glow-effect flex flex-col items-center text-center space-y-5 relative overflow-hidden group transition-all duration-300 shadow-[0_10px_25px_rgba(6,95,70,0.4)] hover:shadow-none" data-target="view-patient">
                     <div class="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                    <div class="relative p-4 bg-white/5 backdrop-blur-md rounded-2xl border border-white/10 shadow-inner text-blue-300 group-hover:scale-110 group-hover:bg-white/10 transition-all duration-300">
-                        <i data-feather="users" class="w-12 h-12 drop-shadow-[0_0_10px_rgba(147,197,253,0.5)]"></i>
+                    <div class="relative p-4 bg-white/5 backdrop-blur-md rounded-2xl border border-white/10 shadow-inner text-emerald-300 group-hover:scale-110 group-hover:bg-white/10 transition-all duration-300">
+                        <i data-feather="users" class="w-12 h-12 drop-shadow-[0_0_10px_rgba(52,211,153,0.5)]"></i>
                     </div>
                     <h3 class="relative text-2xl font-bold text-white tracking-wide">แบบบันทึกสำหรับผู้ป่วย</h3>
-                    <p class="relative text-base text-blue-100/80 font-light leading-relaxed">สำหรับผู้ป่วยที่พักรักษาตัวร่วมหอผู้ป่วย หรือเตียงข้างเคียงผู้ติดเชื้อ</p>
+                    <p class="relative text-base text-emerald-100/80 font-light leading-relaxed">สำหรับผู้ป่วยที่พักรักษาตัวร่วมหอผู้ป่วย หรือเตียงข้างเคียงผู้ติดเชื้อ</p>
                 </div>
             </div>
         </div>
@@ -163,7 +163,7 @@
 
         <!-- ================= PATIENT FORM VIEW ================= -->
         <div id="view-patient" class="view-section hidden fade-in w-full max-w-4xl mx-auto bg-white rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.08)] border border-slate-200 overflow-hidden">
-            <div class="bg-gradient-to-r from-blue-500 to-indigo-600 px-6 py-5 flex items-center space-x-3 text-white">
+            <div class="bg-gradient-to-r from-teal-500 to-emerald-600 px-6 py-5 flex items-center space-x-3 text-white">
                 <i data-feather="users" class="drop-shadow-md"></i>
                 <h2 class="text-2xl font-bold drop-shadow-sm">แบบบันทึกข้อมูล - สำหรับผู้ป่วยสัมผัสโรค</h2>
             </div>
@@ -1721,7 +1721,7 @@
         function lineChartSVG(pairs) {
             // pairs: [{x:'YYYY-MM-DD', y:number}] เรียงตามวันแล้ว
             if (!pairs.length) return '<div class="text-slate-400 text-sm py-6 text-center">ยังไม่มีข้อมูลการสัมผัส</div>';
-            const W = 760, H = 260, padL = 54, padR = 18, padT = 22, padB = 58;
+            const W = 760, H = 300, padL = 54, padR = 18, padT = 22, padB = 96;
             const maxY = Math.max(1, ...pairs.map(p => p.y));
             const n = pairs.length;
             const xAt = i => padL + (n === 1 ? (W - padL - padR) / 2 : i * (W - padL - padR) / (n - 1));
@@ -1733,7 +1733,9 @@
             const step = Math.ceil(n / 12);
             const vlab = pairs.map((p, i) => (p.y > 0 && (i % step === 0 || i === n - 1)) ? `<text x="${xAt(i).toFixed(1)}" y="${(yAt(p.y) - 6).toFixed(1)}" text-anchor="middle" font-size="9" fill="#0f766e" font-weight="600">${Math.round(p.y)}</text>` : '').join('');
             const gy = [0, 0.5, 1].map(f => { const v = maxY * f, y = yAt(v); return `<line x1="${padL}" y1="${y}" x2="${W - padR}" y2="${y}" stroke="#e2e8f0"/><text x="${padL - 8}" y="${y + 3}" text-anchor="end" font-size="10" fill="#94a3b8">${Math.round(v)}</text>`; }).join('');
-            const gx = pairs.map((p, i) => (i % step === 0 || i === n - 1) ? `<text x="${xAt(i).toFixed(1)}" y="${H - padB + 16}" text-anchor="middle" font-size="9" fill="#94a3b8" transform="rotate(-35 ${xAt(i).toFixed(1)} ${H - padB + 16})">${fmtThaiDate(p.x).replace(/ \d{4}$/, '')}</text>` : '').join('');
+            // แสดงป้ายวันที่ทุกวัน (เอียงเพื่อไม่ให้ซ้อน; ย่อฟอนต์เมื่อวันเยอะ)
+            const dfs = n > 20 ? 7 : 9;
+            const gx = pairs.map((p, i) => `<text x="${xAt(i).toFixed(1)}" y="${H - padB + 16}" text-anchor="end" font-size="${dfs}" fill="#64748b" transform="rotate(-60 ${xAt(i).toFixed(1)} ${H - padB + 16})">${fmtThaiDate(p.x).replace(/ \d{4}$/, '')}</text>`).join('');
             // ชื่อแกน
             const axisY = `<text x="16" y="${(padT + (H - padT - padB) / 2).toFixed(1)}" text-anchor="middle" font-size="11" fill="#475569" transform="rotate(-90 16 ${(padT + (H - padT - padB) / 2).toFixed(1)})">ชั่วโมงการสัมผัสรวม</text>`;
             const axisX = `<text x="${((padL + W - padR) / 2).toFixed(1)}" y="${H - 6}" text-anchor="middle" font-size="11" fill="#475569">วันที่ (พ.ศ.) — ช่วงที่สำรวจได้</text>`;

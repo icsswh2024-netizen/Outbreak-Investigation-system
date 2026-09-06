@@ -337,6 +337,7 @@
                     <table class="w-full text-base text-left">
                         <thead class="text-sm text-slate-500 uppercase bg-slate-100 border-b border-slate-200">
                             <tr>
+                                <th class="px-6 py-4 whitespace-nowrap font-semibold tracking-wider">ลำดับ</th>
                                 <th class="px-6 py-4 whitespace-nowrap font-semibold tracking-wider">วันที่บันทึก</th>
                                 <th class="px-6 py-4 whitespace-nowrap font-semibold tracking-wider">ชื่อ-นามสกุล</th>
                                 <th class="px-6 py-4 whitespace-nowrap font-semibold tracking-wider">HN</th>
@@ -483,7 +484,7 @@
             <div class="px-5 py-3 border-b border-slate-300 flex flex-wrap justify-between items-center gap-3 bg-white shadow-sm no-print">
                 <h3 class="text-xl font-bold text-slate-800 flex items-center"><i data-feather="file-text" class="w-5 h-5 mr-2 text-emerald-600"></i> รายงานสรุป Contact case TB (A4 แนวนอน)</h3>
                 <div class="flex flex-wrap items-center gap-3">
-                    <label class="flex items-center gap-2 text-base text-slate-600"><span>หน่วยงาน:</span><input id="rep-unit" type="text" class="text-base rounded-lg border border-slate-300 px-3 py-1.5 w-64" placeholder="เช่น หอผู้ป่วยโรคหลอดเลือดสมอง"></label>
+                    <label class="flex items-center gap-2 text-base text-slate-600"><span>หน่วยงาน:</span><select id="rep-unit" class="text-base rounded-lg border border-slate-300 px-3 py-1.5 w-64"><option value="">— ทุกหน่วยงาน —</option></select></label>
                     <button id="btn-report-pdf" class="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-5 py-2 rounded-lg text-base font-semibold flex items-center transition-all shadow-sm"><i data-feather="download" class="w-4 h-4 mr-2"></i> บันทึก PDF</button>
                     <button id="btn-report-print" class="bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 px-5 py-2 rounded-lg text-base font-semibold flex items-center transition-all shadow-sm"><i data-feather="printer" class="w-4 h-4 mr-2"></i> พิมพ์</button>
                     <button onclick="closeReport()" class="text-slate-400 hover:text-slate-700"><i data-feather="x" class="w-6 h-6"></i></button>
@@ -1879,11 +1880,11 @@
             if (cnt) cnt.textContent = `แสดง ${filtered.length} / ${records.length} รายการ`;
 
             if (filtered.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="12" class="px-6 py-8 text-center text-slate-500 text-lg">${records.length ? 'ไม่พบข้อมูลตามตัวกรอง' : 'ไม่มีข้อมูลการบันทึก'}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="13" class="px-6 py-8 text-center text-slate-500 text-lg">${records.length ? 'ไม่พบข้อมูลตามตัวกรอง' : 'ไม่มีข้อมูลการบันทึก'}</td></tr>`;
                 return;
             }
 
-            filtered.forEach(record => {
+            filtered.forEach((record, idx) => {
                 const tr = document.createElement('tr');
                 tr.className = 'hover:bg-slate-50 transition-colors border-b border-slate-100 last:border-0';
                 const statusDisplay = record.status === 'เฝ้าระวัง'
@@ -1907,6 +1908,7 @@
                 const roomCode = cset.rooms.map(r => ROOM_CODE[r] || r).join(', ') || '-';
                 const cell = v => `<td class="px-6 py-5 text-sm text-slate-600" style="max-width:220px"><div class="whitespace-normal break-words">${v}</div></td>`;
                 tr.innerHTML = `
+                    <td class="px-6 py-5 whitespace-nowrap text-slate-400 text-center">${idx + 1}</td>
                     <td class="px-6 py-5 whitespace-nowrap text-slate-600">${record.date}</td>
                     <td class="px-6 py-5 font-medium text-slate-900 whitespace-nowrap">${record.name || '-'}</td>
                     <td class="px-6 py-5 whitespace-nowrap text-slate-500">${record.hn || '-'}</td>
@@ -1932,12 +1934,15 @@
             // หมายเหตุท้ายตาราง: รหัสกิจกรรม / ขนาดห้อง
             const legend = document.getElementById('tbl-legend');
             if (legend) {
-                const actItems = Object.keys(ACT_CODE).map(k => `<b>${ACT_CODE[k]}</b> = ${escHtml ? escHtml(k) : k}`);
-                const roomItems = Object.keys(ROOM_CODE).map(k => `<b>${ROOM_CODE[k]}</b> = ${escHtml ? escHtml(k) : k}`);
-                legend.innerHTML =
-                    (actItems.length ? `<div class="mb-1"><span class="font-semibold text-slate-700">หมายเหตุ กิจกรรม:</span> ${actItems.join(' &nbsp;·&nbsp; ')}</div>` : '')
-                    + (roomItems.length ? `<div><span class="font-semibold text-slate-700">หมายเหตุ ขนาดห้อง:</span> ${roomItems.join(' &nbsp;·&nbsp; ')}</div>` : '')
-                    || '<span class="text-slate-400">— ยังไม่มีข้อมูลกิจกรรม/ขนาดห้อง —</span>';
+                const legTable = (title, map, color) => {
+                    const keys = Object.keys(map);
+                    if (!keys.length) return '';
+                    const rowsH = keys.map(k => `<tr><td class="pr-2 py-0.5 align-top whitespace-nowrap"><span class="inline-block min-w-[2rem] text-center font-bold ${color} rounded px-1.5">${map[k]}</span></td><td class="py-0.5 text-slate-600">${escHtml(k)}</td></tr>`).join('');
+                    return `<div class="min-w-[240px]"><div class="font-semibold text-slate-700 mb-1">${title}</div><table style="border-collapse:collapse"><tbody>${rowsH}</tbody></table></div>`;
+                };
+                const a = legTable('หมายเหตุ · รหัสกิจกรรม', ACT_CODE, 'bg-indigo-100 text-indigo-700');
+                const r = legTable('หมายเหตุ · รหัสขนาดห้อง', ROOM_CODE, 'bg-teal-100 text-teal-700');
+                legend.innerHTML = (a || r) ? `<div class="flex flex-wrap gap-x-10 gap-y-4">${a}${r}</div>` : '<span class="text-slate-400">— ยังไม่มีข้อมูลกิจกรรม/ขนาดห้อง —</span>';
             }
             try { renderAnalytics(); } catch (e) {}
         }
@@ -2336,8 +2341,11 @@
         }
 
         function buildReport() {
-            const unit = (document.getElementById('rep-unit') || {}).value || '.................................................';
-            const rows = repCollect();
+            const selUnit = (document.getElementById('rep-unit') || {}).value || '';
+            const unit = selUnit || 'ทุกหน่วยงาน';
+            const unitOfR = r => (r.answers && (r.answers.unit || r.answers.ward)) || '';
+            let rows = repCollect();
+            if (selUnit) rows = rows.filter(r => unitOfR(r) === selUnit);
             const staff = rows.filter(r => r.type !== 'patient');
             const patient = rows.filter(r => r.type === 'patient');
 
@@ -2462,6 +2470,16 @@
         }
 
         function openReport() {
+            // เติมตัวเลือกหน่วยงานในตัวกรองรายงาน
+            const usel = document.getElementById('rep-unit');
+            if (usel) {
+                const unitOf = r => (r.answers && (r.answers.unit || r.answers.ward)) || '';
+                const units = Array.from(new Set(records.map(unitOf).filter(Boolean))).sort();
+                const cur = usel.value;
+                usel.innerHTML = '<option value="">— ทุกหน่วยงาน —</option>' + units.map(u => `<option value="${escAttr(u)}">${u}</option>`).join('');
+                usel.value = units.indexOf(cur) >= 0 ? cur : '';
+                usel.onchange = () => { document.getElementById('report-pages').innerHTML = buildReport(); feather.replace(); };
+            }
             const box = document.getElementById('report-pages');
             box.innerHTML = buildReport();
             document.getElementById('report-modal').classList.remove('hidden');

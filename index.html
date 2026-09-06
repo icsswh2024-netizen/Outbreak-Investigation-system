@@ -87,8 +87,8 @@
         <div class="w-full max-w-[1600px] mx-auto px-2 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16">
                 <div class="hidden lg:flex items-center space-x-3 cursor-pointer nav-btn" data-target="view-home">
-                    <img src="assets/logo-sswh.png" alt="โลโก้ รพ.ศรีสังวรสุโขทัย" class="h-11 w-auto" onerror="this.style.display='none'; if(this.nextElementSibling)this.nextElementSibling.style.display='inline-block';">
-                    <i data-feather="shield" class="text-blue-600 drop-shadow-[0_0_5px_rgba(37,99,235,0.4)]" style="display:none"></i>
+                    <img id="site-logo" src="assets/logo-sswh.png" alt="โลโก้ รพ.ศรีสังวรสุโขทัย" class="h-11 w-auto" onerror="this.style.display='none'; var s=document.getElementById('site-logo-fallback'); if(s)s.style.display='inline-block';">
+                    <i id="site-logo-fallback" data-feather="shield" class="text-blue-600 drop-shadow-[0_0_5px_rgba(37,99,235,0.4)]" style="display:none"></i>
                     <span class="font-bold text-[1.15rem] sm:text-xl tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-700 to-cyan-500">
                         SSWH : Outbreak Investigation system
                     </span>
@@ -556,6 +556,7 @@
             if (data && Array.isArray(data.logo)) {
                 logoList = data.logo;
                 try { localStorage.setItem('oi-logolist', JSON.stringify(logoList)); } catch (e) {}
+                try { applySiteLogo(); } catch (e) {}
                 if (!document.getElementById('view-admin').classList.contains('hidden')) { try { renderRepMetaForm(); } catch (e) {} }
             }
             // แท็บ "การจัดการแบบสอบถาม": มีบนชีต -> ใช้; ยังว่าง -> เติม schema ปัจจุบันขึ้นไป
@@ -724,6 +725,18 @@
         function getRepMeta() {
             try { const d = localStorage.getItem(REPMETA_KEY); if (d) return Object.assign({ logos: [], signers: ['', '', ''] }, JSON.parse(d)); } catch (e) {}
             return { logos: [], signers: ['', '', ''] };
+        }
+        // ใช้โลโก้จากแท็บ logo-name (แถว code=logo หรือชื่อมีคำว่า "ศรีสังวร") มาแสดงบนหัวเว็บ
+        function applySiteLogo() {
+            const img = document.getElementById('site-logo');
+            if (!img) return;
+            const e = (logoList || []).find(x => String(x.code || '').toLowerCase() === 'logo')
+                || (logoList || []).find(x => /ศรีสังวร|โรงพยาบาล/.test(x.name || ''));
+            if (e && e.link && typeof repImgUrl === 'function') {
+                img.style.display = 'inline-block';
+                const fb = document.getElementById('site-logo-fallback'); if (fb) fb.style.display = 'none';
+                img.src = repImgUrl(e.link);
+            }
         }
 
         // id กันชนแม้บันทึกในมิลลิวินาทีเดียวกัน
@@ -3024,6 +3037,7 @@
         renderForm('patient');
         renderAdminTable();
         applyNavVisibility();
+        try { applySiteLogo(); } catch (e) {}
 
         // โหลดจากฐานข้อมูลกลาง + รีเฟรชอัตโนมัติ (รองรับหลายเครื่องพร้อมกัน)
         if (USE_SERVER) {

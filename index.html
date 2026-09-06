@@ -294,7 +294,10 @@
                         <h3 class="text-xl font-bold text-slate-800 flex items-center">
                             <i data-feather="list" class="w-5 h-5 mr-2 text-slate-500"></i> รายชื่อผู้สัมผัส (Contact List)
                         </h3>
-                        <span id="flt-count" class="text-sm text-slate-500"></span>
+                        <div class="flex items-center gap-3">
+                            <span id="flt-count" class="text-sm text-slate-500"></span>
+                            <button id="btn-list-print" class="bg-white border border-teal-300 text-teal-700 hover:bg-teal-50 px-4 py-2 rounded-lg text-sm font-semibold flex items-center transition-all shadow-sm" title="พิมพ์/บันทึกรายชื่อที่กรองไว้เป็น PDF ข้อความคัดลอกได้ คมชัด"><i data-feather="printer" class="w-4 h-4 mr-2"></i> พิมพ์ / PDF ข้อความ</button>
+                        </div>
                     </div>
                     <div id="chart-filter-chip" hidden></div>
                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
@@ -2641,6 +2644,89 @@
             setTimeout(waitImgs, 400);
         }
 
+        // พิมพ์ / PDF ข้อความ ของรายชื่อผู้สัมผัส (Contact List) ตามที่กรองไว้
+        function printContactList() {
+            buildContactCodes();
+            const rows = records.filter(passAdminFilters);
+            const esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            // สรุปตัวกรองที่ใช้อยู่
+            const fv = id => (document.getElementById(id) || {}).value || '';
+            const fparts = [];
+            if (fv('flt-search')) fparts.push(`ค้นหา: "${esc(fv('flt-search'))}"`);
+            if (fv('flt-group')) fparts.push(`กลุ่ม/ตำแหน่ง: ${esc(fv('flt-group'))}`);
+            if (fv('flt-unit')) fparts.push(`หน่วยงาน: ${esc(fv('flt-unit'))}`);
+            if (fv('flt-risk')) fparts.push(`ระดับความเสี่ยง: ${fv('flt-risk') === 'high' ? 'เสี่ยงสูง' : 'เสี่ยงทั่วไป'}`);
+            if (fv('flt-activity')) fparts.push(`กิจกรรม: ${esc(fv('flt-activity'))}`);
+            if (fv('flt-duration')) fparts.push(`ระยะเวลา: ${esc(fv('flt-duration'))}`);
+            if (fv('flt-room')) fparts.push(`ขนาดห้อง: ${esc(fv('flt-room'))}`);
+            if (chartFilter) { const kl = { unit: 'หน่วยงาน', activity: 'กิจกรรม', duration: 'ระยะเวลา', date: 'วันที่' }[chartFilter.kind] || chartFilter.kind; fparts.push(`จากกราฟ ${kl}: ${esc(chartFilter.kind === 'date' ? fmtThaiDate(chartFilter.value) : chartFilter.value)}`); }
+            const filterLine = fparts.length ? `ตัวกรอง: ${fparts.join(' · ')}` : 'ตัวกรอง: แสดงทั้งหมด (ไม่ได้กรอง)';
+
+            const body = rows.map((r, i) => {
+                const unitVal = (r.answers && (r.answers.unit || r.answers.ward)) || '-';
+                const cset = contactSets(r);
+                const actCode = cset.activities.map(a => ACT_CODE[a] || a).join(', ') || '-';
+                const roomCode = cset.rooms.map(x => ROOM_CODE[x] || x).join(', ') || '-';
+                const ri = computeRecordRisk(r);
+                const risk = !ri.hasData ? '-' : (ri.isClose ? '<span class="badge-hi">เสี่ยงสูง</span>' : '<span class="badge-lo">เสี่ยงทั่วไป</span>');
+                return `<tr>
+                    <td class="c">${i + 1}</td><td class="c">${esc(r.date)}</td><td>${esc(r.name || '-')}</td>
+                    <td class="c">${esc(r.hn || '-')}</td><td>${esc(r.group || '-')}</td><td>${esc(unitVal)}</td>
+                    <td class="c">${esc(actCode)}</td><td>${esc(cset.masks.join(', ') || '-')}</td><td>${esc(cset.durations.join(', ') || '-')}</td>
+                    <td class="c">${esc(roomCode)}</td><td class="c">${ri.hasData ? ri.hours : '-'}</td><td class="c">${risk}</td>
+                </tr>`;
+            }).join('') || `<tr><td class="c" colspan="12" style="padding:20px;color:#64748b">ไม่พบข้อมูลตามตัวกรอง</td></tr>`;
+
+            const legRow = (map, title) => { const ks = Object.keys(map); if (!ks.length) return ''; return `<div class="leg"><b>${title}:</b> ${ks.map(k => `${esc(map[k])} = ${esc(k)}`).join(' &nbsp;·&nbsp; ')}</div>`; };
+            const legend = legRow(ACT_CODE, 'รหัสกิจกรรม (ก)') + legRow(ROOM_CODE, 'รหัสขนาดห้อง (ห)');
+
+            const html = `<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8">
+                <title>รายชื่อผู้สัมผัส (Contact List)</title>
+                <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+                <style>
+                @page { size: A4 landscape; margin: 10mm; }
+                * { box-sizing:border-box; }
+                body { font-family:'Sarabun',sans-serif; color:#0f172a; margin:0; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+                .rt { text-align:center; margin-bottom:6px; }
+                .rt .t { font-size:20px; font-weight:700; color:#0f766e; }
+                .rt .s { font-size:12px; color:#64748b; margin-top:2px; }
+                .meta { font-size:12px; color:#334155; margin:8px 0; padding:6px 10px; background:#f0fdfa; border:1px solid #99f6e4; border-radius:6px; }
+                .meta .cnt { font-weight:700; color:#0f766e; }
+                table { width:100%; border-collapse:collapse; font-size:11px; }
+                th, td { border:1px solid #cbd5e1; padding:4px 6px; vertical-align:top; word-break:break-word; }
+                thead th { background:#0f766e; color:#fff; font-weight:600; text-align:center; }
+                thead { display:table-header-group; }
+                tr { break-inside:avoid; }
+                tbody tr:nth-child(even) td { background:#f8fafc; }
+                td.c { text-align:center; }
+                .badge-hi { display:inline-block; padding:1px 7px; border-radius:999px; font-weight:700; background:#ffe4e6; color:#be123c; }
+                .badge-lo { display:inline-block; padding:1px 7px; border-radius:999px; font-weight:600; background:#fef3c7; color:#b45309; }
+                .leg { font-size:10.5px; color:#475569; margin-top:8px; line-height:1.7; }
+                .foot { margin-top:10px; font-size:10px; color:#94a3b8; text-align:right; }
+                </style></head><body>
+                <div class="rt"><div class="t">รายชื่อผู้สัมผัส (Contact List)</div><div class="s">รพ.ศรีสังวรสุโขทัย · กลุ่มงานการพยาบาลด้านการควบคุมและป้องกันการติดเชื้อ</div></div>
+                <div class="meta"><span class="cnt">จำนวน ${rows.length} ราย</span> &nbsp;|&nbsp; ${filterLine}</div>
+                <table>
+                    <thead><tr>
+                        <th style="width:34px">ลำดับ</th><th style="width:70px">วันที่บันทึก</th><th>ชื่อ-นามสกุล</th>
+                        <th style="width:58px">HN</th><th>กลุ่ม/ตำแหน่ง</th><th>หน่วยงาน</th>
+                        <th style="width:70px">กิจกรรม</th><th style="width:70px">หน้ากาก</th><th style="width:70px">ระยะเวลา</th>
+                        <th style="width:52px">ขนาดห้อง</th><th style="width:44px">ชม.</th><th style="width:78px">ความเสี่ยง</th>
+                    </tr></thead>
+                    <tbody>${body}</tbody>
+                </table>
+                ${legend}
+                <div class="foot">พิมพ์เมื่อ ${fmtThaiDate(isoToday())}</div>
+                </body></html>`;
+            const ifr = document.createElement('iframe');
+            ifr.style.position = 'fixed'; ifr.style.right = '0'; ifr.style.bottom = '0';
+            ifr.style.width = '0'; ifr.style.height = '0'; ifr.style.border = '0';
+            document.body.appendChild(ifr);
+            const d = ifr.contentDocument || ifr.contentWindow.document;
+            d.open(); d.write(html); d.close();
+            setTimeout(() => { try { ifr.contentWindow.focus(); ifr.contentWindow.print(); } catch (e) {} setTimeout(() => ifr.remove(), 60000); }, 500);
+        }
+
         // CSS ใช้ทั้งพรีวิวและหน้าพิมพ์ (A4 แนวนอน 1123×794 px)
         const REPORT_CSS = `
             #report-pages, body { font-family:'Sarabun',sans-serif; color:#0f172a;
@@ -2750,6 +2836,7 @@
         // บันทึก PDF = ดาวน์โหลดไฟล์ตรง ๆ (ไม่มีกล่องพิมพ์เด้ง) ; ปุ่มพิมพ์ = ผ่านเบราว์เซอร์
         document.getElementById('btn-report-pdf').addEventListener('click', downloadReportPdf);
         document.getElementById('btn-report-print').addEventListener('click', printReport);
+        (function () { const b = document.getElementById('btn-list-print'); if (b) b.addEventListener('click', printContactList); })();
 
         /* ============================================================
            10. FORM BUILDER

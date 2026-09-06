@@ -193,6 +193,15 @@
                 </div>
             </div>
 
+            <!-- ปุ่มรวมการจัดการ -->
+            <div>
+                <button id="btn-manage-toggle" class="bg-white border border-slate-300 text-slate-700 px-5 py-2.5 rounded-lg text-lg font-medium hover:bg-slate-50 flex items-center transition-all shadow-sm">
+                    <i data-feather="settings" class="w-5 h-5 mr-2 text-slate-500"></i> การจัดการ
+                    <i data-feather="chevron-down" id="manage-caret" class="w-5 h-5 ml-2 text-slate-400 transition-transform"></i>
+                </button>
+            </div>
+
+            <div id="manage-panel" class="space-y-8" hidden>
             <!-- ตั้งค่าการแสดงเมนู -->
             <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
                 <h3 class="text-lg font-semibold text-slate-800 flex items-center mb-3"><i data-feather="eye-off" class="w-5 h-5 mr-2 text-purple-500"></i> จัดการเมนู (เลือกซ่อน/แสดง)</h3>
@@ -232,6 +241,7 @@
                 </div>
                 <button id="btn-save-tbdef" class="bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-600 hover:to-red-700 text-white px-5 py-2 rounded-lg text-base font-semibold flex items-center transition-all shadow-[0_4px_15px_rgba(244,63,94,0.3)]"><i data-feather="save" class="w-4 h-4 mr-2"></i> บันทึกนิยาม</button>
             </div>
+            </div><!-- /manage-panel -->
 
             <div class="grid grid-cols-2 md:grid-cols-5 gap-4 sm:gap-6">
                 <div class="rounded-2xl border p-5 flex flex-col bg-white border-blue-200 shadow-[0_4px_15px_rgba(59,130,246,0.1)] transition-transform hover:-translate-y-1">
@@ -2174,6 +2184,18 @@
                 printReport();
             } finally { btn.disabled = false; btn.innerHTML = prev; feather.replace(); }
         }
+
+        // ปุ่ม "การจัดการ" — ยุบ/ขยายกล่องจัดการเมนู + จัดการนิยาม
+        (function () {
+            const btn = document.getElementById('btn-manage-toggle');
+            const panel = document.getElementById('manage-panel');
+            const caret = document.getElementById('manage-caret');
+            if (btn && panel) btn.addEventListener('click', () => {
+                panel.hidden = !panel.hidden;
+                if (caret) caret.style.transform = panel.hidden ? '' : 'rotate(180deg)';
+                if (!panel.hidden) feather.replace();
+            });
+        })();
 
         document.getElementById('btn-report').addEventListener('click', openReport);
         document.getElementById('btn-report-pdf').addEventListener('click', downloadReportPdf);

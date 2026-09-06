@@ -472,8 +472,8 @@
                         <div id="rep-unit-list" class="absolute z-10 mt-1 right-0 bg-white border border-slate-200 rounded-lg shadow-lg p-3 max-h-72 overflow-auto w-72 space-y-1"></div>
                     </details>
                     <button id="btn-report-comment" class="bg-white border border-indigo-300 text-indigo-700 hover:bg-indigo-50 px-5 py-2 rounded-lg text-base font-semibold flex items-center transition-all shadow-sm"><i data-feather="message-square" class="w-4 h-4 mr-2"></i> Comment</button>
-                    <button id="btn-report-pdf" class="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-5 py-2 rounded-lg text-base font-semibold flex items-center transition-all shadow-sm"><i data-feather="download" class="w-4 h-4 mr-2"></i> บันทึก PDF</button>
-                    <button id="btn-report-print" class="bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 px-5 py-2 rounded-lg text-base font-semibold flex items-center transition-all shadow-sm"><i data-feather="printer" class="w-4 h-4 mr-2"></i> พิมพ์</button>
+                    <button id="btn-report-pdf" class="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-5 py-2 rounded-lg text-base font-semibold flex items-center transition-all shadow-sm" title="ดาวน์โหลดไฟล์ทันที (ภาพ)"><i data-feather="download" class="w-4 h-4 mr-2"></i> บันทึก PDF</button>
+                    <button id="btn-report-print" class="bg-white border border-teal-300 text-teal-700 hover:bg-teal-50 px-5 py-2 rounded-lg text-base font-semibold flex items-center transition-all shadow-sm" title="พิมพ์/บันทึกเป็น PDF ข้อความคัดลอกได้ คมชัด"><i data-feather="printer" class="w-4 h-4 mr-2"></i> พิมพ์ / PDF ข้อความ</button>
                     <button onclick="closeReport()" class="text-slate-400 hover:text-slate-700"><i data-feather="x" class="w-6 h-6"></i></button>
                 </div>
             </div>
@@ -2670,7 +2670,12 @@
             .sign .role { color:#64748b; font-size:13px; }
             .pgno { position:absolute; right:38px; bottom:18px; font-size:11px; color:#94a3b8; }
             .foot { position:absolute; left:38px; bottom:18px; font-size:11px; color:#94a3b8; }
-            @media print { .pg { box-shadow:none; margin:0; border-radius:0; } }
+            @media print {
+                .pg { box-shadow:none; margin:0; border-radius:0; width:100%; min-height:auto;
+                      height:190mm; padding:8mm 8mm 6mm; overflow:hidden; break-after:page; break-inside:avoid; }
+                .pg:last-child { break-after:auto; }
+                .pg::before { height:5px; }
+            }
         `;
         (function injectReportCss() { const s = document.createElement('style'); s.textContent = REPORT_CSS; document.head.appendChild(s); })();
 

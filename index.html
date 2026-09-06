@@ -500,10 +500,9 @@
                 </div>
                 <div class="pt-2 border-t border-slate-200">
                     <label class="text-base font-medium text-slate-700">ผู้ลงนามท้ายรายงาน (จากแท็บ "logo-name")</label>
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-2">
-                        <div class="space-y-1"><label class="text-sm font-medium text-slate-600">1. ผู้ลงนามช่องที่ 1</label><select id="rep-sign-0" class="w-full text-base rounded-lg border border-slate-300 bg-slate-50 px-3 py-2"></select></div>
-                        <div class="space-y-1"><label class="text-sm font-medium text-slate-600">2. ผู้ลงนามช่องที่ 2</label><select id="rep-sign-1" class="w-full text-base rounded-lg border border-slate-300 bg-slate-50 px-3 py-2"></select></div>
-                        <div class="space-y-1"><label class="text-sm font-medium text-slate-600">3. ผู้ลงนามช่องที่ 3</label><select id="rep-sign-2" class="w-full text-base rounded-lg border border-slate-300 bg-slate-50 px-3 py-2"></select></div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
+                        <div class="space-y-1"><label class="text-sm font-medium text-slate-600">1. ผู้สอบสวน / ผู้จัดทำรายงาน</label><select id="rep-sign-0" class="w-full text-base rounded-lg border border-slate-300 bg-slate-50 px-3 py-2"></select></div>
+                        <div class="space-y-1"><label class="text-sm font-medium text-slate-600">2. หัวหน้าหน่วยงาน</label><select id="rep-sign-1" class="w-full text-base rounded-lg border border-slate-300 bg-slate-50 px-3 py-2"></select></div>
                     </div>
                 </div>
             </div>
@@ -2361,6 +2360,13 @@
             return `วันที่ ${d.getDate()} ${TH_MONTH_FULL[d.getMonth()]} พ.ศ. ${d.getFullYear() + 543}`;
         }
         function repEsc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+        // แปลงลิงก์ Google Drive/Photos เป็น URL รูปโดยตรงเท่าที่ทำได้
+        function repImgUrl(link) {
+            link = String(link || '').trim();
+            let m = link.match(/\/d\/([-\w]{20,})/) || link.match(/[?&]id=([-\w]{20,})/);
+            if (m) return 'https://drive.google.com/uc?export=view&id=' + m[1];
+            return link;
+        }
 
         // รวมสถิติจากรายการที่ผ่านตัวกรองปัจจุบัน
         function repCollect() {
@@ -2411,15 +2417,17 @@
             const closeN = staff.filter(r => computeRecordRisk(r).isClose).length;
 
             const meta = getRepMeta();
+            const logoEntry = v => (logoList || []).find(x => (x.name || x.code) === v);
             const sign = (title, idx) => {
                 const nm = (meta.signers && meta.signers[idx]) ? meta.signers[idx] : '';
-                const person = nm ? (logoList || []).find(x => (x.name || x.code) === nm) : null;
+                const person = nm ? logoEntry(nm) : null;
+                const sigImg = person && person.link ? `<img src="${escAttr(repImgUrl(person.link))}" alt="ลายเซ็น" crossorigin="anonymous" style="max-height:56px;max-width:180px;object-fit:contain;margin:0 auto 2px">` : '';
                 const nameLine = nm ? `( ${repEsc(nm)} )` : '( ........................................................... )';
                 const posLine = person && person.position ? `<div class="role">${repEsc(person.position)}</div>` : '';
                 const groupLine = person && person.group ? `<div class="role">${repEsc(person.group)}</div>` : '';
                 return `
                 <div class="sign">
-                    <div class="sline">ลงชื่อ ...........................................................</div>
+                    ${sigImg || '<div class="sline">ลงชื่อ ...........................................................</div>'}
                     <div>${nameLine}</div>
                     <div class="role">${title}</div>
                     ${posLine}${groupLine}
@@ -2427,15 +2435,19 @@
                 </div>`;
             };
 
+            // โลโก้หัวรายงาน: ถ้ามีลิงก์รูป แสดงรูป ไม่งั้นแสดงข้อความ
             const logosLine = (meta.logos && meta.logos.length)
-                ? `<div class="hs" style="font-weight:600;color:#0f766e">${meta.logos.map(repEsc).join(' &nbsp;|&nbsp; ')}</div>` : '';
+                ? `<div style="display:flex;flex-wrap:wrap;gap:14px;justify-content:center;align-items:center;margin:6px 0">${meta.logos.map(v => {
+                    const e = logoEntry(v);
+                    if (e && e.link) return `<img src="${escAttr(repImgUrl(e.link))}" alt="${escAttr(v)}" crossorigin="anonymous" style="height:52px;max-width:180px;object-fit:contain">`;
+                    return `<span style="font-weight:600;color:#0f766e">${repEsc(v)}</span>`;
+                }).join('')}</div>` : '';
             const headBlock = `
                 <div class="head">
+                    ${logosLine}
                     <div class="logo">
-                        <div class="seal">รพ.ศ</div>
                         <div class="ht">รายงานสรุปการสอบสวนผู้สัมผัสวัณโรค (Contact case TB)</div>
                     </div>
-                    ${logosLine}
                     <div class="hs">โรงพยาบาลศรีสังวรสุโขทัย &nbsp;•&nbsp; งานป้องกันและควบคุมการติดเชื้อ (IPC/ICN)</div>
                     <div class="hm">หน่วยงาน : ${repEsc(unit)} &nbsp;&nbsp;|&nbsp;&nbsp; ${repThaiToday()}</div>
                 </div>`;
@@ -2509,7 +2521,6 @@
                 <div class="signs">
                     ${sign('ผู้สอบสวน / ผู้จัดทำรายงาน', 0)}
                     ${sign('หัวหน้าหน่วยงาน', 1)}
-                    ${sign('ผู้อำนวยการ / ผู้ตรวจสอบ', 2)}
                 </div>
                 <div class="foot">รพ.ศรีสังวรสุโขทัย • IPC/ICN</div>
                 <div class="pgno">หน้า ${totalPages}/${totalPages}</div>

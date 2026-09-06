@@ -1988,11 +1988,13 @@
             const st = r.status === 'เฝ้าระวัง'
                 ? '<span class="st-watch">เฝ้าระวัง</span>'
                 : `<span class="st-ok">${repEsc(r.status || 'ปกติ')}</span>`;
+            const unitVal = (r.answers && (r.answers.unit || r.answers.ward)) || '-';
             return `<tr>
                 <td class="c">${i + 1}</td>
                 <td>${repEsc(r.name || '-')}</td>
                 <td class="c">${repEsc(r.hn || '-')}</td>
                 <td>${repEsc(r.group || '-')}</td>
+                <td>${repEsc(unitVal)}</td>
                 <td class="c">${ri.hasData ? ri.days : '-'}</td>
                 <td class="c">${ri.hasData ? ri.hours : '-'}</td>
                 <td class="c">${badge}</td>
@@ -2037,9 +2039,9 @@
                 </div>`;
 
             const tHead = `<thead><tr>
-                        <th class="nowrap" style="width:6%">ลำดับ</th><th style="width:23%">ชื่อ-สกุล</th><th style="width:11%">HN</th>
-                        <th style="width:20%">ตำแหน่ง</th><th class="nowrap" style="width:9%">วันสัมผัส</th>
-                        <th class="nowrap" style="width:9%">ชม.รวม</th><th style="width:12%">ความเสี่ยง</th><th style="width:10%">สถานะ</th>
+                        <th class="nowrap" style="width:5%">ลำดับ</th><th style="width:20%">ชื่อ-สกุล</th><th style="width:9%">HN</th>
+                        <th style="width:16%">ตำแหน่ง</th><th style="width:15%">หน่วยงาน</th><th class="nowrap" style="width:8%">วันสัมผัส</th>
+                        <th class="nowrap" style="width:8%">ชม.รวม</th><th style="width:10%">ความเสี่ยง</th><th style="width:9%">สถานะ</th>
                     </tr></thead>`;
 
             // แบ่งตารางเจ้าหน้าที่เป็นหลายหน้า (หน้าแรกมี KPI จึงใส่ได้น้อยกว่า)
@@ -2060,7 +2062,7 @@
             const tablePages = chunks.map((chunk, ci) => {
                 const body = staff.length
                     ? chunk.map(r => repStaffRow(r, seq++)).join('')
-                    : `<tr><td class="c" colspan="8" style="color:#94a3b8">ไม่มีข้อมูลเจ้าหน้าที่</td></tr>`;
+                    : `<tr><td class="c" colspan="9" style="color:#94a3b8">ไม่มีข้อมูลเจ้าหน้าที่</td></tr>`;
                 const contd = ci > 0 ? ' (ต่อ)' : '';
                 return `
               <section class="pg pdf-page">

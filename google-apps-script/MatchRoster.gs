@@ -83,6 +83,43 @@ function _findColContains(headers, kw) {
   for (var i = 0; i < headers.length; i++) if (_norm(headers[i]).indexOf(kw) >= 0) return i;
   return -1;
 }
+// ระยะแก้ไข (Levenshtein) สำหรับแมตชื่อพิมพ์ผิดเล็กน้อย
+function _lev(a, b) {
+  var m = a.length, n = b.length;
+  if (!m) return n; if (!n) return m;
+  var prev = [], cur = [], i, j;
+  for (j = 0; j <= n; j++) prev[j] = j;
+  for (i = 1; i <= m; i++) {
+    cur[0] = i;
+    for (j = 1; j <= n; j++) {
+      var cost = a.charAt(i - 1) === b.charAt(j - 1) ? 0 : 1;
+      cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + cost);
+    }
+    for (j = 0; j <= n; j++) prev[j] = cur[j];
+  }
+  return prev[n];
+}
+// หาคู่ใกล้เคียงที่สุดในทะเบียน: คืน key ถ้ามั่นใจพอ ไม่งั้นคืน null
+function _fuzzyKey(key, regKeys) {
+  if (!key) return null;
+  // 1) ชื่อในแบบสอบถามเป็น "คำขึ้นต้น" ของทะเบียนแบบไม่ซ้ำ (เช่น ขาดนามสกุล)
+  var pfxHits = [];
+  for (var p = 0; p < regKeys.length; p++) {
+    var rk = regKeys[p];
+    if (key.length >= 4 && rk.indexOf(key) === 0) pfxHits.push(rk);
+  }
+  if (pfxHits.length === 1) return pfxHits[0];
+  // 2) ระยะแก้ไขน้อยสุดและไม่กำกวม
+  var best = null, bestD = 99, second = 99;
+  for (var i = 0; i < regKeys.length; i++) {
+    var d = _lev(key, regKeys[i]);
+    if (d < bestD) { second = bestD; bestD = d; best = regKeys[i]; }
+    else if (d < second) { second = d; }
+  }
+  var limit = key.length >= 6 ? 2 : 1;  // ชื่อสั้นเข้มงวดกว่า
+  if (best && bestD <= limit && second - bestD >= 1) return best;
+  return null;
+}
 
 // ---------- main ----------
 function matchRoster() {
@@ -159,37 +196,37 @@ function matchRoster() {
     ds.getRange(1, dh.length + 1, 1, appended.length).setValues([appended]);
   }
 
-  var matched = 0, unmatched = 0;
+  var regKeys = Object.keys(reg);
+  var matched = 0, fuzzy = 0, unmatched = 0;
   var lastRow = dv.length;               // จำนวนแถวข้อมูล (รวม header)
   var maxCol = Math.max(dNameCol, dPosCol, dUnitCol, dPreCol, dFCol, dLCol, dMatchCol) + 1;
 
-  // เตรียม array สำหรับเขียนกลับทีเดียว (เร็ว + กันเขียนชนกัน)
-  // อ่านช่วงตั้งแต่คอลัมน์ 1 ถึง maxCol ทุกแถวข้อมูล
   var block = ds.getRange(2, 1, lastRow - 1, maxCol).getValues();
   var bgClear = [];
   var missList = [];
   for (var r = 0; r < block.length; r++) {
     var brow = block[r];
+    while (brow.length < maxCol) brow.push('');
     var key = _nameKey(brow[dNameCol]);
-    if (key && reg[key]) {
-      var m = reg[key];
+    var m = null, isFuzzy = false;
+    if (key && reg[key]) { m = reg[key]; }
+    else if (key) { var fk = _fuzzyKey(key, regKeys); if (fk) { m = reg[fk]; isFuzzy = true; } }
+
+    if (m) {
       // เขียนทับด้วยทะเบียนจริง
-      brow[dNameCol] = _norm((m.prefix ? m.prefix + ' ' : '') + m.full); // ชื่อ-สกุล = คำนำหน้า+ชื่อ+นามสกุล
+      brow[dNameCol] = _norm((m.prefix ? m.prefix + ' ' : '') + m.full);
       if (dPosCol >= 0 && m.pos)  brow[dPosCol]  = m.pos;
       if (dUnitCol >= 0 && m.unit) brow[dUnitCol] = m.unit;
       brow[dPreCol]   = m.prefix;
       brow[dFCol]     = m.first;
       brow[dLCol]     = m.last;
-      brow[dMatchCol] = 'ตรงกับทะเบียน';
-      matched++;
-      bgClear.push(null);
+      if (isFuzzy) { brow[dMatchCol] = 'แมตใกล้เคียง-ตรวจสอบ'; fuzzy++; bgClear.push('#ffe8cc'); }
+      else { brow[dMatchCol] = 'ตรงกับทะเบียน'; matched++; bgClear.push(null); }
     } else {
       brow[dMatchCol] = brow[dNameCol] ? 'ไม่พบในทะเบียน' : '';
       if (brow[dNameCol]) { unmatched++; if (missList.length < 20) missList.push('• ' + _norm(brow[dNameCol])); }
       bgClear.push(brow[dNameCol] ? '#fff3cd' : null);
     }
-    // เผื่อ block สั้นกว่า maxCol ให้เติม
-    while (brow.length < maxCol) brow.push('');
   }
   ds.getRange(2, 1, block.length, maxCol).setValues(block);
 
@@ -198,7 +235,9 @@ function matchRoster() {
     ds.getRange(r2 + 2, dNameCol + 1).setBackground(bgClear[r2]);
   }
 
-  var msg = 'เสร็จแล้ว ✅\n\nแมตตรงกับทะเบียน: ' + matched + ' ราย\nไม่พบในทะเบียน (ระบายเหลือง): ' + unmatched + ' ราย';
+  var msg = 'เสร็จแล้ว ✅\n\nแมตตรงกับทะเบียน: ' + matched + ' ราย'
+          + '\nแมตใกล้เคียง-ตรวจสอบ (ระบายส้ม): ' + fuzzy + ' ราย'
+          + '\nไม่พบในทะเบียน (ระบายเหลือง): ' + unmatched + ' ราย';
   if (missList.length) msg += '\n\nรายชื่อที่ยังไม่พบ (ตรวจการสะกด/เว้นวรรคกับทะเบียน):\n' + missList.join('\n');
   ui.alert(msg);
 }

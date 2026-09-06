@@ -256,6 +256,22 @@
                 </div>
                 <button id="btn-save-repnotes" class="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-5 py-2 rounded-lg text-base font-semibold flex items-center transition-all shadow-sm"><i data-feather="save" class="w-4 h-4 mr-2"></i> บันทึกข้อความรายงาน</button>
             </div>
+
+            <!-- โลโก้หัวรายงาน + ผู้ลงนาม (จากแท็บ logo-) -->
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
+                <h3 class="text-lg font-semibold text-slate-800 flex items-center"><i data-feather="award" class="w-5 h-5 mr-2 text-indigo-500"></i> โลโก้หัวรายงาน &amp; ผู้ลงนาม (จากแท็บ "logo-")</h3>
+                <div>
+                    <label class="text-base font-medium text-slate-700">เลือกโลโก้/ชื่อหน่วยงานที่จะแสดงบนหัวรายงาน</label>
+                    <div id="rep-logo-list" class="flex flex-wrap gap-x-6 gap-y-2 mt-2 text-base"></div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div class="space-y-1"><label class="text-sm font-medium text-slate-600">ผู้ลงนามช่องที่ 1</label><select id="rep-sign-0" class="w-full text-base rounded-lg border border-slate-300 bg-slate-50 px-3 py-2"></select></div>
+                    <div class="space-y-1"><label class="text-sm font-medium text-slate-600">ผู้ลงนามช่องที่ 2</label><select id="rep-sign-1" class="w-full text-base rounded-lg border border-slate-300 bg-slate-50 px-3 py-2"></select></div>
+                    <div class="space-y-1"><label class="text-sm font-medium text-slate-600">ผู้ลงนามช่องที่ 3</label><select id="rep-sign-2" class="w-full text-base rounded-lg border border-slate-300 bg-slate-50 px-3 py-2"></select></div>
+                </div>
+                <p id="rep-logo-empty" class="text-sm text-amber-600" hidden>ยังไม่มีข้อมูลแท็บ "logo-" — เพิ่มคอลัมน์ code, name ในชีต แล้ว Deploy Code.gs ใหม่</p>
+                <button id="btn-save-repmeta" class="bg-gradient-to-r from-indigo-500 to-violet-600 hover:from-indigo-600 hover:to-violet-700 text-white px-5 py-2 rounded-lg text-base font-semibold flex items-center transition-all shadow-sm"><i data-feather="save" class="w-4 h-4 mr-2"></i> บันทึกโลโก้ &amp; ผู้ลงนาม</button>
+            </div>
             </div><!-- /manage-panel -->
 
             <div class="grid grid-cols-2 md:grid-cols-5 gap-4 sm:gap-6">
@@ -514,6 +530,12 @@
                 roster = data.roster;
                 try { localStorage.setItem('oi-roster', JSON.stringify(roster)); } catch (e) {}
             }
+            // รายการโลโก้/ผู้ลงนาม จากแท็บ "logo-"
+            if (data && Array.isArray(data.logo)) {
+                logoList = data.logo;
+                try { localStorage.setItem('oi-logolist', JSON.stringify(logoList)); } catch (e) {}
+                if (!document.getElementById('view-admin').classList.contains('hidden')) { try { renderRepMetaForm(); } catch (e) {} }
+            }
             // แท็บ "การจัดการแบบสอบถาม": มีบนชีต -> ใช้; ยังว่าง -> เติม schema ปัจจุบันขึ้นไป
             if (data && data.schema) {
                 schema = data.schema;
@@ -547,6 +569,10 @@
                 if (data.settings.reportNotes) {
                     try { localStorage.setItem('oi-repnotes', JSON.stringify(data.settings.reportNotes)); } catch (e) {}
                     if (typeof renderRepNotesForm === 'function' && !document.getElementById('view-admin').classList.contains('hidden')) renderRepNotesForm();
+                }
+                if (data.settings.reportMeta) {
+                    try { localStorage.setItem('oi-repmeta', JSON.stringify(data.settings.reportMeta)); } catch (e) {}
+                    if (typeof renderRepMetaForm === 'function' && !document.getElementById('view-admin').classList.contains('hidden')) renderRepMetaForm();
                 }
             }
             renderForm('staff'); renderForm('patient');
@@ -668,6 +694,15 @@
         // ทะเบียนเจ้าหน้าที่ปฏิบัติงานจริง [{prefix,name,position,unit}]
         let roster = [];
         try { const rr = localStorage.getItem('oi-roster'); if (rr) roster = JSON.parse(rr); } catch (e) {}
+        // รายการโลโก้/ผู้ลงนาม จากแท็บ "logo-" [{code,name}]
+        let logoList = [];
+        try { const lg = localStorage.getItem('oi-logolist'); if (lg) logoList = JSON.parse(lg); } catch (e) {}
+        // การเลือกโลโก้หัวรายงาน + ผู้ลงนาม 3 ช่อง
+        const REPMETA_KEY = 'oi-repmeta';
+        function getRepMeta() {
+            try { const d = localStorage.getItem(REPMETA_KEY); if (d) return Object.assign({ logos: [], signers: ['', '', ''] }, JSON.parse(d)); } catch (e) {}
+            return { logos: [], signers: ['', '', ''] };
+        }
 
         // id กันชนแม้บันทึกในมิลลิวินาทีเดียวกัน
         function genId() { return Date.now() * 1000 + Math.floor(Math.random() * 1000); }
@@ -1561,7 +1596,7 @@
                     }
                 });
 
-                if (targetId === 'view-admin') { renderAdminTable(); renderNavToggles(); renderTbDefForm(); renderRepNotesForm(); serverLoad(); }
+                if (targetId === 'view-admin') { renderAdminTable(); renderNavToggles(); renderTbDefForm(); renderRepNotesForm(); renderRepMetaForm(); serverLoad(); }
                 if (targetId === 'view-builder') renderBuilder();
             });
         });
@@ -2013,6 +2048,42 @@
             });
         })();
 
+        // แสดง/บันทึก โลโก้หัวรายงาน + ผู้ลงนาม
+        function logoLabel(x) { return (x.code ? x.code + ' - ' : '') + (x.name || ''); }
+        function renderRepMetaForm() {
+            const meta = getRepMeta();
+            const empty = document.getElementById('rep-logo-empty');
+            if (empty) empty.hidden = !!(logoList && logoList.length);
+            const box = document.getElementById('rep-logo-list');
+            if (box) {
+                box.innerHTML = (logoList || []).map((x, i) => {
+                    const val = x.name || x.code;
+                    const on = meta.logos.indexOf(val) >= 0;
+                    return `<label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" class="rep-logo-cb w-5 h-5 text-indigo-600" value="${escAttr(val)}" ${on ? 'checked' : ''}> ${logoLabel(x)}</label>`;
+                }).join('') || '<span class="text-slate-400 text-sm">— ไม่มีรายการ —</span>';
+            }
+            for (let i = 0; i < 3; i++) {
+                const sel = document.getElementById('rep-sign-' + i);
+                if (!sel) continue;
+                const cur = meta.signers[i] || '';
+                sel.innerHTML = '<option value="">— ไม่ระบุ —</option>' + (logoList || []).map(x => {
+                    const val = x.name || x.code;
+                    return `<option value="${escAttr(val)}" ${val === cur ? 'selected' : ''}>${escHtml(logoLabel(x))}</option>`;
+                }).join('');
+            }
+        }
+        (function () {
+            const btn = document.getElementById('btn-save-repmeta');
+            if (btn) btn.addEventListener('click', () => {
+                const logos = Array.from(document.querySelectorAll('.rep-logo-cb')).filter(c => c.checked).map(c => c.value);
+                const signers = [0, 1, 2].map(i => (document.getElementById('rep-sign-' + i) || {}).value || '');
+                confirmSave('บันทึกการเลือกโลโก้และผู้ลงนามใช่หรือไม่?', () => {
+                    try { localStorage.setItem(REPMETA_KEY, JSON.stringify({ logos, signers })); } catch (e) {}
+                    serverSaveSettings(currentSettings());
+                }, 'บันทึกโลโก้ & ผู้ลงนามแล้ว' + (USE_SERVER ? ' (ทุกเครื่อง)' : ''));
+            });
+        })();
+
         document.getElementById('btn-logout').addEventListener('click', () => {
             try { sessionStorage.removeItem('oi-admin'); } catch (e) {}
             document.querySelector('nav .nav-btn[data-target="view-home"]').click();
@@ -2198,20 +2269,28 @@
             const minH = hrs.length ? Math.min(...hrs) : 0;
             const closeN = staff.filter(r => computeRecordRisk(r).isClose).length;
 
-            const sign = (title) => `
+            const meta = getRepMeta();
+            const sign = (title, idx) => {
+                const nm = (meta.signers && meta.signers[idx]) ? meta.signers[idx] : '';
+                const nameLine = nm ? `( ${repEsc(nm)} )` : '( ........................................................... )';
+                return `
                 <div class="sign">
                     <div class="sline">ลงชื่อ ...........................................................</div>
-                    <div>( ........................................................... )</div>
+                    <div>${nameLine}</div>
                     <div class="role">${title}</div>
                     <div class="role">วันที่ ......... / ......... / .........</div>
                 </div>`;
+            };
 
+            const logosLine = (meta.logos && meta.logos.length)
+                ? `<div class="hs" style="font-weight:600;color:#0f766e">${meta.logos.map(repEsc).join(' &nbsp;|&nbsp; ')}</div>` : '';
             const headBlock = `
                 <div class="head">
                     <div class="logo">
                         <div class="seal">รพ.ศ</div>
                         <div class="ht">รายงานสรุปการสอบสวนผู้สัมผัสวัณโรค (Contact case TB)</div>
                     </div>
+                    ${logosLine}
                     <div class="hs">โรงพยาบาลศรีสังวรสุโขทัย &nbsp;•&nbsp; งานป้องกันและควบคุมการติดเชื้อ (IPC/ICN)</div>
                     <div class="hm">หน่วยงาน : ${repEsc(unit)} &nbsp;&nbsp;|&nbsp;&nbsp; ${repThaiToday()}</div>
                 </div>`;
@@ -2283,9 +2362,9 @@
                     </div>
                 </div>
                 <div class="signs">
-                    ${sign('ผู้สอบสวน / ผู้จัดทำรายงาน')}
-                    ${sign('หัวหน้าหน่วยงาน')}
-                    ${sign('ผู้อำนวยการ / ผู้ตรวจสอบ')}
+                    ${sign('ผู้สอบสวน / ผู้จัดทำรายงาน', 0)}
+                    ${sign('หัวหน้าหน่วยงาน', 1)}
+                    ${sign('ผู้อำนวยการ / ผู้ตรวจสอบ', 2)}
                 </div>
                 <div class="foot">รพ.ศรีสังวรสุโขทัย • IPC/ICN</div>
                 <div class="pgno">หน้า ${totalPages}/${totalPages}</div>
@@ -2619,7 +2698,7 @@
             return defaultSchema();
         }
         function currentSettings() {
-            const s = { navHidden: getHiddenNav(), tbDef: getTbDef(), reportNotes: getRepNotes() };
+            const s = { navHidden: getHiddenNav(), tbDef: getTbDef(), reportNotes: getRepNotes(), reportMeta: getRepMeta() };
             try { const d = localStorage.getItem(DEFAULT_SCHEMA_KEY); if (d) s.defaultSchema = JSON.parse(d); } catch (e) {}
             return s;
         }

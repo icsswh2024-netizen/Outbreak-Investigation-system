@@ -24,7 +24,7 @@ var SPREADSHEET_ID = '1-vvdG18uzzn9EQgSAnQ1G4aCLdUvNIQA6deWZrk92EI';
 function doGet(e) {
   var action = (e && e.parameter && e.parameter.action) || 'load';
   var out;
-  if (action === 'load') out = { schema: readSchema(), records: readRecords(), settings: readSettings(), roster: readRoster() };
+  if (action === 'load') out = { schema: readSchema(), records: readRecords(), settings: readSettings(), roster: readRoster(), logo: readLogo() };
   else out = { error: 'unknown action' };
 
   // รองรับ JSONP (เรียกจากเว็บสถิตข้ามโดเมนได้ ผ่าน callback)
@@ -302,6 +302,39 @@ function readRoster() {
       position: cPos >= 0 ? String(row[cPos] || '').trim() : '',
       unit: cUnit >= 0 ? String(row[cUnit] || '').trim() : ''
     });
+  }
+  return out;
+}
+
+// อ่านแท็บ "logo-" (คอลัมน์ code, name) — ใช้เป็นตัวเลือกโลโก้หัวรายงาน + ผู้ลงนาม
+function readLogo() {
+  var sheets = ss().getSheets();
+  var sh = null;
+  for (var i = 0; i < sheets.length; i++) {
+    var nm = String(sheets[i].getName() || '').replace(/\s+/g, '').toLowerCase();
+    if (nm === 'logo-' || nm === 'logo' || nm.indexOf('logo') === 0) { sh = sheets[i]; break; }
+  }
+  if (!sh) return [];
+  var last = sh.getLastRow();
+  if (last < 2) return [];
+  var vals = sh.getDataRange().getValues();
+  var h = vals[0];
+  function find(names) {
+    for (var i = 0; i < h.length; i++) {
+      var hh = String(h[i] || '').replace(/\s+/g, '').toLowerCase().trim();
+      for (var j = 0; j < names.length; j++) if (hh === names[j]) return i;
+    }
+    return -1;
+  }
+  var cCode = find(['code', 'รหัส']);
+  var cName = find(['name', 'ชื่อ', 'ชื่อ-สกุล', 'ชื่อหน่วยงาน']);
+  var out = [];
+  for (var r = 1; r < vals.length; r++) {
+    var row = vals[r];
+    var code = cCode >= 0 ? String(row[cCode] || '').trim() : '';
+    var name = cName >= 0 ? String(row[cName] || '').trim() : String(row[0] || '').trim();
+    if (!code && !name) continue;
+    out.push({ code: code, name: name });
   }
   return out;
 }

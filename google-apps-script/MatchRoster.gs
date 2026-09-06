@@ -47,24 +47,28 @@ function _ss() {
 }
 function _norm(s) {
   s = String(s == null ? '' : s);
+  try { s = s.normalize('NFC'); } catch (e) {}
   s = s.replace(/[​‌‍﻿]/g, ''); // zero-width
   s = s.replace(/\s+/g, ' ').trim();
   return s;
 }
 // กุญแจเทียบ: ตัดคำนำหน้า + ตัดช่องว่างทั้งหมด
-function _nameKey(s) {
-  var t = _norm(s);
-  for (var i = 0; i < PREFIXES.length; i++) {
-    if (t.indexOf(PREFIXES[i]) === 0) { t = t.slice(PREFIXES[i].length); break; }
-  }
-  return t.replace(/\s+/g, '');
-}
-function _stripPrefix(s) {
-  var t = _norm(s);
-  for (var i = 0; i < PREFIXES.length; i++) {
-    if (t.indexOf(PREFIXES[i]) === 0) return _norm(t.slice(PREFIXES[i].length));
+function _stripAllPrefix(t) {
+  var changed = true;
+  while (changed) {
+    changed = false;
+    for (var i = 0; i < PREFIXES.length; i++) {
+      var pfx = PREFIXES[i];
+      if (t.indexOf(pfx) === 0) { t = t.slice(pfx.length).replace(/^[\s.]+/, ''); changed = true; break; }
+    }
   }
   return t;
+}
+function _nameKey(s) {
+  return _stripAllPrefix(_norm(s)).replace(/[\s.()\-]/g, '');
+}
+function _stripPrefix(s) {
+  return _stripAllPrefix(_norm(s));
 }
 function _findCol(headers, names) {
   for (var i = 0; i < headers.length; i++) {
@@ -114,9 +118,9 @@ function matchRoster() {
       }
       key = _nameKey(row[rNameCol]);
     } else {
-      var f = _norm(row[rFirstCol]), l = _norm(row[rLastCol]);
+      var f = _stripAllPrefix(_norm(row[rFirstCol])), l = _norm(row[rLastCol]);
       full = _norm(f + ' ' + l);
-      key = (f + l).replace(/\s+/g, '');
+      key = _nameKey(f + ' ' + l);
     }
     if (!key) continue;
     reg[key] = {
@@ -154,6 +158,7 @@ function matchRoster() {
   // อ่านช่วงตั้งแต่คอลัมน์ 1 ถึง maxCol ทุกแถวข้อมูล
   var block = ds.getRange(2, 1, lastRow - 1, maxCol).getValues();
   var bgClear = [];
+  var missList = [];
   for (var r = 0; r < block.length; r++) {
     var brow = block[r];
     var key = _nameKey(brow[dNameCol]);
@@ -169,7 +174,7 @@ function matchRoster() {
       bgClear.push(null);
     } else {
       brow[dMatchCol] = brow[dNameCol] ? 'ไม่พบในทะเบียน' : '';
-      unmatched += brow[dNameCol] ? 1 : 0;
+      if (brow[dNameCol]) { unmatched++; if (missList.length < 20) missList.push('• ' + _norm(brow[dNameCol])); }
       bgClear.push(brow[dNameCol] ? '#fff3cd' : null);
     }
     // เผื่อ block สั้นกว่า maxCol ให้เติม
@@ -182,5 +187,7 @@ function matchRoster() {
     ds.getRange(r2 + 2, dNameCol + 1).setBackground(bgClear[r2]);
   }
 
-  ui.alert('เสร็จแล้ว ✅\n\nแมตตรงกับทะเบียน: ' + matched + ' ราย\nไม่พบในทะเบียน (ระบายเหลือง): ' + unmatched + ' ราย');
+  var msg = 'เสร็จแล้ว ✅\n\nแมตตรงกับทะเบียน: ' + matched + ' ราย\nไม่พบในทะเบียน (ระบายเหลือง): ' + unmatched + ' ราย';
+  if (missList.length) msg += '\n\nรายชื่อที่ยังไม่พบ (ตรวจการสะกด/เว้นวรรคกับทะเบียน):\n' + missList.join('\n');
+  ui.alert(msg);
 }

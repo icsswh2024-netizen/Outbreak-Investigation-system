@@ -328,13 +328,21 @@ function readLogo() {
   }
   var cCode = find(['code', 'รหัส']);
   var cName = find(['name', 'ชื่อ', 'ชื่อ-สกุล', 'ชื่อหน่วยงาน']);
+  var cPos = find(['ตำแหน่ง', 'position']);
+  var cGroup = find(['กลุ่มงาน', 'กลุ่ม', 'group']);
+  var cLink = find(['link', 'ลิงก์', 'ลิงค์']);
   var out = [];
   for (var r = 1; r < vals.length; r++) {
     var row = vals[r];
     var code = cCode >= 0 ? String(row[cCode] || '').trim() : '';
     var name = cName >= 0 ? String(row[cName] || '').trim() : String(row[0] || '').trim();
     if (!code && !name) continue;
-    out.push({ code: code, name: name });
+    out.push({
+      code: code, name: name,
+      position: cPos >= 0 ? String(row[cPos] || '').trim() : '',
+      group: cGroup >= 0 ? String(row[cGroup] || '').trim() : '',
+      link: cLink >= 0 ? String(row[cLink] || '').trim() : ''
+    });
   }
   return out;
 }

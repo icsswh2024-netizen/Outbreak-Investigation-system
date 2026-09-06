@@ -2272,12 +2272,16 @@
             const meta = getRepMeta();
             const sign = (title, idx) => {
                 const nm = (meta.signers && meta.signers[idx]) ? meta.signers[idx] : '';
+                const person = nm ? (logoList || []).find(x => (x.name || x.code) === nm) : null;
                 const nameLine = nm ? `( ${repEsc(nm)} )` : '( ........................................................... )';
+                const posLine = person && person.position ? `<div class="role">${repEsc(person.position)}</div>` : '';
+                const groupLine = person && person.group ? `<div class="role">${repEsc(person.group)}</div>` : '';
                 return `
                 <div class="sign">
                     <div class="sline">ลงชื่อ ...........................................................</div>
                     <div>${nameLine}</div>
                     <div class="role">${title}</div>
+                    ${posLine}${groupLine}
                     <div class="role">วันที่ ......... / ......... / .........</div>
                 </div>`;
             };

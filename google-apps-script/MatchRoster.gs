@@ -20,6 +20,8 @@ var COL_NAME_DATA = ['ชื่อ-สกุล', 'ชื่อ-นามสก�
 var COL_POS_DATA  = ['กลุ่ม/ตำแหน่ง', 'ตำแหน่ง', 'ตำแหน่งการพยาบาล'];
 var COL_UNIT_DATA = ['หน่วยงาน'];   // จับแบบ "ขึ้นต้นด้วย/มีคำว่า" หน่วยงาน
 var COL_PREFIX    = 'คำนำหน้า';     // ถ้าไม่มีจะเพิ่มให้อัตโนมัติ
+var COL_FNAME     = 'ชื่อ';          // เพิ่มให้อัตโนมัติ (แยกจากทะเบียน)
+var COL_LNAME     = 'นามสกุล';       // เพิ่มให้อัตโนมัติ
 var COL_MATCH     = 'สถานะแมตรายชื่อ'; // คอลัมน์ audit ถ้าไม่มีจะเพิ่มให้
 
 // แท็บ "รายชื่อเจ้าหน้าที่ปฏิบัติงาน"
@@ -105,27 +107,30 @@ function matchRoster() {
     ui.alert('แท็บทะเบียนต้องมีคอลัมน์ "ชื่อ-สกุล" หรือ ("ชื่อ" และ "นามสกุล")'); return;
   }
 
-  var reg = {}; // key -> {prefix, full, pos, unit}
+  var reg = {}; // key -> {prefix, first, last, full, pos, unit}
   for (var i = 1; i < rv.length; i++) {
     var row = rv[i];
     var prefix = rPreCol >= 0 ? _norm(row[rPreCol]) : '';
-    var full, key;
+    var full, key, first, last;
     if (rNameCol >= 0) {
-      full = _stripPrefix(row[rNameCol]);
+      full = _stripPrefix(row[rNameCol]);          // ชื่อ+สกุล ไม่มีคำนำหน้า
       if (!prefix) { // ดึงคำนำหน้าออกจากชื่อรวมถ้าไม่มีคอลัมน์แยก
         var raw = _norm(row[rNameCol]);
         for (var p = 0; p < PREFIXES.length; p++) if (raw.indexOf(PREFIXES[p]) === 0) { prefix = PREFIXES[p]; break; }
       }
+      var sp = full.indexOf(' ');                  // แยกที่เว้นวรรคแรก
+      first = sp >= 0 ? full.slice(0, sp) : full;
+      last  = sp >= 0 ? _norm(full.slice(sp + 1)) : '';
       key = _nameKey(row[rNameCol]);
     } else {
-      var f = _stripAllPrefix(_norm(row[rFirstCol])), l = _norm(row[rLastCol]);
-      full = _norm(f + ' ' + l);
-      key = _nameKey(f + ' ' + l);
+      first = _stripAllPrefix(_norm(row[rFirstCol]));
+      last  = _norm(row[rLastCol]);
+      full = _norm(first + ' ' + last);
+      key = _nameKey(first + ' ' + last);
     }
     if (!key) continue;
     reg[key] = {
-      prefix: prefix,
-      full: full,
+      prefix: prefix, first: first, last: last, full: full,
       pos: rPosCol >= 0 ? _norm(row[rPosCol]) : '',
       unit: rUnitCol >= 0 ? _norm(row[rUnitCol]) : ''
     };
@@ -142,9 +147,13 @@ function matchRoster() {
 
   // เพิ่มคอลัมน์ คำนำหน้า / สถานะแมต ถ้ายังไม่มี (ต่อท้าย)
   var dPreCol   = _findCol(dh, [COL_PREFIX]);
+  var dFCol     = _findCol(dh, [COL_FNAME]);
+  var dLCol     = _findCol(dh, [COL_LNAME]);
   var dMatchCol = _findCol(dh, [COL_MATCH]);
   var appended = [];
   if (dPreCol < 0)   { dPreCol = dh.length + appended.length; appended.push(COL_PREFIX); }
+  if (dFCol < 0)     { dFCol = dh.length + appended.length; appended.push(COL_FNAME); }
+  if (dLCol < 0)     { dLCol = dh.length + appended.length; appended.push(COL_LNAME); }
   if (dMatchCol < 0) { dMatchCol = dh.length + appended.length; appended.push(COL_MATCH); }
   if (appended.length) {
     ds.getRange(1, dh.length + 1, 1, appended.length).setValues([appended]);
@@ -152,7 +161,7 @@ function matchRoster() {
 
   var matched = 0, unmatched = 0;
   var lastRow = dv.length;               // จำนวนแถวข้อมูล (รวม header)
-  var maxCol = Math.max(dNameCol, dPosCol, dUnitCol, dPreCol, dMatchCol) + 1;
+  var maxCol = Math.max(dNameCol, dPosCol, dUnitCol, dPreCol, dFCol, dLCol, dMatchCol) + 1;
 
   // เตรียม array สำหรับเขียนกลับทีเดียว (เร็ว + กันเขียนชนกัน)
   // อ่านช่วงตั้งแต่คอลัมน์ 1 ถึง maxCol ทุกแถวข้อมูล
@@ -165,10 +174,12 @@ function matchRoster() {
     if (key && reg[key]) {
       var m = reg[key];
       // เขียนทับด้วยทะเบียนจริง
-      brow[dNameCol] = m.full;                 // ชื่อ-สกุล (ไม่มีคำนำหน้า)
+      brow[dNameCol] = _norm((m.prefix ? m.prefix + ' ' : '') + m.full); // ชื่อ-สกุล = คำนำหน้า+ชื่อ+นามสกุล
       if (dPosCol >= 0 && m.pos)  brow[dPosCol]  = m.pos;
       if (dUnitCol >= 0 && m.unit) brow[dUnitCol] = m.unit;
       brow[dPreCol]   = m.prefix;
+      brow[dFCol]     = m.first;
+      brow[dLCol]     = m.last;
       brow[dMatchCol] = 'ตรงกับทะเบียน';
       matched++;
       bgClear.push(null);

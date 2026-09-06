@@ -11,6 +11,10 @@
     <!-- Load Feather Icons for UI icons -->
     <script src="https://unpkg.com/feather-icons"></script>
 
+    <!-- html2canvas + jsPDF สำหรับบันทึกรายงานเป็น PDF (A4 แนวนอน) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
+
     <!-- Load Google Fonts (Sarabun) -->
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
@@ -430,11 +434,12 @@
                 <h3 class="text-xl font-bold text-slate-800 flex items-center"><i data-feather="file-text" class="w-5 h-5 mr-2 text-emerald-600"></i> รายงานสรุป Contact case TB (A4 แนวนอน)</h3>
                 <div class="flex flex-wrap items-center gap-3">
                     <label class="flex items-center gap-2 text-base text-slate-600"><span>หน่วยงาน:</span><input id="rep-unit" type="text" class="text-base rounded-lg border border-slate-300 px-3 py-1.5 w-64" placeholder="เช่น หอผู้ป่วยโรคหลอดเลือดสมอง"></label>
-                    <button id="btn-report-print" class="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-5 py-2 rounded-lg text-base font-semibold flex items-center transition-all shadow-sm"><i data-feather="printer" class="w-4 h-4 mr-2"></i> พิมพ์ / บันทึก PDF</button>
+                    <button id="btn-report-pdf" class="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-5 py-2 rounded-lg text-base font-semibold flex items-center transition-all shadow-sm"><i data-feather="download" class="w-4 h-4 mr-2"></i> บันทึก PDF</button>
+                    <button id="btn-report-print" class="bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 px-5 py-2 rounded-lg text-base font-semibold flex items-center transition-all shadow-sm"><i data-feather="printer" class="w-4 h-4 mr-2"></i> พิมพ์</button>
                     <button onclick="closeReport()" class="text-slate-400 hover:text-slate-700"><i data-feather="x" class="w-6 h-6"></i></button>
                 </div>
             </div>
-            <div class="flex-1 overflow-auto p-6 flex flex-col items-center gap-6" id="report-scroll">
+            <div class="flex-1 overflow-auto p-6 flex flex-col items-center gap-6" id="report-scroll" style="background:radial-gradient(circle at 50% 0,#e2e8f0,#cbd5e1)">
                 <div id="report-pages"></div>
             </div>
         </div>
@@ -1928,9 +1933,12 @@
         // แถวรายงานเจ้าหน้าที่แต่ละคน
         function repStaffRow(r, i) {
             const ri = computeRecordRisk(r);
-            const badge = !ri.hasData ? '-' : (ri.isClose
-                ? '<span style="color:#be123c;font-weight:700">เสี่ยงสูง</span>'
-                : '<span style="color:#b45309">เสี่ยงทั่วไป</span>');
+            const badge = !ri.hasData ? '<span style="color:#94a3b8">-</span>' : (ri.isClose
+                ? '<span class="badge-hi">เสี่ยงสูง</span>'
+                : '<span class="badge-lo">เสี่ยงทั่วไป</span>');
+            const st = r.status === 'เฝ้าระวัง'
+                ? '<span class="st-watch">เฝ้าระวัง</span>'
+                : `<span class="st-ok">${repEsc(r.status || 'ปกติ')}</span>`;
             return `<tr>
                 <td class="c">${i + 1}</td>
                 <td>${repEsc(r.name || '-')}</td>
@@ -1939,7 +1947,7 @@
                 <td class="c">${ri.hasData ? ri.days : '-'}</td>
                 <td class="c">${ri.hasData ? ri.hours : '-'}</td>
                 <td class="c">${badge}</td>
-                <td class="c">${repEsc(r.status || '-')}</td>
+                <td class="c">${st}</td>
             </tr>`;
         }
 
@@ -1961,46 +1969,72 @@
             const minH = hrs.length ? Math.min(...hrs) : 0;
             const closeN = staff.filter(r => computeRecordRisk(r).isClose).length;
 
-            const staffTable = staff.length
-                ? staff.map((r, i) => repStaffRow(r, i)).join('')
-                : `<tr><td class="c" colspan="8" style="color:#94a3b8">ไม่มีข้อมูลเจ้าหน้าที่</td></tr>`;
-
             const sign = (title) => `
                 <div class="sign">
-                    <div class="sline">.................................................</div>
-                    <div>( ................................................. )</div>
-                    <div>${title}</div>
+                    <div class="sline">ลงชื่อ ...........................................................</div>
+                    <div>( ........................................................... )</div>
+                    <div class="role">${title}</div>
+                    <div class="role">วันที่ ......... / ......... / .........</div>
                 </div>`;
 
-            // แบ่งหน้า: หน้า 1 = ตารางเจ้าหน้าที่, หน้า 2 = สรุป + ลงชื่อ
-            const page1 = `
-              <section class="pg">
+            const headBlock = `
                 <div class="head">
-                    <div class="ht">รายงานสรุปการสอบสวนผู้สัมผัสวัณโรค (Contact case TB)</div>
+                    <div class="logo">
+                        <div class="seal">รพ.ศ</div>
+                        <div class="ht">รายงานสรุปการสอบสวนผู้สัมผัสวัณโรค (Contact case TB)</div>
+                    </div>
                     <div class="hs">โรงพยาบาลศรีสังวรสุโขทัย &nbsp;•&nbsp; งานป้องกันและควบคุมการติดเชื้อ (IPC/ICN)</div>
                     <div class="hm">หน่วยงาน : ${repEsc(unit)} &nbsp;&nbsp;|&nbsp;&nbsp; ${repThaiToday()}</div>
-                </div>
-                <div class="sech">รายชื่อเจ้าหน้าที่ผู้สัมผัส (${staff.length} ราย)</div>
-                <table class="grid">
-                    <thead><tr>
-                        <th style="width:34px">ลำดับ</th><th>ชื่อ-สกุล</th><th style="width:80px">HN</th>
-                        <th style="width:120px">ตำแหน่ง</th><th style="width:64px">วันสัมผัส</th>
-                        <th style="width:64px">ชม.รวม</th><th style="width:80px">ความเสี่ยง</th><th style="width:70px">สถานะ</th>
-                    </tr></thead>
-                    <tbody>${staffTable}</tbody>
-                </table>
+                </div>`;
+
+            const tHead = `<thead><tr>
+                        <th style="width:44px">ลำดับ</th><th>ชื่อ-สกุล</th><th style="width:90px">HN</th>
+                        <th style="width:150px">ตำแหน่ง</th><th style="width:72px">วันสัมผัส</th>
+                        <th style="width:72px">ชม.รวม</th><th style="width:96px">ความเสี่ยง</th><th style="width:88px">สถานะ</th>
+                    </tr></thead>`;
+
+            // แบ่งตารางเจ้าหน้าที่เป็นหลายหน้า (หน้าแรกมี KPI จึงใส่ได้น้อยกว่า)
+            const kpis = `<div class="kpis">
+                    <div class="kpi"><div class="n">${staff.length}</div><div class="t">เจ้าหน้าที่ผู้สัมผัส (ราย)</div></div>
+                    <div class="kpi"><div class="n hi">${closeN}</div><div class="t">เสี่ยงสูง (Close Contact)</div></div>
+                    <div class="kpi"><div class="n">${maxH}</div><div class="t">ชม.สัมผัสสูงสุด</div></div>
+                    <div class="kpi"><div class="n">${patient.length}</div><div class="t">ผู้ป่วยในระบบ (ราย)</div></div>
+                </div>`;
+            const ROWS_FIRST = 15, ROWS_REST = 21;
+            const chunks = [];
+            if (!staff.length) chunks.push('');
+            else { let idx = 0; while (idx < staff.length) { const n = chunks.length === 0 ? ROWS_FIRST : ROWS_REST; chunks.push(staff.slice(idx, idx + n)); idx += n; } }
+            const tablePagesCount = chunks.length;
+            const totalPages = tablePagesCount + 1;
+
+            let seq = 0;
+            const tablePages = chunks.map((chunk, ci) => {
+                const body = staff.length
+                    ? chunk.map(r => repStaffRow(r, seq++)).join('')
+                    : `<tr><td class="c" colspan="8" style="color:#94a3b8">ไม่มีข้อมูลเจ้าหน้าที่</td></tr>`;
+                const contd = ci > 0 ? ' (ต่อ)' : '';
+                return `
+              <section class="pg pdf-page">
+                ${headBlock}
+                ${ci === 0 ? kpis : ''}
+                <div class="sech">รายชื่อเจ้าหน้าที่ผู้สัมผัส (${staff.length} ราย)${contd}</div>
+                <table class="grid">${tHead}<tbody>${body}</tbody></table>
+                <div class="foot">รพ.ศรีสังวรสุโขทัย • IPC/ICN</div>
+                <div class="pgno">หน้า ${ci + 1}/${totalPages}</div>
               </section>`;
+            }).join('');
 
             const page2 = `
-              <section class="pg">
+              <section class="pg pdf-page">
+                ${headBlock}
                 <div class="sech">สรุปผลการสอบสวน</div>
                 <div class="cols">
-                    <div class="col">
+                    <div class="col card">
                         <div class="lbl">1. จำนวนเจ้าหน้าที่ผู้สัมผัส จำแนกตามตำแหน่ง</div>
-                        <table class="grid sm"><thead><tr><th>ตำแหน่ง</th><th style="width:80px">จำนวน</th></tr></thead>
+                        <table class="grid"><thead><tr><th>ตำแหน่ง</th><th style="width:90px">จำนวน</th></tr></thead>
                         <tbody>${groupRows}</tbody></table>
                     </div>
-                    <div class="col">
+                    <div class="col card">
                         <div class="lbl">2. ผลการวิเคราะห์ความเสี่ยง</div>
                         <ul class="bul">
                             <li>ผู้สัมผัสที่มีข้อมูลการสัมผัส ${hrs.length} ราย จากทั้งหมด ${staff.length} ราย</li>
@@ -2008,7 +2042,7 @@
                             <li>เจ้าหน้าที่กลุ่มเสี่ยงสูง (Close Contact ตามเกณฑ์ ≥8 ชม./วัน หรือ >120 ชม./เดือน) จำนวน <b>${closeN}</b> ราย</li>
                             <li>ผู้ป่วยต้นทาง/ผู้สัมผัสที่เป็นผู้ป่วยในระบบ ${patient.length} ราย</li>
                         </ul>
-                        <div class="lbl" style="margin-top:8px">3. ข้อเสนอแนะและการจัดการ</div>
+                        <div class="lbl" style="margin-top:12px">3. ข้อเสนอแนะและการจัดการ</div>
                         <ul class="bul">
                             <li>ปรึกษาอายุรแพทย์โรคติดเชื้อ สังเกตอาการตนเอง สวมหน้ากากอนามัย และตรวจสุขภาพประจำปี</li>
                             <li>ประสานหัวหน้าหน่วยงานติดตามผลการตรวจสุขภาพของเจ้าหน้าที่อย่างต่อเนื่อง</li>
@@ -2021,9 +2055,11 @@
                     ${sign('หัวหน้าหน่วยงาน')}
                     ${sign('ผู้อำนวยการ / ผู้ตรวจสอบ')}
                 </div>
+                <div class="foot">รพ.ศรีสังวรสุโขทัย • IPC/ICN</div>
+                <div class="pgno">หน้า ${totalPages}/${totalPages}</div>
               </section>`;
 
-            return page1 + page2;
+            return tablePages + page2;
         }
 
         function openReport() {
@@ -2057,35 +2093,89 @@
 
         // CSS ใช้ทั้งพรีวิวและหน้าพิมพ์ (A4 แนวนอน 1123×794 px)
         const REPORT_CSS = `
-            #report-pages, body { font-family:'Sarabun',sans-serif; color:#0f172a; }
-            .pg { width:1123px; min-height:794px; background:#fff; padding:34px 44px 40px; margin:0 auto 22px;
-                  box-shadow:0 4px 18px rgba(0,0,0,.12); box-sizing:border-box; page-break-after:always; }
+            #report-pages, body { font-family:'Sarabun',sans-serif; color:#0f172a;
+                  -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+            .pg { position:relative; width:1123px; min-height:794px; background:#fff; padding:40px 52px 58px;
+                  margin:0 auto 26px; border-radius:6px; box-shadow:0 10px 30px rgba(15,23,42,.16);
+                  box-sizing:border-box; page-break-after:always; overflow:hidden; }
             .pg:last-child { page-break-after:auto; margin-bottom:0; }
-            .head { text-align:center; border-bottom:2px solid #0f766e; padding-bottom:10px; margin-bottom:14px; }
-            .ht { font-size:22px; font-weight:700; }
-            .hs { font-size:13px; color:#475569; margin-top:2px; }
-            .hm { font-size:14px; margin-top:6px; }
-            .sech { font-size:16px; font-weight:700; color:#0f766e; margin:6px 0 8px; border-left:4px solid #0f766e; padding-left:8px; }
+            .pg::before { content:''; position:absolute; inset:0 0 auto 0; height:8px;
+                  background:linear-gradient(90deg,#0d9488,#14b8a6,#0d9488); }
+            .head { text-align:center; padding:6px 0 14px; margin-bottom:18px;
+                  border-bottom:2px solid #0f766e; }
+            .head .logo { display:inline-flex; align-items:center; justify-content:center; gap:10px; }
+            .head .seal { width:40px; height:40px; border-radius:50%; border:2px solid #0f766e; color:#0f766e;
+                  display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13px; flex:0 0 auto; }
+            .ht { font-size:23px; font-weight:700; letter-spacing:.2px; }
+            .hs { font-size:13px; color:#64748b; margin-top:3px; }
+            .hm { font-size:14px; margin-top:10px; color:#334155;
+                  display:inline-block; background:#f0fdfa; border:1px solid #99f6e4; border-radius:999px; padding:4px 16px; }
+            .sech { font-size:16px; font-weight:700; color:#0f766e; margin:4px 0 10px; padding:6px 12px;
+                  background:linear-gradient(90deg,#f0fdfa,transparent); border-left:4px solid #0d9488; border-radius:0 6px 6px 0; }
             table.grid { width:100%; border-collapse:collapse; font-size:13px; }
-            table.grid th, table.grid td { border:1px solid #cbd5e1; padding:4px 6px; vertical-align:middle;
+            table.grid th, table.grid td { border:1px solid #e2e8f0; padding:5px 8px; vertical-align:middle;
                   overflow-wrap:anywhere; word-break:break-word; }
-            table.grid th { background:#f1f5f9; font-weight:600; text-align:center; }
+            table.grid thead th { background:#0f766e; color:#fff; font-weight:600; text-align:center;
+                  border-color:#0f766e; }
+            table.grid tbody tr:nth-child(even) td { background:#f8fafc; }
             table.grid td.c { text-align:center; }
-            table.grid tr.sum td { background:#f8fafc; font-weight:700; }
-            table.grid.sm { font-size:13px; }
-            .cols { display:flex; gap:24px; }
+            table.grid tr.sum td { background:#ccfbf1 !important; font-weight:700; color:#134e4a; }
+            .badge-hi { display:inline-block; padding:1px 9px; border-radius:999px; font-weight:700;
+                  background:#ffe4e6; color:#be123c; }
+            .badge-lo { display:inline-block; padding:1px 9px; border-radius:999px; font-weight:600;
+                  background:#fef3c7; color:#b45309; }
+            .st-ok { color:#047857; } .st-watch { color:#be123c; font-weight:600; }
+            .cols { display:flex; gap:26px; }
             .col { flex:1; min-width:0; }
-            .lbl { font-weight:700; font-size:14px; margin-bottom:6px; }
-            ul.bul { margin:0; padding-left:18px; font-size:13.5px; line-height:1.7; }
-            ul.bul li { margin-bottom:3px; }
-            .signs { display:flex; gap:24px; margin-top:56px; }
-            .sign { flex:1; text-align:center; font-size:14px; line-height:2.1; }
-            .sign .sline { margin-bottom:4px; }
-            @media print { .pg { box-shadow:none; margin:0; } }
+            .card { border:1px solid #e2e8f0; border-radius:10px; padding:14px 16px; background:#fff;
+                  box-shadow:0 2px 8px rgba(15,23,42,.05); }
+            .kpis { display:flex; gap:14px; margin-bottom:16px; }
+            .kpi { flex:1; border:1px solid #e2e8f0; border-radius:10px; padding:12px 14px; text-align:center;
+                  background:linear-gradient(180deg,#f8fafc,#fff); }
+            .kpi .n { font-size:26px; font-weight:800; color:#0f766e; line-height:1.1; }
+            .kpi .n.hi { color:#be123c; }
+            .kpi .t { font-size:12px; color:#64748b; margin-top:2px; }
+            .lbl { font-weight:700; font-size:14px; margin-bottom:8px; color:#0f172a; }
+            ul.bul { margin:0; padding-left:20px; font-size:13.5px; line-height:1.75; }
+            ul.bul li { margin-bottom:4px; }
+            .signs { position:absolute; left:52px; right:52px; bottom:44px; display:flex; gap:26px; }
+            .sign { flex:1; text-align:center; font-size:14px; line-height:2.05; color:#1e293b; }
+            .sign .sline { margin-bottom:2px; letter-spacing:1px; color:#334155; }
+            .sign .role { color:#64748b; font-size:13px; }
+            .pgno { position:absolute; right:52px; bottom:20px; font-size:11px; color:#94a3b8; }
+            .foot { position:absolute; left:52px; bottom:20px; font-size:11px; color:#94a3b8; }
+            @media print { .pg { box-shadow:none; margin:0; border-radius:0; } }
         `;
         (function injectReportCss() { const s = document.createElement('style'); s.textContent = REPORT_CSS; document.head.appendChild(s); })();
 
+        // บันทึกเป็น PDF ด้วย html2canvas + jsPDF (ตามสกิล pdf-a4-layout) — พรีวิว = ไฟล์ตรงกัน
+        async function downloadReportPdf() {
+            const box = document.getElementById('report-pages');
+            const pages = box.querySelectorAll('.pdf-page');
+            const H2C = window.html2canvas;
+            const JsPDF = window.jspdf && window.jspdf.jsPDF;
+            if (!H2C || !JsPDF || !pages.length) { printReport(); return; } // สำรอง: พิมพ์ผ่านเบราว์เซอร์
+            const btn = document.getElementById('btn-report-pdf');
+            const prev = btn.innerHTML; btn.disabled = true; btn.innerHTML = 'กำลังสร้าง PDF…';
+            try {
+                const pdf = new JsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
+                const pw = pdf.internal.pageSize.getWidth(), ph = pdf.internal.pageSize.getHeight();
+                for (let i = 0; i < pages.length; i++) {
+                    const canvas = await H2C(pages[i], { scale: 2, backgroundColor: '#ffffff', useCORS: true });
+                    const img = canvas.toDataURL('image/jpeg', 0.92);
+                    const ratio = Math.min(pw / canvas.width, ph / canvas.height);
+                    const w = canvas.width * ratio, h = canvas.height * ratio;
+                    if (i > 0) pdf.addPage('a4', 'landscape');
+                    pdf.addImage(img, 'JPEG', (pw - w) / 2, 0, w, h);
+                }
+                pdf.save(`รายงานสรุป-ContactTB-${isoToday()}.pdf`);
+            } catch (e) {
+                printReport();
+            } finally { btn.disabled = false; btn.innerHTML = prev; feather.replace(); }
+        }
+
         document.getElementById('btn-report').addEventListener('click', openReport);
+        document.getElementById('btn-report-pdf').addEventListener('click', downloadReportPdf);
         document.getElementById('btn-report-print').addEventListener('click', printReport);
 
         /* ============================================================

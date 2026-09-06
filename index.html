@@ -241,6 +241,21 @@
                 </div>
                 <button id="btn-save-tbdef" class="bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-600 hover:to-red-700 text-white px-5 py-2 rounded-lg text-base font-semibold flex items-center transition-all shadow-[0_4px_15px_rgba(244,63,94,0.3)]"><i data-feather="save" class="w-4 h-4 mr-2"></i> บันทึกนิยาม</button>
             </div>
+
+            <!-- ข้อความรายงาน (ผลวิเคราะห์ / ข้อเสนอแนะ) สำหรับหน้ารายงานสรุป -->
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-3">
+                <h3 class="text-lg font-semibold text-slate-800 flex items-center"><i data-feather="edit-3" class="w-5 h-5 mr-2 text-emerald-500"></i> ข้อความในรายงานสรุป (แก้ไขได้)</h3>
+                <p class="text-sm text-slate-400">พิมพ์เพิ่ม/แก้ได้ (บรรทัดละ 1 ข้อ) จะไปแสดงในหน้ารายงานสรุป A4 หัวข้อ "ผลการวิเคราะห์ความเสี่ยง" และ "ข้อเสนอแนะและการจัดการ"</p>
+                <div class="space-y-1">
+                    <label class="text-base font-medium text-slate-700">2. ผลการวิเคราะห์ความเสี่ยง</label>
+                    <textarea id="rep-risk" rows="4" class="w-full text-base rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-400"></textarea>
+                </div>
+                <div class="space-y-1">
+                    <label class="text-base font-medium text-slate-700">3. ข้อเสนอแนะและการจัดการ</label>
+                    <textarea id="rep-manage" rows="4" class="w-full text-base rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-400"></textarea>
+                </div>
+                <button id="btn-save-repnotes" class="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-5 py-2 rounded-lg text-base font-semibold flex items-center transition-all shadow-sm"><i data-feather="save" class="w-4 h-4 mr-2"></i> บันทึกข้อความรายงาน</button>
+            </div>
             </div><!-- /manage-panel -->
 
             <div class="grid grid-cols-2 md:grid-cols-5 gap-4 sm:gap-6">
@@ -516,6 +531,10 @@
                 if (data.settings.tbDef) {
                     try { localStorage.setItem('oi-tbdef', JSON.stringify(data.settings.tbDef)); } catch (e) {}
                     if (typeof renderTbDefForm === 'function' && !document.getElementById('view-admin').classList.contains('hidden')) renderTbDefForm();
+                }
+                if (data.settings.reportNotes) {
+                    try { localStorage.setItem('oi-repnotes', JSON.stringify(data.settings.reportNotes)); } catch (e) {}
+                    if (typeof renderRepNotesForm === 'function' && !document.getElementById('view-admin').classList.contains('hidden')) renderRepNotesForm();
                 }
             }
             renderForm('staff'); renderForm('patient');
@@ -1526,7 +1545,7 @@
                     }
                 });
 
-                if (targetId === 'view-admin') { renderAdminTable(); renderNavToggles(); renderTbDefForm(); serverLoad(); }
+                if (targetId === 'view-admin') { renderAdminTable(); renderNavToggles(); renderTbDefForm(); renderRepNotesForm(); serverLoad(); }
                 if (targetId === 'view-builder') renderBuilder();
             });
         });
@@ -1796,6 +1815,26 @@
             }, 'บันทึกนิยาม/เกณฑ์แล้ว' + (USE_SERVER ? ' (ทุกเครื่อง)' : ''));
         });
 
+        // แสดง/บันทึกข้อความรายงาน
+        function renderRepNotesForm() {
+            const n = getRepNotes();
+            const r = document.getElementById('rep-risk'), m = document.getElementById('rep-manage');
+            if (r) r.value = n.risk; if (m) m.value = n.manage;
+        }
+        (function () {
+            const btn = document.getElementById('btn-save-repnotes');
+            if (btn) btn.addEventListener('click', () => {
+                const obj = {
+                    risk: (document.getElementById('rep-risk') || {}).value || '',
+                    manage: (document.getElementById('rep-manage') || {}).value || ''
+                };
+                confirmSave('บันทึกข้อความรายงานนี้ใช่หรือไม่?', () => {
+                    try { localStorage.setItem(REPNOTES_KEY, JSON.stringify(obj)); } catch (e) {}
+                    serverSaveSettings(currentSettings());
+                }, 'บันทึกข้อความรายงานแล้ว' + (USE_SERVER ? ' (ทุกเครื่อง)' : ''));
+            });
+        })();
+
         document.getElementById('btn-logout').addEventListener('click', () => {
             try { sessionStorage.removeItem('oi-admin'); } catch (e) {}
             document.querySelector('nav .nav-btn[data-target="view-home"]').click();
@@ -2034,6 +2073,12 @@
               </section>`;
             }).join('');
 
+            // ข้อความรายงานที่แอดมินพิมพ์ (บรรทัดละ 1 ข้อ → bullet)
+            const notes = getRepNotes();
+            const toBullets = (txt) => String(txt || '').split('\n').map(s => s.trim()).filter(Boolean).map(s => '<li>' + repEsc(s) + '</li>').join('');
+            const riskBul = toBullets(notes.risk);
+            const manageBul = toBullets(notes.manage) || '<li>-</li>';
+
             const page2 = `
               <section class="pg pdf-page">
                 ${headBlock}
@@ -2051,13 +2096,10 @@
                             <li>ระยะเวลารวมการสัมผัส มากที่สุด <b>${maxH}</b> ชั่วโมง น้อยที่สุด <b>${minH}</b> ชั่วโมง</li>
                             <li>เจ้าหน้าที่กลุ่มเสี่ยงสูง (Close Contact ตามเกณฑ์ ≥8 ชม./วัน หรือ >120 ชม./เดือน) จำนวน <b>${closeN}</b> ราย</li>
                             <li>ผู้ป่วยต้นทาง/ผู้สัมผัสที่เป็นผู้ป่วยในระบบ ${patient.length} ราย</li>
+                            ${riskBul}
                         </ul>
                         <div class="lbl" style="margin-top:12px">3. ข้อเสนอแนะและการจัดการ</div>
-                        <ul class="bul">
-                            <li>ปรึกษาอายุรแพทย์โรคติดเชื้อ สังเกตอาการตนเอง สวมหน้ากากอนามัย และตรวจสุขภาพประจำปี</li>
-                            <li>ประสานหัวหน้าหน่วยงานติดตามผลการตรวจสุขภาพของเจ้าหน้าที่อย่างต่อเนื่อง</li>
-                            <li>ประสานงานวิศวกรรมโรงพยาบาลตรวจสอบระบบระบายอากาศ/เปลี่ยนแผ่นกรองอากาศ</li>
-                        </ul>
+                        <ul class="bul">${manageBul}</ul>
                     </div>
                 </div>
                 <div class="signs">
@@ -2397,7 +2439,7 @@
             return defaultSchema();
         }
         function currentSettings() {
-            const s = { navHidden: getHiddenNav(), tbDef: getTbDef() };
+            const s = { navHidden: getHiddenNav(), tbDef: getTbDef(), reportNotes: getRepNotes() };
             try { const d = localStorage.getItem(DEFAULT_SCHEMA_KEY); if (d) s.defaultSchema = JSON.parse(d); } catch (e) {}
             return s;
         }
@@ -2465,6 +2507,18 @@
         function getTbDef() {
             try { const d = localStorage.getItem(TBDEF_KEY); if (d) return Object.assign(defaultTbDef(), JSON.parse(d)); } catch (e) {}
             return defaultTbDef();
+        }
+        // บันทึกข้อความรายงาน (ผลวิเคราะห์ / ข้อเสนอแนะ) ที่แอดมินพิมพ์เอง
+        const REPNOTES_KEY = 'oi-repnotes';
+        function defaultRepNotes() {
+            return {
+                risk: 'ผู้สัมผัสที่มีข้อมูลการสัมผัสตามที่บันทึกในระบบ\nระยะเวลารวมการสัมผัสสูงสุด/ต่ำสุด และจำนวนผู้เข้าเกณฑ์เสี่ยงสูง แสดงในตารางและการ์ดสรุปด้านบน',
+                manage: 'ปรึกษาอายุรแพทย์โรคติดเชื้อ สังเกตอาการตนเอง สวมหน้ากากอนามัย และตรวจสุขภาพประจำปี\nประสานหัวหน้าหน่วยงานติดตามผลการตรวจสุขภาพของเจ้าหน้าที่อย่างต่อเนื่อง\nประสานงานวิศวกรรมโรงพยาบาลตรวจสอบระบบระบายอากาศ/เปลี่ยนแผ่นกรองอากาศ'
+            };
+        }
+        function getRepNotes() {
+            try { const d = localStorage.getItem(REPNOTES_KEY); if (d) return Object.assign(defaultRepNotes(), JSON.parse(d)); } catch (e) {}
+            return defaultRepNotes();
         }
         function renderTbDefForm() {
             const t = getTbDef();

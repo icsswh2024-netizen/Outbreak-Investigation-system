@@ -286,6 +286,9 @@
                 </div>
             </div>
 
+            <!-- แดชบอร์ดวิเคราะห์การตอบแบบสอบถาม + กราฟ -->
+            <div id="analytics" class="space-y-6"></div>
+
             <div class="bg-white rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.05)] border border-slate-200 overflow-hidden mt-8">
                 <div class="px-6 py-5 border-b border-slate-200 bg-slate-50/80 space-y-4">
                     <div class="flex justify-between items-center">
@@ -506,6 +509,11 @@
             });
         }
         function handleServerData(data) {
+            // ทะเบียนเจ้าหน้าที่ปฏิบัติงานจริง (ใช้คำนวณอัตราการตอบ)
+            if (data && Array.isArray(data.roster)) {
+                roster = data.roster;
+                try { localStorage.setItem('oi-roster', JSON.stringify(roster)); } catch (e) {}
+            }
             // แท็บ "การจัดการแบบสอบถาม": มีบนชีต -> ใช้; ยังว่าง -> เติม schema ปัจจุบันขึ้นไป
             if (data && data.schema) {
                 schema = data.schema;
@@ -656,6 +664,10 @@
         } catch (e) { records = defaultRecords.slice(); }
 
         function saveRecords() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(records)); } catch (e) {} }
+
+        // ทะเบียนเจ้าหน้าที่ปฏิบัติงานจริง [{prefix,name,position,unit}]
+        let roster = [];
+        try { const rr = localStorage.getItem('oi-roster'); if (rr) roster = JSON.parse(rr); } catch (e) {}
 
         // id กันชนแม้บันทึกในมิลลิวินาทีเดียวกัน
         function genId() { return Date.now() * 1000 + Math.floor(Math.random() * 1000); }
@@ -1591,6 +1603,135 @@
             return { activities: j(acts), mask: j(masks), duration: j(durs), room: j(rooms) };
         }
 
+        /* ===== แดชบอร์ดวิเคราะห์การตอบแบบสอบถาม + กราฟ ===== */
+        const OI_PREFIXES = ['นางสาว', 'น.ส.', 'นส.', 'นาย', 'นาง', 'ดร.', 'ดร', 'นพ.', 'พญ.', 'ทพ.', 'ทพญ.', 'ภก.', 'ภญ.', 'ว่าที่ร้อยตรี', 'ว่าที่ ร.ต.'];
+        function oiNameKey(s) {
+            s = String(s == null ? '' : s);
+            try { s = s.normalize('NFC'); } catch (e) {}
+            s = s.replace(/\s+/g, ' ').trim();
+            let ch = true;
+            while (ch) { ch = false; for (const p of OI_PREFIXES) { if (s.indexOf(p) === 0) { s = s.slice(p.length).replace(/^[\s.]+/, ''); ch = true; break; } } }
+            return s.replace(/[\s.()\-]/g, '');
+        }
+        function barList(rows, color) {
+            const max = Math.max(1, ...rows.map(r => r.value));
+            return `<div class="space-y-2.5">` + rows.map(r => {
+                const pct = Math.round(r.value / max * 100);
+                return `<div>
+                    <div class="flex justify-between text-sm mb-0.5"><span class="text-slate-700 truncate pr-2">${escHtml(r.label)}</span><span class="text-slate-500 font-medium whitespace-nowrap">${r.disp != null ? r.disp : r.value}</span></div>
+                    <div class="h-3 bg-slate-100 rounded-full overflow-hidden"><div class="h-3 rounded-full" style="width:${pct}%;background:${color}"></div></div>
+                </div>`;
+            }).join('') + `</div>`;
+        }
+        function escHtml(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+        function lineChartSVG(pairs) {
+            // pairs: [{x:'YYYY-MM-DD', y:number}] เรียงตามวันแล้ว
+            if (!pairs.length) return '<div class="text-slate-400 text-sm py-6 text-center">ยังไม่มีข้อมูลการสัมผัส</div>';
+            const W = 720, H = 220, padL = 40, padR = 16, padT = 16, padB = 40;
+            const maxY = Math.max(1, ...pairs.map(p => p.y));
+            const n = pairs.length;
+            const xAt = i => padL + (n === 1 ? (W - padL - padR) / 2 : i * (W - padL - padR) / (n - 1));
+            const yAt = v => padT + (1 - v / maxY) * (H - padT - padB);
+            const pts = pairs.map((p, i) => `${xAt(i).toFixed(1)},${yAt(p.y).toFixed(1)}`).join(' ');
+            const area = `${padL},${yAt(0)} ${pts} ${xAt(n - 1)},${yAt(0)}`;
+            const dots = pairs.map((p, i) => `<circle cx="${xAt(i).toFixed(1)}" cy="${yAt(p.y).toFixed(1)}" r="3" fill="#0d9488"/>`).join('');
+            const gy = [0, 0.5, 1].map(f => { const v = maxY * f, y = yAt(v); return `<line x1="${padL}" y1="${y}" x2="${W - padR}" y2="${y}" stroke="#e2e8f0"/><text x="${padL - 6}" y="${y + 3}" text-anchor="end" font-size="10" fill="#94a3b8">${Math.round(v)}</text>`; }).join('');
+            const step = Math.ceil(n / 8);
+            const gx = pairs.map((p, i) => (i % step === 0 || i === n - 1) ? `<text x="${xAt(i).toFixed(1)}" y="${H - padB + 16}" text-anchor="middle" font-size="9" fill="#94a3b8">${fmtThaiDate(p.x).replace(/ \d{4}$/, '')}</text>` : '').join('');
+            return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto" font-family="Sarabun,sans-serif">
+                ${gy}${gx}
+                <polygon points="${area}" fill="#0d948815"/>
+                <polyline points="${pts}" fill="none" stroke="#0d9488" stroke-width="2"/>
+                ${dots}
+            </svg>`;
+        }
+        function renderAnalytics() {
+            const box = document.getElementById('analytics');
+            if (!box) return;
+            const staffRecs = records.filter(r => r.type !== 'patient');
+            const respondedKeys = new Set(staffRecs.map(r => oiNameKey(r.name)).filter(Boolean));
+
+            if (!roster || !roster.length) {
+                box.innerHTML = `<div class="bg-amber-50 border border-amber-200 rounded-2xl p-5 text-amber-800 text-base"><i data-feather="info" class="w-5 h-5 inline mr-1"></i> ยังไม่มีข้อมูลทะเบียนเจ้าหน้าที่ (แท็บ "รายชื่อเจ้าหน้าที่ปฏิบัติงาน") — อัปเดต Code.gs เวอร์ชันล่าสุดแล้ว Deploy ใหม่ เพื่อให้ระบบดึงทะเบียนมาคำนวณอัตราการตอบ</div>`;
+                feather.replace(); return;
+            }
+
+            // ---- อัตราการตอบ + จำแนกตามหน่วยงาน ----
+            const total = roster.length;
+            let responded = 0;
+            const byUnit = {};
+            const remaining = [];
+            roster.forEach(p => {
+                const k = oiNameKey(p.name);
+                const unit = p.unit || 'ไม่ระบุหน่วยงาน';
+                byUnit[unit] = byUnit[unit] || { total: 0, resp: 0, left: [] };
+                byUnit[unit].total++;
+                if (k && respondedKeys.has(k)) { responded++; byUnit[unit].resp++; }
+                else { remaining.push(p); byUnit[unit].left.push(p); }
+            });
+            const pct = total ? Math.round(responded / total * 100) : 0;
+
+            const unitNames = Object.keys(byUnit).sort();
+            const unitBars = barList(unitNames.map(u => {
+                const b = byUnit[u]; const pc = b.total ? Math.round(b.resp / b.total * 100) : 0;
+                return { label: u, value: pc, disp: `${b.resp}/${b.total} (${pc}%)` };
+            }), '#0d9488');
+            const unitTable = `<table class="w-full text-sm"><thead><tr class="text-slate-500 border-b">
+                    <th class="text-left py-1.5">หน่วยงาน</th><th class="py-1.5">ทั้งหมด</th><th class="py-1.5">ตอบแล้ว</th><th class="py-1.5">เหลือ</th><th class="py-1.5">%</th></tr></thead><tbody>`
+                + unitNames.map(u => { const b = byUnit[u]; const pc = b.total ? Math.round(b.resp / b.total * 100) : 0; return `<tr class="border-b border-slate-100"><td class="py-1.5">${escHtml(u)}</td><td class="text-center">${b.total}</td><td class="text-center text-emerald-600 font-semibold">${b.resp}</td><td class="text-center text-rose-600">${b.total - b.resp}</td><td class="text-center">${pc}%</td></tr>`; }).join('')
+                + `<tr class="font-bold bg-slate-50"><td class="py-1.5">รวม</td><td class="text-center">${total}</td><td class="text-center text-emerald-700">${responded}</td><td class="text-center text-rose-700">${total - responded}</td><td class="text-center">${pct}%</td></tr></tbody></table>`;
+
+            const remainByUnit = {};
+            remaining.forEach(p => { const u = p.unit || 'ไม่ระบุหน่วยงาน'; (remainByUnit[u] = remainByUnit[u] || []).push((p.prefix || '') + p.name); });
+            const remainHtml = Object.keys(remainByUnit).length
+                ? Object.keys(remainByUnit).sort().map(u => `<div class="mb-2"><div class="text-sm font-semibold text-slate-700">${escHtml(u)} (${remainByUnit[u].length})</div><div class="text-sm text-slate-500">${remainByUnit[u].map(escHtml).join(' · ')}</div></div>`).join('')
+                : '<div class="text-emerald-600 text-sm">ตอบครบทุกคนแล้ว 🎉</div>';
+
+            // ---- ชั่วโมงการสัมผัสรายวัน (กราฟเส้น) ----
+            const dateHours = {};
+            staffRecs.forEach(r => {
+                const ans = r.answers || {}; let pv = null;
+                Object.keys(ans).forEach(k => { if (isPatternObj(ans[k])) pv = ans[k]; });
+                if (!pv) return;
+                (pv.patterns || []).forEach(p => { const h = durationHours(p.duration); (expandPattern(pv.rangeStart, pv.rangeEnd, p) || []).forEach(d => { dateHours[d] = (dateHours[d] || 0) + h; }); });
+            });
+            const linePairs = Object.keys(dateHours).sort().map(d => ({ x: d, y: dateHours[d] }));
+
+            // ---- จัดอันดับกิจกรรม + ระยะเวลา (มาก→น้อย) ----
+            const actCount = {}, durCount = {};
+            staffRecs.forEach(r => {
+                const ans = r.answers || {}; let pv = null;
+                Object.keys(ans).forEach(k => { if (isPatternObj(ans[k])) pv = ans[k]; });
+                if (!pv) return;
+                const aset = new Set(), dset = new Set();
+                (pv.patterns || []).forEach(p => { (p.activities || []).forEach(a => { if (a) aset.add(a); }); if (p.duration) dset.add(p.duration); });
+                aset.forEach(a => actCount[a] = (actCount[a] || 0) + 1);
+                dset.forEach(d => durCount[d] = (durCount[d] || 0) + 1);
+            });
+            const actRows = Object.keys(actCount).map(a => ({ label: a, value: actCount[a], disp: actCount[a] + ' คน' })).sort((a, b) => b.value - a.value);
+            const durRows = Object.keys(durCount).map(d => ({ label: d, value: durCount[d], disp: durCount[d] + ' คน' })).sort((a, b) => b.value - a.value);
+
+            const card = (title, icon, body) => `<div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5"><h3 class="text-lg font-semibold text-slate-800 flex items-center mb-3"><i data-feather="${icon}" class="w-5 h-5 mr-2 text-teal-500"></i> ${title}</h3>${body}</div>`;
+
+            box.innerHTML = `
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                    <div class="rounded-2xl border border-emerald-200 bg-white p-5 flex flex-col"><span class="text-base text-slate-500">ตอบแบบสอบถามแล้ว</span><div class="text-4xl font-extrabold text-emerald-600">${responded}<span class="text-xl text-slate-400"> / ${total} คน</span></div><div class="mt-2 h-3 bg-slate-100 rounded-full overflow-hidden"><div class="h-3 rounded-full bg-emerald-500" style="width:${pct}%"></div></div><div class="text-sm text-slate-500 mt-1">คิดเป็น <b class="text-emerald-600">${pct}%</b> ของเจ้าหน้าที่ทั้งหมด</div></div>
+                    <div class="rounded-2xl border border-rose-200 bg-white p-5 flex flex-col"><span class="text-base text-slate-500">ยังไม่ตอบ</span><div class="text-4xl font-extrabold text-rose-600">${total - responded}<span class="text-xl text-slate-400"> คน</span></div><div class="text-sm text-slate-500 mt-1">คิดเป็น ${100 - pct}%</div></div>
+                    <div class="rounded-2xl border border-blue-200 bg-white p-5 flex flex-col"><span class="text-base text-slate-500">จำนวนหน่วยงาน</span><div class="text-4xl font-extrabold text-blue-600">${unitNames.length}<span class="text-xl text-slate-400"> หน่วย</span></div></div>
+                </div>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    ${card('อัตราการตอบ จำแนกตามหน่วยงาน', 'bar-chart-2', unitBars)}
+                    ${card('ตารางสรุปตามหน่วยงาน', 'grid', `<div class="overflow-x-auto">${unitTable}</div>`)}
+                </div>
+                ${card('รายชื่อที่ยังไม่ได้ตอบ (จำแนกตามหน่วยงาน)', 'user-x', remainHtml)}
+                ${card('กราฟเส้น: ชั่วโมงการสัมผัสรวมรายวัน (ตามช่วงวันที่)', 'trending-up', lineChartSVG(linePairs))}
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    ${card('กิจกรรมที่สัมผัส (มาก→น้อย)', 'activity', actRows.length ? barList(actRows, '#6366f1') : '<div class="text-slate-400 text-sm">ยังไม่มีข้อมูล</div>')}
+                    ${card('ระยะเวลาที่สัมผัสต่อวัน (มาก→น้อย)', 'clock', durRows.length ? barList(durRows, '#f59e0b') : '<div class="text-slate-400 text-sm">ยังไม่มีข้อมูล</div>')}
+                </div>`;
+            feather.replace();
+        }
+
         function renderAdminTable() {
             const tbody = document.getElementById('table-body');
             tbody.innerHTML = '';
@@ -1679,6 +1820,7 @@
             tbody.querySelectorAll('.btn-edit').forEach(b => b.addEventListener('click', () => startEdit(b.getAttribute('data-id'))));
             tbody.querySelectorAll('.btn-del').forEach(b => b.addEventListener('click', () => deleteRecord(b.getAttribute('data-id'))));
             feather.replace();
+            try { renderAnalytics(); } catch (e) {}
         }
 
         /* ============================================================

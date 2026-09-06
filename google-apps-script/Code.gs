@@ -24,7 +24,7 @@ var SPREADSHEET_ID = '1-vvdG18uzzn9EQgSAnQ1G4aCLdUvNIQA6deWZrk92EI';
 function doGet(e) {
   var action = (e && e.parameter && e.parameter.action) || 'load';
   var out;
-  if (action === 'load') out = { schema: readSchema(), records: readRecords(), settings: readSettings() };
+  if (action === 'load') out = { schema: readSchema(), records: readRecords(), settings: readSettings(), roster: readRoster() };
   else out = { error: 'unknown action' };
 
   // รองรับ JSONP (เรียกจากเว็บสถิตข้ามโดเมนได้ ผ่าน callback)
@@ -268,4 +268,40 @@ function readRecords() {
     if (r[0]) { try { out.push(JSON.parse(r[0])); } catch (e) {} }
   });
   return out.reverse(); // ล่าสุดอยู่บนสุด
+}
+
+// อ่านทะเบียนเจ้าหน้าที่ปฏิบัติงานจริง (สำหรับคำนวณอัตราการตอบแบบสอบถาม)
+function readRoster() {
+  var sh = ss().getSheetByName('รายชื่อเจ้าหน้าที่ปฏิบัติงาน');
+  if (!sh) return [];
+  var last = sh.getLastRow();
+  if (last < 2) return [];
+  var vals = sh.getDataRange().getValues();
+  var h = vals[0];
+  function find(names) {
+    for (var i = 0; i < h.length; i++) {
+      var hh = String(h[i] || '').replace(/\s+/g, '').trim();
+      for (var j = 0; j < names.length; j++) if (hh === names[j]) return i;
+    }
+    return -1;
+  }
+  var cName = find(['ชื่อ-สกุล', 'ชื่อ-นามสกุล', 'ชื่อสกุล']);
+  var cFirst = find(['ชื่อ']), cLast = find(['นามสกุล', 'สกุล']);
+  var cPre = find(['คำนำหน้า']), cPos = find(['ตำแหน่ง', 'ตำแหน่งการพยาบาล']);
+  var cUnit = find(['หน่วยงาน', 'หน่วย']);
+  var out = [];
+  for (var r = 1; r < vals.length; r++) {
+    var row = vals[r];
+    var name = cName >= 0 ? String(row[cName] || '') :
+      (String(cFirst >= 0 ? row[cFirst] : '') + ' ' + String(cLast >= 0 ? row[cLast] : ''));
+    name = name.replace(/\s+/g, ' ').trim();
+    if (!name) continue;
+    out.push({
+      prefix: cPre >= 0 ? String(row[cPre] || '').trim() : '',
+      name: name,
+      position: cPos >= 0 ? String(row[cPos] || '').trim() : '',
+      unit: cUnit >= 0 ? String(row[cUnit] || '').trim() : ''
+    });
+  }
+  return out;
 }

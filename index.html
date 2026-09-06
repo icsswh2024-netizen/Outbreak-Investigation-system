@@ -500,9 +500,10 @@
                 </div>
                 <div class="pt-2 border-t border-slate-200">
                     <label class="text-base font-medium text-slate-700">ผู้ลงนามท้ายรายงาน (จากแท็บ "logo-name")</label>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-2">
                         <div class="space-y-1"><label class="text-sm font-medium text-slate-600">1. ผู้สอบสวน / ผู้จัดทำรายงาน</label><select id="rep-sign-0" class="w-full text-base rounded-lg border border-slate-300 bg-slate-50 px-3 py-2"></select></div>
                         <div class="space-y-1"><label class="text-sm font-medium text-slate-600">2. หัวหน้าหน่วยงาน</label><select id="rep-sign-1" class="w-full text-base rounded-lg border border-slate-300 bg-slate-50 px-3 py-2"></select></div>
+                        <div class="space-y-1"><label class="text-sm font-medium text-slate-600">3. ผู้ตรวจสอบ</label><select id="rep-sign-2" class="w-full text-base rounded-lg border border-slate-300 bg-slate-50 px-3 py-2"></select></div>
                     </div>
                 </div>
             </div>
@@ -2521,6 +2522,7 @@
                 <div class="signs">
                     ${sign('ผู้สอบสวน / ผู้จัดทำรายงาน', 0)}
                     ${sign('หัวหน้าหน่วยงาน', 1)}
+                    ${sign('ผู้ตรวจสอบ', 2)}
                 </div>
                 <div class="foot">รพ.ศรีสังวรสุโขทัย • IPC/ICN</div>
                 <div class="pgno">หน้า ${totalPages}/${totalPages}</div>

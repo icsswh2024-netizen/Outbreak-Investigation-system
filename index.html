@@ -1988,9 +1988,9 @@
                 </div>`;
 
             const tHead = `<thead><tr>
-                        <th style="width:44px">ลำดับ</th><th>ชื่อ-สกุล</th><th style="width:90px">HN</th>
-                        <th style="width:150px">ตำแหน่ง</th><th style="width:72px">วันสัมผัส</th>
-                        <th style="width:72px">ชม.รวม</th><th style="width:96px">ความเสี่ยง</th><th style="width:88px">สถานะ</th>
+                        <th class="nowrap" style="width:52px">ลำดับ</th><th>ชื่อ-สกุล</th><th style="width:92px">HN</th>
+                        <th style="width:170px">ตำแหน่ง</th><th class="nowrap" style="width:78px">วันสัมผัส</th>
+                        <th class="nowrap" style="width:74px">ชม.รวม</th><th style="width:100px">ความเสี่ยง</th><th style="width:82px">สถานะ</th>
                     </tr></thead>`;
 
             // แบ่งตารางเจ้าหน้าที่เป็นหลายหน้า (หน้าแรกมี KPI จึงใส่ได้น้อยกว่า)
@@ -2095,7 +2095,7 @@
         const REPORT_CSS = `
             #report-pages, body { font-family:'Sarabun',sans-serif; color:#0f172a;
                   -webkit-print-color-adjust:exact; print-color-adjust:exact; }
-            .pg { position:relative; width:1123px; min-height:794px; background:#fff; padding:40px 52px 58px;
+            .pg { position:relative; width:1123px; min-height:794px; background:#fff; padding:38px 38px 52px;
                   margin:0 auto 26px; border-radius:6px; box-shadow:0 10px 30px rgba(15,23,42,.16);
                   box-sizing:border-box; page-break-after:always; overflow:hidden; }
             .pg:last-child { page-break-after:auto; margin-bottom:0; }
@@ -2112,9 +2112,10 @@
                   display:inline-block; background:#f0fdfa; border:1px solid #99f6e4; border-radius:999px; padding:4px 16px; }
             .sech { font-size:16px; font-weight:700; color:#0f766e; margin:4px 0 10px; padding:6px 12px;
                   background:linear-gradient(90deg,#f0fdfa,transparent); border-left:4px solid #0d9488; border-radius:0 6px 6px 0; }
-            table.grid { width:100%; border-collapse:collapse; font-size:13px; }
+            table.grid { width:100%; border-collapse:collapse; font-size:13px; table-layout:fixed; }
             table.grid th, table.grid td { border:1px solid #e2e8f0; padding:5px 8px; vertical-align:middle;
                   overflow-wrap:anywhere; word-break:break-word; }
+            table.grid th.nowrap { white-space:nowrap; }
             table.grid thead th { background:#0f766e; color:#fff; font-weight:600; text-align:center;
                   border-color:#0f766e; }
             table.grid tbody tr:nth-child(even) td { background:#f8fafc; }
@@ -2138,12 +2139,12 @@
             .lbl { font-weight:700; font-size:14px; margin-bottom:8px; color:#0f172a; }
             ul.bul { margin:0; padding-left:20px; font-size:13.5px; line-height:1.75; }
             ul.bul li { margin-bottom:4px; }
-            .signs { position:absolute; left:52px; right:52px; bottom:44px; display:flex; gap:26px; }
+            .signs { position:absolute; left:38px; right:38px; bottom:44px; display:flex; gap:26px; }
             .sign { flex:1; text-align:center; font-size:14px; line-height:2.05; color:#1e293b; }
             .sign .sline { margin-bottom:2px; letter-spacing:1px; color:#334155; }
             .sign .role { color:#64748b; font-size:13px; }
-            .pgno { position:absolute; right:52px; bottom:20px; font-size:11px; color:#94a3b8; }
-            .foot { position:absolute; left:52px; bottom:20px; font-size:11px; color:#94a3b8; }
+            .pgno { position:absolute; right:38px; bottom:18px; font-size:11px; color:#94a3b8; }
+            .foot { position:absolute; left:38px; bottom:18px; font-size:11px; color:#94a3b8; }
             @media print { .pg { box-shadow:none; margin:0; border-radius:0; } }
         `;
         (function injectReportCss() { const s = document.createElement('style'); s.textContent = REPORT_CSS; document.head.appendChild(s); })();

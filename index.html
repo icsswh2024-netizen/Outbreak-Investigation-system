@@ -2674,29 +2674,33 @@
         `;
         (function injectReportCss() { const s = document.createElement('style'); s.textContent = REPORT_CSS; document.head.appendChild(s); })();
 
-        // บันทึกเป็น PDF ด้วย html2canvas + jsPDF (ตามสกิล pdf-a4-layout) — พรีวิว = ไฟล์ตรงกัน
+        // บันทึกเป็น PDF ตรง ๆ (ไม่มีกล่องพิมพ์) ด้วย html2canvas + jsPDF — ให้เหมือนพรีวิว
         async function downloadReportPdf() {
             const box = document.getElementById('report-pages');
             const pages = box.querySelectorAll('.pdf-page');
             const H2C = window.html2canvas;
             const JsPDF = window.jspdf && window.jspdf.jsPDF;
-            if (!H2C || !JsPDF || !pages.length) { printReport(); return; } // สำรอง: พิมพ์ผ่านเบราว์เซอร์
             const btn = document.getElementById('btn-report-pdf');
+            if (!H2C || !JsPDF || !pages.length) { showAlert('บันทึก PDF ไม่ได้', 'ไลบรารีสร้าง PDF ยังโหลดไม่เสร็จ ลองรีเฟรชหน้าใหม่อีกครั้ง'); return; }
             const prev = btn.innerHTML; btn.disabled = true; btn.innerHTML = 'กำลังสร้าง PDF…';
+            // รอรูปในรายงานโหลดครบก่อน (โลโก้/ลายเซ็น)
+            try {
+                await Promise.all(Array.from(box.querySelectorAll('img')).map(im => im.complete ? Promise.resolve() : new Promise(res => { im.addEventListener('load', res); im.addEventListener('error', res); setTimeout(res, 4000); })));
+            } catch (e) {}
             try {
                 const pdf = new JsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
                 const pw = pdf.internal.pageSize.getWidth(), ph = pdf.internal.pageSize.getHeight();
                 for (let i = 0; i < pages.length; i++) {
-                    const canvas = await H2C(pages[i], { scale: 2, backgroundColor: '#ffffff', useCORS: true });
-                    const img = canvas.toDataURL('image/jpeg', 0.92);
-                    const ratio = Math.min(pw / canvas.width, ph / canvas.height);
-                    const w = canvas.width * ratio, h = canvas.height * ratio;
+                    const canvas = await H2C(pages[i], { scale: 2, backgroundColor: '#ffffff', useCORS: true, allowTaint: true, imageTimeout: 5000, windowWidth: 1123 });
+                    const img = canvas.toDataURL('image/jpeg', 0.95);
+                    // เต็มความกว้างหน้า A4 แนวนอน (สัดส่วนตามหน้าเดิม 1123px)
+                    const w = pw, h = canvas.height * pw / canvas.width;
                     if (i > 0) pdf.addPage('a4', 'landscape');
-                    pdf.addImage(img, 'JPEG', (pw - w) / 2, 0, w, h);
+                    pdf.addImage(img, 'JPEG', 0, 0, w, Math.min(h, ph));
                 }
                 pdf.save(`รายงานสรุป-ContactTB-${isoToday()}.pdf`);
             } catch (e) {
-                printReport();
+                showAlert('บันทึก PDF ไม่สำเร็จ', 'เกิดข้อผิดพลาดระหว่างสร้างไฟล์ ลองใหม่อีกครั้ง หรือใช้ปุ่ม "พิมพ์" แล้วเลือก Save as PDF');
             } finally { btn.disabled = false; btn.innerHTML = prev; feather.replace(); }
         }
 
@@ -2713,8 +2717,8 @@
         })();
 
         document.getElementById('btn-report').addEventListener('click', openReport);
-        // บันทึก PDF = ใช้กลไกพิมพ์ของเบราว์เซอร์ (เลือก "Save as PDF") ให้ผลเหมือนพรีวิวเป๊ะ รวมรูปโลโก้/ลายเซ็น
-        document.getElementById('btn-report-pdf').addEventListener('click', printReport);
+        // บันทึก PDF = ดาวน์โหลดไฟล์ตรง ๆ (ไม่มีกล่องพิมพ์เด้ง) ; ปุ่มพิมพ์ = ผ่านเบราว์เซอร์
+        document.getElementById('btn-report-pdf').addEventListener('click', downloadReportPdf);
         document.getElementById('btn-report-print').addEventListener('click', printReport);
 
         /* ============================================================

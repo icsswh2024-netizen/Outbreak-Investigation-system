@@ -305,7 +305,7 @@
             <!-- แดชบอร์ดวิเคราะห์การตอบแบบสอบถาม + กราฟ -->
             <div id="analytics" class="space-y-6"></div>
 
-            <div class="bg-white rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.05)] border border-slate-200 overflow-hidden mt-8">
+            <div id="contact-list-card" class="bg-white rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.05)] border border-slate-200 overflow-hidden mt-8">
                 <div class="px-6 py-5 border-b border-slate-200 bg-slate-50/80 space-y-4">
                     <div class="flex justify-between items-center">
                         <h3 class="text-xl font-bold text-slate-800 flex items-center">
@@ -313,6 +313,7 @@
                         </h3>
                         <span id="flt-count" class="text-sm text-slate-500"></span>
                     </div>
+                    <div id="chart-filter-chip" hidden></div>
                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                         <div class="relative sm:col-span-2 lg:col-span-1">
                             <i data-feather="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
@@ -353,6 +354,7 @@
                         <tbody id="table-body" class="divide-y divide-slate-100 text-slate-700"></tbody>
                     </table>
                 </div>
+                <div id="tbl-legend" class="px-6 py-4 border-t border-slate-200 bg-slate-50/60 text-sm text-slate-600"></div>
             </div>
         </div>
 
@@ -1622,8 +1624,8 @@
             return { hasData: !!pv, hours: Math.round(hours), days: days, isClose: isClose, risk: ageTbRisk(ans.age) };
         }
 
-        // สรุปกิจกรรม/หน้ากาก/ระยะเวลา/ขนาดห้อง จากรูปแบบการสัมผัส (6.4)
-        function contactSummary(rec) {
+        // สรุปกิจกรรม/หน้ากาก/ระยะเวลา/ขนาดห้อง จากรูปแบบการสัมผัส (6.4) — คืนเป็น array
+        function contactSets(rec) {
             const ans = rec.answers || {};
             let pv = null;
             Object.keys(ans).forEach(k => { if (isPatternObj(ans[k])) pv = ans[k]; });
@@ -1634,9 +1636,40 @@
                 if (p.duration) durs.add(p.duration);
                 if (p.room) rooms.add(p.room);
             });
-            const j = s => Array.from(s).join(', ') || '-';
-            return { activities: j(acts), mask: j(masks), duration: j(durs), room: j(rooms) };
+            return { activities: Array.from(acts), masks: Array.from(masks), durations: Array.from(durs), rooms: Array.from(rooms) };
         }
+        function contactSummary(rec) {
+            const s = contactSets(rec);
+            const j = a => a.join(', ') || '-';
+            return { activities: j(s.activities), mask: j(s.masks), duration: j(s.durations), room: j(s.rooms) };
+        }
+        // แผนที่รหัสกิจกรรม/ขนาดห้อง (สร้างจากข้อมูลจริง) + ตัวกรองจากกราฟ
+        let ACT_CODE = {}, ROOM_CODE = {};
+        let chartFilter = null; // {kind:'unit'|'activity'|'duration'|'date', value}
+        function buildContactCodes() {
+            ACT_CODE = {}; ROOM_CODE = {};
+            let a = 0, r = 0;
+            records.forEach(rec => {
+                const s = contactSets(rec);
+                s.activities.forEach(x => { if (!(x in ACT_CODE)) ACT_CODE[x] = 'ก' + (++a); });
+                s.rooms.forEach(x => { if (!(x in ROOM_CODE)) ROOM_CODE[x] = 'ห' + (++r); });
+            });
+        }
+        function recordHasActivity(rec, v) { return contactSets(rec).activities.indexOf(v) >= 0; }
+        function recordHasDuration(rec, v) { return contactSets(rec).durations.indexOf(v) >= 0; }
+        function recordOnDate(rec, iso) {
+            const ans = rec.answers || {}; let pv = null;
+            Object.keys(ans).forEach(k => { if (isPatternObj(ans[k])) pv = ans[k]; });
+            if (!pv) return false;
+            return (pv.patterns || []).some(p => (expandPattern(pv.rangeStart, pv.rangeEnd, p) || []).indexOf(iso) >= 0);
+        }
+        function setChartFilter(kind, value) {
+            chartFilter = { kind, value };
+            renderAdminTable();
+            const el = document.getElementById('contact-list-card');
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+        function clearChartFilter() { chartFilter = null; renderAdminTable(); }
 
         /* ===== แดชบอร์ดวิเคราะห์การตอบแบบสอบถาม + กราฟ ===== */
         const OI_PREFIXES = ['นางสาว', 'น.ส.', 'นส.', 'นาย', 'นาง', 'ดร.', 'ดร', 'นพ.', 'พญ.', 'ทพ.', 'ทพญ.', 'ภก.', 'ภญ.', 'ว่าที่ร้อยตรี', 'ว่าที่ ร.ต.'];
@@ -1648,11 +1681,12 @@
             while (ch) { ch = false; for (const p of OI_PREFIXES) { if (s.indexOf(p) === 0) { s = s.slice(p.length).replace(/^[\s.]+/, ''); ch = true; break; } } }
             return s.replace(/[\s.()\-]/g, '');
         }
-        function barList(rows, color) {
+        function barList(rows, color, kind) {
             const max = Math.max(1, ...rows.map(r => r.value));
             return `<div class="space-y-2.5">` + rows.map(r => {
                 const pct = Math.round(r.value / max * 100);
-                return `<div>
+                const attrs = kind ? ` class="chart-clk cursor-pointer hover:bg-slate-50 rounded-lg -mx-1 px-1 py-0.5" data-kind="${kind}" data-value="${escAttr(r.key != null ? r.key : r.label)}" title="คลิกเพื่อดูรายชื่อ"` : '';
+                return `<div${attrs}>
                     <div class="flex justify-between text-sm mb-0.5"><span class="text-slate-700 truncate pr-2">${escHtml(r.label)}</span><span class="text-slate-500 font-medium whitespace-nowrap">${r.disp != null ? r.disp : r.value}</span></div>
                     <div class="h-3 bg-slate-100 rounded-full overflow-hidden"><div class="h-3 rounded-full" style="width:${pct}%;background:${color}"></div></div>
                 </div>`;
@@ -1669,7 +1703,7 @@
             const yAt = v => padT + (1 - v / maxY) * (H - padT - padB);
             const pts = pairs.map((p, i) => `${xAt(i).toFixed(1)},${yAt(p.y).toFixed(1)}`).join(' ');
             const area = `${padL},${yAt(0)} ${pts} ${xAt(n - 1)},${yAt(0)}`;
-            const dots = pairs.map((p, i) => `<circle cx="${xAt(i).toFixed(1)}" cy="${yAt(p.y).toFixed(1)}" r="3" fill="#0d9488"/>`).join('');
+            const dots = pairs.map((p, i) => `<circle class="chart-clk" data-kind="date" data-value="${p.x}" style="cursor:pointer" cx="${xAt(i).toFixed(1)}" cy="${yAt(p.y).toFixed(1)}" r="${p.y > 0 ? 5 : 3}" fill="#0d9488"><title>${fmtThaiDate(p.x)} — ${Math.round(p.y)} ชม. (คลิกดูรายชื่อ)</title></circle>`).join('');
             // ตัวเลขกำกับแต่ละจุด (ซ่อนค่า 0 เพื่อไม่ให้รก)
             const step = Math.ceil(n / 12);
             const vlab = pairs.map((p, i) => (p.y > 0 && (i % step === 0 || i === n - 1)) ? `<text x="${xAt(i).toFixed(1)}" y="${(yAt(p.y) - 6).toFixed(1)}" text-anchor="middle" font-size="9" fill="#0f766e" font-weight="600">${Math.round(p.y)}</text>` : '').join('');
@@ -1716,8 +1750,8 @@
             const unitNames = Object.keys(byUnit).sort();
             const unitBars = barList(unitNames.map(u => {
                 const b = byUnit[u]; const pc = b.total ? Math.round(b.resp / b.total * 100) : 0;
-                return { label: u, value: pc, disp: `${b.resp}/${b.total} (${pc}%)` };
-            }), '#0d9488');
+                return { label: u, key: u, value: pc, disp: `${b.resp}/${b.total} (${pc}%)` };
+            }), '#0d9488', 'unit');
             const unitTable = `<table class="w-full text-sm"><thead><tr class="text-slate-500 border-b">
                     <th class="text-left py-1.5">หน่วยงาน</th><th class="py-1.5">ทั้งหมด</th><th class="py-1.5">ตอบแล้ว</th><th class="py-1.5">เหลือ</th><th class="py-1.5">%</th></tr></thead><tbody>`
                 + unitNames.map(u => { const b = byUnit[u]; const pc = b.total ? Math.round(b.resp / b.total * 100) : 0; return `<tr class="border-b border-slate-100"><td class="py-1.5">${escHtml(u)}</td><td class="text-center">${b.total}</td><td class="text-center text-emerald-600 font-semibold">${b.resp}</td><td class="text-center text-rose-600">${b.total - b.resp}</td><td class="text-center">${pc}%</td></tr>`; }).join('')
@@ -1759,8 +1793,8 @@
                 aset.forEach(a => actCount[a] = (actCount[a] || 0) + 1);
                 dset.forEach(d => durCount[d] = (durCount[d] || 0) + 1);
             });
-            const actRows = Object.keys(actCount).map(a => ({ label: a, value: actCount[a], disp: actCount[a] + ' คน' })).sort((a, b) => b.value - a.value);
-            const durRows = Object.keys(durCount).map(d => ({ label: d, value: durCount[d], disp: durCount[d] + ' คน' })).sort((a, b) => b.value - a.value);
+            const actRows = Object.keys(actCount).map(a => ({ label: a, key: a, value: actCount[a], disp: actCount[a] + ' คน' })).sort((a, b) => b.value - a.value);
+            const durRows = Object.keys(durCount).map(d => ({ label: d, key: d, value: durCount[d], disp: durCount[d] + ' คน' })).sort((a, b) => b.value - a.value);
 
             const card = (title, icon, body) => `<div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden"><h3 class="text-lg font-semibold text-white flex items-center px-5 py-3 bg-gradient-to-r from-teal-600 to-emerald-700"><i data-feather="${icon}" class="w-5 h-5 mr-2"></i> ${title}</h3><div class="p-5">${body}</div></div>`;
 
@@ -1777,10 +1811,14 @@
                 ${card('รายชื่อที่ยังไม่ได้ตอบ (จำแนกตามหน่วยงาน)', 'user-x', remainHtml)}
                 ${card('กราฟเส้น: ชั่วโมงการสัมผัสรวมรายวัน (ตามช่วงวันที่)', 'trending-up', lineChartSVG(linePairs))}
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                    ${card('กิจกรรมที่สัมผัส (มาก→น้อย)', 'activity', actRows.length ? barList(actRows, '#6366f1') : '<div class="text-slate-400 text-sm">ยังไม่มีข้อมูล</div>')}
-                    ${card('ระยะเวลาที่สัมผัสต่อวัน (มาก→น้อย)', 'clock', durRows.length ? barList(durRows, '#f59e0b') : '<div class="text-slate-400 text-sm">ยังไม่มีข้อมูล</div>')}
+                    ${card('กิจกรรมที่สัมผัส (มาก→น้อย)', 'activity', actRows.length ? barList(actRows, '#6366f1', 'activity') : '<div class="text-slate-400 text-sm">ยังไม่มีข้อมูล</div>')}
+                    ${card('ระยะเวลาที่สัมผัสต่อวัน (มาก→น้อย)', 'clock', durRows.length ? barList(durRows, '#f59e0b', 'duration') : '<div class="text-slate-400 text-sm">ยังไม่มีข้อมูล</div>')}
                 </div>`;
             feather.replace();
+            // คลิกกราฟ → กรองรายชื่อผู้สัมผัส
+            box.querySelectorAll('.chart-clk').forEach(el => el.addEventListener('click', () => {
+                setChartFilter(el.getAttribute('data-kind'), el.getAttribute('data-value'));
+            }));
         }
 
         function renderAdminTable() {
@@ -1812,13 +1850,31 @@
             const funit = (document.getElementById('flt-unit') || {}).value || '';
             const frisk = (document.getElementById('flt-risk') || {}).value || '';
             const qq = q.trim().toLowerCase();
+            buildContactCodes();
             const filtered = records.filter(r => {
                 if (fgroup && r.group !== fgroup) return false;
                 if (funit && unitOf(r) !== funit) return false;
                 if (frisk) { const c = computeRecordRisk(r).isClose; if (frisk === 'high' && !c) return false; if (frisk === 'normal' && c) return false; }
                 if (qq) { const hay = ((r.name || '') + ' ' + (r.hn || '')).toLowerCase(); if (hay.indexOf(qq) < 0) return false; }
+                if (chartFilter) {
+                    const cf = chartFilter;
+                    if (cf.kind === 'unit' && unitOf(r) !== cf.value) return false;
+                    if (cf.kind === 'activity' && !recordHasActivity(r, cf.value)) return false;
+                    if (cf.kind === 'duration' && !recordHasDuration(r, cf.value)) return false;
+                    if (cf.kind === 'date' && !recordOnDate(r, cf.value)) return false;
+                }
                 return true;
             });
+            // ป้ายตัวกรองจากกราฟ (ลบได้)
+            const chipBox = document.getElementById('chart-filter-chip');
+            if (chipBox) {
+                if (chartFilter) {
+                    const kindLabel = { unit: 'หน่วยงาน', activity: 'กิจกรรม', duration: 'ระยะเวลา', date: 'วันที่' }[chartFilter.kind] || chartFilter.kind;
+                    const valLabel = chartFilter.kind === 'date' ? fmtThaiDate(chartFilter.value) : chartFilter.value;
+                    chipBox.innerHTML = `<span class="inline-flex items-center gap-2 bg-teal-100 text-teal-800 border border-teal-300 rounded-full px-3 py-1 text-sm font-medium">กรองจากกราฟ: ${kindLabel} = ${escHtml(valLabel)} <button onclick="clearChartFilter()" class="text-teal-600 hover:text-teal-900 font-bold">✕</button></span>`;
+                    chipBox.hidden = false;
+                } else { chipBox.innerHTML = ''; chipBox.hidden = true; }
+            }
             const cnt = document.getElementById('flt-count');
             if (cnt) cnt.textContent = `แสดง ${filtered.length} / ${records.length} รายการ`;
 
@@ -1846,7 +1902,9 @@
                 }
 
                 const unitVal = (record.answers && (record.answers.unit || record.answers.ward)) || '-';
-                const cs = contactSummary(record);
+                const cset = contactSets(record);
+                const actCode = cset.activities.map(a => ACT_CODE[a] || a).join(', ') || '-';
+                const roomCode = cset.rooms.map(r => ROOM_CODE[r] || r).join(', ') || '-';
                 const cell = v => `<td class="px-6 py-5 text-sm text-slate-600" style="max-width:220px"><div class="whitespace-normal break-words">${v}</div></td>`;
                 tr.innerHTML = `
                     <td class="px-6 py-5 whitespace-nowrap text-slate-600">${record.date}</td>
@@ -1854,7 +1912,7 @@
                     <td class="px-6 py-5 whitespace-nowrap text-slate-500">${record.hn || '-'}</td>
                     <td class="px-6 py-5 whitespace-nowrap">${record.group || '-'}</td>
                     <td class="px-6 py-5 whitespace-nowrap text-slate-700">${unitVal}</td>
-                    ${cell(cs.activities)}${cell(cs.mask)}${cell(cs.duration)}${cell(cs.room)}
+                    <td class="px-6 py-5 whitespace-nowrap text-slate-700 font-medium">${actCode}</td>${cell(cset.masks.join(', ') || '-')}${cell(cset.durations.join(', ') || '-')}<td class="px-6 py-5 whitespace-nowrap text-slate-700 font-medium">${roomCode}</td>
                     <td class="px-6 py-5 whitespace-nowrap text-slate-700">${riskInfo.hasData ? riskInfo.hours + ' ชม.' : '-'}</td>
                     <td class="px-6 py-5 whitespace-nowrap">${riskDisplay}</td>
                     <td class="px-6 py-5 whitespace-nowrap text-right">
@@ -1871,6 +1929,16 @@
             tbody.querySelectorAll('.btn-edit').forEach(b => b.addEventListener('click', () => startEdit(b.getAttribute('data-id'))));
             tbody.querySelectorAll('.btn-del').forEach(b => b.addEventListener('click', () => deleteRecord(b.getAttribute('data-id'))));
             feather.replace();
+            // หมายเหตุท้ายตาราง: รหัสกิจกรรม / ขนาดห้อง
+            const legend = document.getElementById('tbl-legend');
+            if (legend) {
+                const actItems = Object.keys(ACT_CODE).map(k => `<b>${ACT_CODE[k]}</b> = ${escHtml ? escHtml(k) : k}`);
+                const roomItems = Object.keys(ROOM_CODE).map(k => `<b>${ROOM_CODE[k]}</b> = ${escHtml ? escHtml(k) : k}`);
+                legend.innerHTML =
+                    (actItems.length ? `<div class="mb-1"><span class="font-semibold text-slate-700">หมายเหตุ กิจกรรม:</span> ${actItems.join(' &nbsp;·&nbsp; ')}</div>` : '')
+                    + (roomItems.length ? `<div><span class="font-semibold text-slate-700">หมายเหตุ ขนาดห้อง:</span> ${roomItems.join(' &nbsp;·&nbsp; ')}</div>` : '')
+                    || '<span class="text-slate-400">— ยังไม่มีข้อมูลกิจกรรม/ขนาดห้อง —</span>';
+            }
             try { renderAnalytics(); } catch (e) {}
         }
 
@@ -2856,6 +2924,7 @@
         const fltClear = document.getElementById('btn-flt-clear');
         if (fltClear) fltClear.addEventListener('click', () => {
             ['flt-search', 'flt-group', 'flt-unit', 'flt-risk'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+            chartFilter = null;
             renderAdminTable();
         });
 

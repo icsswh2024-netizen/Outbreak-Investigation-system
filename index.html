@@ -299,15 +299,15 @@
                             <i data-feather="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
                             <input id="flt-search" type="text" placeholder="ค้นหา ชื่อ / HN" class="w-full text-base rounded-lg border border-slate-300 bg-white pl-9 pr-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400">
                         </div>
-                        <select id="flt-type" class="text-base rounded-lg border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 cursor-pointer">
-                            <option value="">ประเภท: ทั้งหมด</option><option value="staff">เจ้าหน้าที่</option><option value="patient">ผู้ป่วย</option>
+                        <select id="flt-group" class="text-base rounded-lg border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 cursor-pointer">
+                            <option value="">กลุ่ม/ตำแหน่ง: ทั้งหมด</option>
                         </select>
-                        <select id="flt-status" class="text-base rounded-lg border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 cursor-pointer">
-                            <option value="">สถานะ: ทั้งหมด</option><option value="ปกติ">ปกติ</option><option value="เฝ้าระวัง">เฝ้าระวัง</option>
+                        <select id="flt-unit" class="text-base rounded-lg border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 cursor-pointer">
+                            <option value="">หน่วยงาน: ทั้งหมด</option>
                         </select>
                         <div class="flex gap-2">
                             <select id="flt-risk" class="flex-1 text-base rounded-lg border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 cursor-pointer">
-                                <option value="">ความเสี่ยง: ทั้งหมด</option><option value="high">เสี่ยงสูง</option><option value="normal">เสี่ยงทั่วไป</option>
+                                <option value="">ระดับความเสี่ยง: ทั้งหมด</option><option value="high">เสี่ยงสูง</option><option value="normal">เสี่ยงทั่วไป</option>
                             </select>
                             <button id="btn-flt-clear" class="px-3 py-2 rounded-lg border border-slate-300 bg-white text-slate-500 hover:bg-slate-50" title="ล้างตัวกรอง"><i data-feather="x" class="w-5 h-5"></i></button>
                         </div>
@@ -322,6 +322,10 @@
                                 <th class="px-6 py-4 whitespace-nowrap font-semibold tracking-wider">HN</th>
                                 <th class="px-6 py-4 whitespace-nowrap font-semibold tracking-wider">กลุ่ม/ตำแหน่ง</th>
                                 <th class="px-6 py-4 whitespace-nowrap font-semibold tracking-wider">หน่วยงาน</th>
+                                <th class="px-6 py-4 whitespace-nowrap font-semibold tracking-wider">กิจกรรม</th>
+                                <th class="px-6 py-4 whitespace-nowrap font-semibold tracking-wider">หน้ากาก</th>
+                                <th class="px-6 py-4 whitespace-nowrap font-semibold tracking-wider">ระยะเวลา</th>
+                                <th class="px-6 py-4 whitespace-nowrap font-semibold tracking-wider">ขนาดห้อง</th>
                                 <th class="px-6 py-4 whitespace-nowrap font-semibold tracking-wider">ชม./เดือน</th>
                                 <th class="px-6 py-4 whitespace-nowrap font-semibold tracking-wider">ระดับความเสี่ยง</th>
                                 <th class="px-6 py-4 whitespace-nowrap font-semibold tracking-wider text-right">รายละเอียด</th>
@@ -1571,6 +1575,22 @@
             return { hasData: !!pv, hours: Math.round(hours), days: days, isClose: isClose, risk: ageTbRisk(ans.age) };
         }
 
+        // สรุปกิจกรรม/หน้ากาก/ระยะเวลา/ขนาดห้อง จากรูปแบบการสัมผัส (6.4)
+        function contactSummary(rec) {
+            const ans = rec.answers || {};
+            let pv = null;
+            Object.keys(ans).forEach(k => { if (isPatternObj(ans[k])) pv = ans[k]; });
+            const acts = new Set(), masks = new Set(), durs = new Set(), rooms = new Set();
+            if (pv) (pv.patterns || []).forEach(p => {
+                (p.activities || []).forEach(a => { if (a) acts.add(a); });
+                if (p.mask) masks.add(p.mask);
+                if (p.duration) durs.add(p.duration);
+                if (p.room) rooms.add(p.room);
+            });
+            const j = s => Array.from(s).join(', ') || '-';
+            return { activities: j(acts), mask: j(masks), duration: j(durs), room: j(rooms) };
+        }
+
         function renderAdminTable() {
             const tbody = document.getElementById('table-body');
             tbody.innerHTML = '';
@@ -1582,15 +1602,27 @@
             const closeEl = document.getElementById('stat-close');
             if (closeEl) closeEl.textContent = records.filter(r => computeRecordRisk(r).isClose).length;
 
+            // เติมตัวเลือกกลุ่ม/ตำแหน่ง และ หน่วยงาน จากข้อมูลจริง (คงค่าที่เลือกไว้)
+            const unitOf = r => (r.answers && (r.answers.unit || r.answers.ward)) || '';
+            const fillSelect = (id, values) => {
+                const el = document.getElementById(id); if (!el) return;
+                const cur = el.value;
+                const first = el.options[0] ? el.options[0].outerHTML : '';
+                el.innerHTML = first + values.map(v => `<option value="${escAttr(v)}">${v}</option>`).join('');
+                el.value = values.indexOf(cur) >= 0 ? cur : '';
+            };
+            fillSelect('flt-group', Array.from(new Set(records.map(r => r.group).filter(Boolean))).sort());
+            fillSelect('flt-unit', Array.from(new Set(records.map(unitOf).filter(Boolean))).sort());
+
             // ตัวกรอง
             const q = (document.getElementById('flt-search') || {}).value || '';
-            const ftype = (document.getElementById('flt-type') || {}).value || '';
-            const fstatus = (document.getElementById('flt-status') || {}).value || '';
+            const fgroup = (document.getElementById('flt-group') || {}).value || '';
+            const funit = (document.getElementById('flt-unit') || {}).value || '';
             const frisk = (document.getElementById('flt-risk') || {}).value || '';
             const qq = q.trim().toLowerCase();
             const filtered = records.filter(r => {
-                if (ftype && r.type !== ftype) return false;
-                if (fstatus && r.status !== fstatus) return false;
+                if (fgroup && r.group !== fgroup) return false;
+                if (funit && unitOf(r) !== funit) return false;
                 if (frisk) { const c = computeRecordRisk(r).isClose; if (frisk === 'high' && !c) return false; if (frisk === 'normal' && c) return false; }
                 if (qq) { const hay = ((r.name || '') + ' ' + (r.hn || '')).toLowerCase(); if (hay.indexOf(qq) < 0) return false; }
                 return true;
@@ -1599,7 +1631,7 @@
             if (cnt) cnt.textContent = `แสดง ${filtered.length} / ${records.length} รายการ`;
 
             if (filtered.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="8" class="px-6 py-8 text-center text-slate-500 text-lg">${records.length ? 'ไม่พบข้อมูลตามตัวกรอง' : 'ไม่มีข้อมูลการบันทึก'}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="12" class="px-6 py-8 text-center text-slate-500 text-lg">${records.length ? 'ไม่พบข้อมูลตามตัวกรอง' : 'ไม่มีข้อมูลการบันทึก'}</td></tr>`;
                 return;
             }
 
@@ -1622,12 +1654,15 @@
                 }
 
                 const unitVal = (record.answers && (record.answers.unit || record.answers.ward)) || '-';
+                const cs = contactSummary(record);
+                const cell = v => `<td class="px-6 py-5 text-sm text-slate-600" style="max-width:220px"><div class="whitespace-normal break-words">${v}</div></td>`;
                 tr.innerHTML = `
                     <td class="px-6 py-5 whitespace-nowrap text-slate-600">${record.date}</td>
                     <td class="px-6 py-5 font-medium text-slate-900 whitespace-nowrap">${record.name || '-'}</td>
                     <td class="px-6 py-5 whitespace-nowrap text-slate-500">${record.hn || '-'}</td>
                     <td class="px-6 py-5 whitespace-nowrap">${record.group || '-'}</td>
                     <td class="px-6 py-5 whitespace-nowrap text-slate-700">${unitVal}</td>
+                    ${cell(cs.activities)}${cell(cs.mask)}${cell(cs.duration)}${cell(cs.room)}
                     <td class="px-6 py-5 whitespace-nowrap text-slate-700">${riskInfo.hasData ? riskInfo.hours + ' ชม.' : '-'}</td>
                     <td class="px-6 py-5 whitespace-nowrap">${riskDisplay}</td>
                     <td class="px-6 py-5 whitespace-nowrap text-right">
@@ -1966,13 +2001,14 @@
         // รวมสถิติจากรายการที่ผ่านตัวกรองปัจจุบัน
         function repCollect() {
             const q = (document.getElementById('flt-search') || {}).value || '';
-            const ftype = (document.getElementById('flt-type') || {}).value || '';
-            const fstatus = (document.getElementById('flt-status') || {}).value || '';
+            const fgroup = (document.getElementById('flt-group') || {}).value || '';
+            const funit = (document.getElementById('flt-unit') || {}).value || '';
             const frisk = (document.getElementById('flt-risk') || {}).value || '';
+            const unitOf = r => (r.answers && (r.answers.unit || r.answers.ward)) || '';
             const qq = q.trim().toLowerCase();
             const rows = records.filter(r => {
-                if (ftype && r.type !== ftype) return false;
-                if (fstatus && r.status !== fstatus) return false;
+                if (fgroup && r.group !== fgroup) return false;
+                if (funit && unitOf(r) !== funit) return false;
                 if (frisk) { const c = computeRecordRisk(r).isClose; if (frisk === 'high' && !c) return false; if (frisk === 'normal' && c) return false; }
                 if (qq) { const hay = ((r.name || '') + ' ' + (r.hn || '')).toLowerCase(); if (hay.indexOf(qq) < 0) return false; }
                 return true;
@@ -2572,13 +2608,13 @@
         });
 
         // ผูกตัวกรองตารางรายชื่อ
-        ['flt-search', 'flt-type', 'flt-status', 'flt-risk'].forEach(id => {
+        ['flt-search', 'flt-group', 'flt-unit', 'flt-risk'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.addEventListener('input', renderAdminTable);
         });
         const fltClear = document.getElementById('btn-flt-clear');
         if (fltClear) fltClear.addEventListener('click', () => {
-            ['flt-search', 'flt-type', 'flt-status', 'flt-risk'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+            ['flt-search', 'flt-group', 'flt-unit', 'flt-risk'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
             renderAdminTable();
         });
 

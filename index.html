@@ -321,9 +321,9 @@
                                 <th class="px-6 py-4 whitespace-nowrap font-semibold tracking-wider">ชื่อ-นามสกุล</th>
                                 <th class="px-6 py-4 whitespace-nowrap font-semibold tracking-wider">HN</th>
                                 <th class="px-6 py-4 whitespace-nowrap font-semibold tracking-wider">กลุ่ม/ตำแหน่ง</th>
+                                <th class="px-6 py-4 whitespace-nowrap font-semibold tracking-wider">หน่วยงาน</th>
                                 <th class="px-6 py-4 whitespace-nowrap font-semibold tracking-wider">ชม./เดือน</th>
                                 <th class="px-6 py-4 whitespace-nowrap font-semibold tracking-wider">ระดับความเสี่ยง</th>
-                                <th class="px-6 py-4 whitespace-nowrap font-semibold tracking-wider">สถานะ</th>
                                 <th class="px-6 py-4 whitespace-nowrap font-semibold tracking-wider text-right">รายละเอียด</th>
                             </tr>
                         </thead>
@@ -1621,14 +1621,15 @@
                     riskDisplay = badge + (riskInfo.risk ? `<div class="text-xs text-slate-500 mt-0.5">${riskInfo.risk.g}: ~${riskInfo.risk.r}</div>` : '');
                 }
 
+                const unitVal = (record.answers && (record.answers.unit || record.answers.ward)) || '-';
                 tr.innerHTML = `
                     <td class="px-6 py-5 whitespace-nowrap text-slate-600">${record.date}</td>
                     <td class="px-6 py-5 font-medium text-slate-900 whitespace-nowrap">${record.name || '-'}</td>
                     <td class="px-6 py-5 whitespace-nowrap text-slate-500">${record.hn || '-'}</td>
                     <td class="px-6 py-5 whitespace-nowrap">${record.group || '-'}</td>
+                    <td class="px-6 py-5 whitespace-nowrap text-slate-700">${unitVal}</td>
                     <td class="px-6 py-5 whitespace-nowrap text-slate-700">${riskInfo.hasData ? riskInfo.hours + ' ชม.' : '-'}</td>
                     <td class="px-6 py-5 whitespace-nowrap">${riskDisplay}</td>
-                    <td class="px-6 py-5 whitespace-nowrap">${statusDisplay}</td>
                     <td class="px-6 py-5 whitespace-nowrap text-right">
                         <div class="inline-flex items-center gap-3">
                             <button class="btn-detail text-blue-600 hover:text-blue-800 font-medium inline-flex items-center" data-id="${record.id}" title="ดูรายละเอียด"><i data-feather="eye" class="w-4 h-4 mr-1"></i> ดู</button>

@@ -2433,7 +2433,7 @@
             // นับตามตำแหน่ง (กลุ่ม)
             const byGroup = {};
             staff.forEach(r => { const g = r.group || 'ไม่ระบุ'; byGroup[g] = (byGroup[g] || 0) + 1; });
-            const groupRows = Object.keys(byGroup).map(g => `<tr><td>${repEsc(g)}</td><td class="c">${byGroup[g]}</td></tr>`).join('')
+            const groupRows = Object.keys(byGroup).sort((a, b) => byGroup[b] - byGroup[a]).map(g => `<tr><td>${repEsc(g)}</td><td class="c">${byGroup[g]}</td></tr>`).join('')
                 + `<tr class="sum"><td>รวม</td><td class="c">${staff.length}</td></tr>`;
 
             // ช่วงชั่วโมงสัมผัสของเจ้าหน้าที่ (เฉพาะที่มีข้อมูล)

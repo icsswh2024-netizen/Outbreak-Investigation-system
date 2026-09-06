@@ -121,7 +121,8 @@
         <div id="view-home" class="view-section fade-in space-y-10">
             <div class="text-center space-y-5 max-w-3xl mx-auto">
                 <h1 class="text-4xl font-extrabold text-slate-900 drop-shadow-sm pb-1">ระบบสอบสวนการระบาดทางระบาดวิทยา</h1>
-                <div class="flex justify-center">
+                <div class="flex flex-col items-center gap-3">
+                    <img id="ipc-logo" alt="โลโก้กลุ่มงาน IPC" class="h-20 w-auto" style="display:none">
                     <span class="inline-flex items-center px-6 py-2 rounded-full bg-gradient-to-r from-blue-100 to-cyan-100 border border-blue-200 text-blue-800 font-bold text-xl shadow-sm drop-shadow-[0_2px_8px_rgba(59,130,246,0.2)]">
                         <i data-feather="activity" class="w-5 h-5 mr-2 text-blue-600"></i>
                         IPC & ICN SSWH
@@ -736,6 +737,16 @@
                 img.style.display = 'inline-block';
                 const fb = document.getElementById('site-logo-fallback'); if (fb) fb.style.display = 'none';
                 img.src = repImgUrl(e.link);
+            }
+            // โลโก้กลุ่มงาน IPC บนหน้าแรก (ชื่อมีคำว่า ควบคุม/ป้องกันการติดเชื้อ หรือ IPC/ICN)
+            const ipc = document.getElementById('ipc-logo');
+            if (ipc) {
+                const ie = (logoList || []).find(x => /ควบคุม.*ป้องกัน|ป้องกัน.*ติดเชื้อ|IPC|ICN/i.test(x.name || ''));
+                if (ie && ie.link && typeof repImgUrl === 'function') {
+                    ipc.src = repImgUrl(ie.link);
+                    ipc.style.display = 'inline-block';
+                    ipc.onerror = function () { this.style.display = 'none'; };
+                }
             }
         }
 

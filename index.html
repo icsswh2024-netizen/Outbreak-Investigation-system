@@ -2588,6 +2588,11 @@
             document.getElementById('report-modal').classList.add('hidden');
             document.getElementById('report-modal').classList.remove('flex');
         }
+        // คลิกนอกดรอปดาวน์เลือกหน่วยงาน → ยุบเก็บ
+        document.addEventListener('click', (e) => {
+            const dd = document.getElementById('rep-unit-dd');
+            if (dd && dd.open && !dd.contains(e.target)) dd.open = false;
+        });
         function printReport() {
             const html = `<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8">
                 <title>รายงานสรุป Contact case TB</title>

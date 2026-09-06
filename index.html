@@ -2361,11 +2361,11 @@
             return `วันที่ ${d.getDate()} ${TH_MONTH_FULL[d.getMonth()]} พ.ศ. ${d.getFullYear() + 543}`;
         }
         function repEsc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
-        // แปลงลิงก์ Google Drive/Photos เป็น URL รูปโดยตรงเท่าที่ทำได้
+        // แปลงลิงก์ Google Drive เป็น URL ที่ฝังด้วย <img> ได้ (Drive uc มักถูกบล็อก)
         function repImgUrl(link) {
             link = String(link || '').trim();
-            let m = link.match(/\/d\/([-\w]{20,})/) || link.match(/[?&]id=([-\w]{20,})/);
-            if (m) return 'https://drive.google.com/uc?export=view&id=' + m[1];
+            const m = link.match(/\/d\/([-\w]{20,})/) || link.match(/[?&]id=([-\w]{20,})/);
+            if (m) return 'https://drive.google.com/thumbnail?id=' + m[1] + '&sz=w1000';
             return link;
         }
 
@@ -2422,7 +2422,7 @@
             const sign = (title, idx) => {
                 const nm = (meta.signers && meta.signers[idx]) ? meta.signers[idx] : '';
                 const person = nm ? logoEntry(nm) : null;
-                const sigImg = person && person.link ? `<img src="${escAttr(repImgUrl(person.link))}" alt="ลายเซ็น" crossorigin="anonymous" style="max-height:56px;max-width:180px;object-fit:contain;margin:0 auto 2px">` : '';
+                const sigImg = person && person.link ? `<img src="${escAttr(repImgUrl(person.link))}" alt="ลายเซ็น" referrerpolicy="no-referrer" onerror="this.style.display='none'" style="max-height:56px;max-width:180px;object-fit:contain;margin:0 auto 2px">` : '';
                 const nameLine = nm ? `( ${repEsc(nm)} )` : '( ........................................................... )';
                 const posLine = person && person.position ? `<div class="role">${repEsc(person.position)}</div>` : '';
                 const groupLine = person && person.group ? `<div class="role">${repEsc(person.group)}</div>` : '';
@@ -2440,7 +2440,7 @@
             const logosLine = (meta.logos && meta.logos.length)
                 ? `<div style="display:flex;flex-wrap:wrap;gap:14px;justify-content:center;align-items:center;margin:6px 0">${meta.logos.map(v => {
                     const e = logoEntry(v);
-                    if (e && e.link) return `<img src="${escAttr(repImgUrl(e.link))}" alt="${escAttr(v)}" crossorigin="anonymous" style="height:52px;max-width:180px;object-fit:contain">`;
+                    if (e && e.link) return `<img src="${escAttr(repImgUrl(e.link))}" alt="${escAttr(v)}" referrerpolicy="no-referrer" onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:this.alt,style:'font-weight:600;color:#0f766e'}))" style="height:52px;max-width:180px;object-fit:contain">`;
                     return `<span style="font-weight:600;color:#0f766e">${repEsc(v)}</span>`;
                 }).join('')}</div>` : '';
             const headBlock = `

@@ -2603,7 +2603,17 @@
             const d = ifr.contentDocument || ifr.contentWindow.document;
             d.open(); d.write(html); d.close();
             const go = () => { try { ifr.contentWindow.focus(); ifr.contentWindow.print(); } catch (e) {} setTimeout(() => ifr.remove(), 60000); };
-            setTimeout(go, 700);
+            // รอให้รูป (โลโก้/ลายเซ็น) โหลดครบก่อนพิมพ์ เพื่อให้ PDF เหมือนพรีวิว
+            const waitImgs = () => {
+                const imgs = Array.from(d.images || []);
+                if (!imgs.length) return go();
+                let left = imgs.length, done = false;
+                const fin = () => { if (!done) { done = true; go(); } };
+                const tick = () => { if (--left <= 0) fin(); };
+                imgs.forEach(im => { if (im.complete) tick(); else { im.addEventListener('load', tick); im.addEventListener('error', tick); } });
+                setTimeout(fin, 4000); // กันค้าง
+            };
+            setTimeout(waitImgs, 400);
         }
 
         // CSS ใช้ทั้งพรีวิวและหน้าพิมพ์ (A4 แนวนอน 1123×794 px)
@@ -2703,7 +2713,8 @@
         })();
 
         document.getElementById('btn-report').addEventListener('click', openReport);
-        document.getElementById('btn-report-pdf').addEventListener('click', downloadReportPdf);
+        // บันทึก PDF = ใช้กลไกพิมพ์ของเบราว์เซอร์ (เลือก "Save as PDF") ให้ผลเหมือนพรีวิวเป๊ะ รวมรูปโลโก้/ลายเซ็น
+        document.getElementById('btn-report-pdf').addEventListener('click', printReport);
         document.getElementById('btn-report-print').addEventListener('click', printReport);
 
         /* ============================================================

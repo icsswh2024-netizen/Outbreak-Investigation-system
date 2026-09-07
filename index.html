@@ -31,6 +31,43 @@
         /* ช่องกรอกและดรอปดาวน์ไม่ล้นกรอบ */
         input, select, textarea { max-width: 100%; }
 
+        /* ปฏิทินวันที่/เวลา สวยงามและเหมือนกันทั้งเว็บ */
+        input[type="date"], input[type="time"], input[type="month"], input[type="datetime-local"] {
+            font-family: 'Sarabun', sans-serif;
+            font-size: 1rem;
+            padding: 0.55rem 0.75rem;
+            border: 1px solid #cbd5e1;
+            border-radius: 0.6rem;
+            background-color: #fff;
+            color: #0f172a;
+            line-height: 1.4;
+            transition: border-color .15s, box-shadow .15s;
+            -webkit-appearance: none; appearance: none;
+        }
+        input[type="date"]:hover, input[type="time"]:hover, input[type="month"]:hover, input[type="datetime-local"]:hover {
+            border-color: #5eead4;
+        }
+        input[type="date"]:focus, input[type="time"]:focus, input[type="month"]:focus, input[type="datetime-local"]:focus {
+            outline: none;
+            border-color: #14b8a6;
+            box-shadow: 0 0 0 3px rgba(20,184,166,0.25);
+        }
+        /* ไอคอนปฏิทินให้เป็นโทนเดียวกัน + คลิกง่าย */
+        input[type="date"]::-webkit-calendar-picker-indicator,
+        input[type="time"]::-webkit-calendar-picker-indicator,
+        input[type="month"]::-webkit-calendar-picker-indicator,
+        input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+            cursor: pointer;
+            padding: 2px;
+            border-radius: 4px;
+            filter: invert(45%) sepia(60%) saturate(500%) hue-rotate(130deg);
+            opacity: .85;
+        }
+        input[type="date"]::-webkit-calendar-picker-indicator:hover,
+        input[type="time"]::-webkit-calendar-picker-indicator:hover {
+            background: #f0fdfa; opacity: 1;
+        }
+
         .fade-in { animation: fadeIn 0.4s ease-in-out; }
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(15px); }
@@ -1849,7 +1886,11 @@
             box.querySelectorAll('.lab-del').forEach(b => b.addEventListener('click', () => {
                 syncLabDraft();
                 const row = b.closest('[data-test]'); const k = row.getAttribute('data-test'); const i = +row.getAttribute('data-idx');
-                labDraft[k].splice(i, 1); renderLabBody();
+                openConfirm({
+                    title: 'ยืนยันการลบ', danger: true, confirmText: 'ลบ',
+                    message: `ต้องการลบผลตรวจครั้งที่ ${i + 1} ใช่หรือไม่?`,
+                    onConfirm: () => { labDraft[k].splice(i, 1); renderLabBody(); }
+                });
             }));
             feather.replace();
         }

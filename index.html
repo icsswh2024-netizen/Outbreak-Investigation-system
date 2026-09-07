@@ -3131,7 +3131,7 @@
             .st-ok { color:#047857; } .st-watch { color:#be123c; font-weight:600; }
             .cols { display:flex; gap:26px; }
             .col { flex:1; min-width:0; }
-            .card { border:1px solid #e2e8f0; border-radius:10px; padding:14px 16px; background:#fff;
+            .card { border:1px solid #e2e8f0; border-radius:10px; padding:10px 14px; background:#fff;
                   box-shadow:0 2px 8px rgba(15,23,42,.05); }
             .kpis { display:flex; gap:14px; margin-bottom:16px; }
             .kpi { flex:1; border:1px solid #e2e8f0; border-radius:10px; padding:12px 14px; text-align:center;
@@ -3140,10 +3140,10 @@
             .kpi .n.hi { color:#be123c; }
             .kpi .t { font-size:12px; color:#64748b; margin-top:2px; }
             .lbl { font-weight:700; font-size:14px; margin-bottom:8px; color:#0f172a; }
-            ul.bul { margin:0; padding-left:20px; font-size:13.5px; line-height:1.75; }
-            ul.bul li { margin-bottom:4px; }
-            .signs { margin-top:40px; margin-bottom:28px; display:flex; gap:26px; }
-            .sign { flex:1; text-align:center; font-size:14px; line-height:2.05; color:#1e293b; }
+            ul.bul { margin:0; padding-left:20px; font-size:13px; line-height:1.5; }
+            ul.bul li { margin-bottom:3px; }
+            .signs { margin-top:22px; margin-bottom:14px; display:flex; gap:26px; }
+            .sign { flex:1; text-align:center; font-size:14px; line-height:1.7; color:#1e293b; }
             .sign .sline { margin-bottom:2px; letter-spacing:1px; color:#334155; }
             .sign .role { color:#64748b; font-size:13px; }
             .pgno { position:absolute; right:38px; bottom:18px; font-size:11px; color:#94a3b8; }
@@ -3151,8 +3151,8 @@
             @media print {
                 .pg { box-shadow:none; margin:0; border-radius:0; width:100%; min-height:auto;
                       height:196mm; padding:7mm 8mm 6mm; overflow:hidden; break-after:page; break-inside:avoid; }
-                /* หน้าลงชื่อ: ปล่อยความสูงตามเนื้อหา ไม่ตัดส่วนลงนามทิ้ง */
-                .pg.signpage { height:auto; min-height:196mm; overflow:visible; }
+                /* หน้าลงชื่อ: ความสูงตามเนื้อหา (ไม่บังคับเต็มหน้า) เพื่อไม่ให้ส่วนลงนามล้นไปหน้าใหม่ และไม่ถูกตัดทิ้ง */
+                .pg.signpage { height:auto; min-height:0; overflow:visible; break-inside:avoid; }
                 .pg:last-child { break-after:auto; }
                 .pg::before { height:5px; }
             }

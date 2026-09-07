@@ -1736,6 +1736,12 @@
             arr = arr.map(x => String(x).trim()).filter(Boolean);
             return arr.length ? arr.join(', ') : '-';
         }
+        function recordHasSymptom(rec, v) {
+            const a = rec.answers || {};
+            let arr = Array.isArray(a.symptoms) ? a.symptoms.slice() : (a.symptoms ? [String(a.symptoms)] : []);
+            if (a.symptomOther) arr.push(String(a.symptomOther));
+            return arr.map(x => String(x).trim()).indexOf(v) >= 0;
+        }
         function recordOnDate(rec, iso) {
             const ans = rec.answers || {}; let pv = null;
             Object.keys(ans).forEach(k => { if (isPatternObj(ans[k])) pv = ans[k]; });
@@ -1772,6 +1778,7 @@
                 if (cf.kind === 'unit' && unitOfRec(r) !== cf.value) return false;
                 if (cf.kind === 'activity' && !recordHasActivity(r, cf.value)) return false;
                 if (cf.kind === 'duration' && !recordHasDuration(r, cf.value)) return false;
+                if (cf.kind === 'symptom' && !recordHasSymptom(r, cf.value)) return false;
                 if (cf.kind === 'date' && !recordOnDate(r, cf.value)) return false;
             }
             return true;
@@ -1909,6 +1916,16 @@
             const actRows = Object.keys(actCount).map(a => ({ label: a, key: a, value: actCount[a], disp: actCount[a] + ' คน' })).sort((a, b) => b.value - a.value);
             const durRows = Object.keys(durCount).map(d => ({ label: d, key: d, value: durCount[d], disp: durCount[d] + ' คน' })).sort((a, b) => b.value - a.value);
 
+            // ---- จัดอันดับอาการ (มาก→น้อย) ----
+            const symCount = {};
+            staffRecs.forEach(r => {
+                const a = r.answers || {};
+                let arr = Array.isArray(a.symptoms) ? a.symptoms.slice() : (a.symptoms ? [String(a.symptoms)] : []);
+                if (a.symptomOther) arr.push(String(a.symptomOther));
+                new Set(arr.map(x => String(x).trim()).filter(Boolean)).forEach(s => symCount[s] = (symCount[s] || 0) + 1);
+            });
+            const symRows = Object.keys(symCount).map(s => ({ label: s, key: s, value: symCount[s], disp: symCount[s] + ' คน' })).sort((a, b) => b.value - a.value);
+
             const card = (title, icon, body) => `<div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden"><h3 class="text-lg font-semibold text-white flex items-center px-5 py-3 bg-gradient-to-r from-teal-600 to-emerald-700"><i data-feather="${icon}" class="w-5 h-5 mr-2"></i> ${title}</h3><div class="p-5">${body}</div></div>`;
 
             box.innerHTML = `
@@ -1926,7 +1943,8 @@
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     ${card('กิจกรรมที่สัมผัส (มาก→น้อย)', 'activity', actRows.length ? barList(actRows, '#6366f1', 'activity') : '<div class="text-slate-400 text-sm">ยังไม่มีข้อมูล</div>')}
                     ${card('ระยะเวลาที่สัมผัสต่อวัน (มาก→น้อย)', 'clock', durRows.length ? barList(durRows, '#f59e0b', 'duration') : '<div class="text-slate-400 text-sm">ยังไม่มีข้อมูล</div>')}
-                </div>`;
+                </div>
+                ${card('อาการที่พบ (มาก→น้อย)', 'thermometer', symRows.length ? barList(symRows, '#e11d48', 'symptom') : '<div class="text-slate-400 text-sm">ยังไม่มีข้อมูลอาการ</div>')}`;
             feather.replace();
             // คลิกกราฟ → กรองรายชื่อผู้สัมผัส
             box.querySelectorAll('.chart-clk').forEach(el => el.addEventListener('click', () => {
@@ -1973,7 +1991,7 @@
             const chipBox = document.getElementById('chart-filter-chip');
             if (chipBox) {
                 if (chartFilter) {
-                    const kindLabel = { unit: 'หน่วยงาน', activity: 'กิจกรรม', duration: 'ระยะเวลา', date: 'วันที่' }[chartFilter.kind] || chartFilter.kind;
+                    const kindLabel = { unit: 'หน่วยงาน', activity: 'กิจกรรม', duration: 'ระยะเวลา', symptom: 'อาการ', date: 'วันที่' }[chartFilter.kind] || chartFilter.kind;
                     const valLabel = chartFilter.kind === 'date' ? fmtThaiDate(chartFilter.value) : chartFilter.value;
                     chipBox.innerHTML = `<span class="inline-flex items-center gap-2 bg-teal-100 text-teal-800 border border-teal-300 rounded-full px-3 py-1 text-sm font-medium">กรองจากกราฟ: ${kindLabel} = ${escHtml(valLabel)} <button onclick="clearChartFilter()" class="text-teal-600 hover:text-teal-900 font-bold">✕</button></span>`;
                     chipBox.hidden = false;

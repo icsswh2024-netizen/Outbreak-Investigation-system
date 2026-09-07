@@ -2823,7 +2823,7 @@
                     <div class="kpi"><div class="n">${maxH}</div><div class="t">ชม.สัมผัสสูงสุด</div></div>
                     <div class="kpi"><div class="n">${patient.length}</div><div class="t">ผู้ป่วยในระบบ (ราย)</div></div>
                 </div>`;
-            const ROWS_FIRST = 10, ROWS_REST = 15;
+            const ROWS_FIRST = 8, ROWS_REST = 12;
             const chunks = [];
             if (!staff.length) chunks.push('');
             else { let idx = 0; while (idx < staff.length) { const n = chunks.length === 0 ? ROWS_FIRST : ROWS_REST; chunks.push(staff.slice(idx, idx + n)); idx += n; } }

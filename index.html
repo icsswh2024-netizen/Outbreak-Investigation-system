@@ -500,7 +500,7 @@
     </div>
 
     <!-- Date Picker Modal (ปฏิทินเต็มจอ) -->
-    <div id="date-modal" class="fixed inset-0 z-[60] hidden items-center justify-center bg-slate-900/50 backdrop-blur-sm fade-in p-4">
+    <div id="date-modal" class="fixed inset-0 z-[80] hidden items-center justify-center bg-slate-900/50 backdrop-blur-sm fade-in p-4">
         <div class="bg-white rounded-2xl shadow-[0_15px_40px_rgba(0,0,0,0.25)] w-full max-w-md overflow-hidden">
             <div class="bg-gradient-to-r from-teal-500 to-emerald-500 px-5 py-4 flex items-center justify-between text-white">
                 <button type="button" id="dp-prev" class="p-2 rounded-lg hover:bg-white/20 transition-colors"><i data-feather="chevron-left" class="w-6 h-6"></i></button>
@@ -1867,7 +1867,7 @@
                 const rows = rounds.map((r, i) => `
                     <div class="flex items-center gap-2 flex-wrap" data-test="${t.key}" data-idx="${i}">
                         <span class="text-sm text-slate-500 w-16">ครั้งที่ ${i + 1}</span>
-                        <input type="date" class="lab-date text-base rounded-lg border border-slate-300 bg-white px-2 py-1.5" value="${escAttr(r.date || '')}">
+                        <input type="text" readonly data-datepicker class="lab-date field-input cursor-pointer bg-white text-base" style="width:auto;min-width:150px" data-value="${escAttr(r.date || '')}" value="${r.date ? fmtThaiDate(r.date) : ''}" placeholder="แตะเพื่อเลือกวันที่">
                         <select class="lab-result text-base rounded-lg border border-slate-300 bg-white px-2 py-1.5">
                             ${LAB_RESULTS.map(v => `<option value="${v}" ${r.result === v ? 'selected' : ''}>${v === 'na' ? 'n/a' : v}</option>`).join('')}
                         </select>
@@ -1900,7 +1900,8 @@
             LAB_TESTS.forEach(t => { labDraft[t.key] = []; });
             box.querySelectorAll('[data-test][data-idx]').forEach(row => {
                 const k = row.getAttribute('data-test');
-                const date = (row.querySelector('.lab-date') || {}).value || '';
+                const de = row.querySelector('.lab-date');
+                const date = de ? (de.dataset.value || '') : '';
                 const result = (row.querySelector('.lab-result') || {}).value || 'na';
                 labDraft[k].push({ date: date, result: result });
             });

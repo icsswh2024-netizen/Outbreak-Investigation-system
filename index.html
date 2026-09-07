@@ -1810,6 +1810,8 @@
             if (!rounds.length) return '<span class="text-slate-300">-</span>';
             return rounds.map((r, i) => `<div class="whitespace-nowrap">ครั้งที่ ${i + 1}${r.date ? ' (' + escHtml(r.date) + ')' : ''}: ${labResultBadge(r.result)}</div>`).join('');
         }
+        function recordLabPositive(rec, key) { return recordLabs(rec)[key].some(x => x.result === '+'); }
+        function labLabel(key) { const t = LAB_TESTS.find(x => x.key === key); return t ? t.label : key; }
         // สรุปผลตรวจเป็นข้อความล้วน (สำหรับ Excel/พิมพ์)
         function labCellText(rec, key) {
             const rounds = recordLabs(rec)[key];
@@ -1934,6 +1936,7 @@
                 if (cf.kind === 'activity' && !recordHasActivity(r, cf.value)) return false;
                 if (cf.kind === 'duration' && !recordHasDuration(r, cf.value)) return false;
                 if (cf.kind === 'symptom' && !recordHasSymptom(r, cf.value)) return false;
+                if (cf.kind === 'lab' && !recordLabPositive(r, cf.value)) return false;
                 if (cf.kind === 'date' && !recordOnDate(r, cf.value)) return false;
             }
             return true;
@@ -2081,6 +2084,32 @@
             });
             const symRows = Object.keys(symCount).map(s => ({ label: s, key: s, value: symCount[s], disp: symCount[s] + ' คน' })).sort((a, b) => b.value - a.value);
 
+            // ---- ผลตรวจทางห้องปฏิบัติการ: จำนวน + ร้อยละ ผล "+" ----
+            const LAB_ICON = { cxr: 'activity', afb: 'droplet', tst: 'target', lab: 'clipboard' };
+            const LAB_GRAD = { cxr: 'from-sky-500 to-indigo-600', afb: 'from-rose-500 to-pink-600', tst: 'from-amber-500 to-orange-600', lab: 'from-teal-500 to-emerald-600' };
+            const labStat = LAB_TESTS.map(t => {
+                let tested = 0, pos = 0, neg = 0, na = 0;
+                records.forEach(r => {
+                    const rounds = recordLabs(r)[t.key];
+                    if (!rounds.length) return;
+                    tested++;
+                    const hasPos = rounds.some(x => x.result === '+');
+                    if (hasPos) pos++;
+                    else if (rounds.some(x => x.result === '-')) neg++;
+                    else na++;
+                });
+                const pct = tested ? Math.round(pos / tested * 100) : 0;
+                return { key: t.key, label: t.label, tested: tested, pos: pos, neg: neg, na: na, pct: pct };
+            });
+            const labTiles = labStat.map(s => `
+                <div class="chart-clk cursor-pointer rounded-2xl p-4 text-white bg-gradient-to-br ${LAB_GRAD[s.key]} shadow-[0_6px_18px_rgba(15,23,42,0.18)] hover:brightness-105 transition" data-kind="lab" data-value="${s.key}" title="คลิกดูรายชื่อที่ตรวจ ${escAttr(s.label)}">
+                    <div class="flex items-center gap-2 text-white/90 text-sm font-semibold"><i data-feather="${LAB_ICON[s.key]}" class="w-4 h-4"></i> ${escHtml(s.label)}</div>
+                    <div class="mt-2 flex items-end gap-1"><span class="text-3xl font-extrabold drop-shadow">${s.pos}</span><span class="text-sm text-white/80 mb-0.5">ราย (+)</span></div>
+                    <div class="mt-1 h-2 bg-white/25 rounded-full overflow-hidden"><div class="h-2 rounded-full bg-white" style="width:${s.pct}%"></div></div>
+                    <div class="text-xs text-white/90 mt-1">คิดเป็น <b>${s.pct}%</b> ของผู้ตรวจ ${s.tested} ราย</div>
+                </div>`).join('');
+            const anyLab = labStat.some(s => s.tested > 0);
+
             const card = (title, icon, body) => `<div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden"><h3 class="text-lg font-semibold text-white flex items-center px-5 py-3 bg-gradient-to-r from-teal-600 to-emerald-700"><i data-feather="${icon}" class="w-5 h-5 mr-2"></i> ${title}</h3><div class="p-5">${body}</div></div>`;
 
             box.innerHTML = `
@@ -2101,7 +2130,11 @@
                         ${card('ระยะเวลาที่สัมผัสต่อวัน (มาก→น้อย)', 'clock', durRows.length ? barList(durRows, '#f59e0b', 'duration') : '<div class="text-slate-400 text-sm">ยังไม่มีข้อมูล</div>')}
                         ${card('อาการที่พบ (มาก→น้อย)', 'thermometer', symRows.length ? barList(symRows, '#e11d48', 'symptom') : '<div class="text-slate-400 text-sm">ยังไม่มีข้อมูลอาการ</div>')}
                     </div>
-                </div>`;
+                </div>
+                ${card('ผลตรวจทางห้องปฏิบัติการ — ผลบวก (+) จำนวน / ร้อยละ', 'clipboard',
+                    anyLab
+                        ? `<div class="grid grid-cols-2 lg:grid-cols-4 gap-3">${labTiles}</div><div class="text-xs text-slate-400 mt-3">* ร้อยละคำนวณจากผู้ที่มีผลตรวจในรายการนั้น (นับผู้มีผล + อย่างน้อย 1 ครั้ง) — คลิกการ์ดเพื่อดูรายชื่อ</div>`
+                        : '<div class="text-slate-400 text-sm">ยังไม่มีการบันทึกผลตรวจ — เพิ่มได้ที่ปุ่ม "ผลตรวจ" ในรายชื่อผู้สัมผัส</div>')}`;
             feather.replace();
             // คลิกกราฟ → กรองรายชื่อผู้สัมผัส
             box.querySelectorAll('.chart-clk').forEach(el => el.addEventListener('click', () => {
@@ -2148,8 +2181,8 @@
             const chipBox = document.getElementById('chart-filter-chip');
             if (chipBox) {
                 if (chartFilter) {
-                    const kindLabel = { unit: 'หน่วยงาน', activity: 'กิจกรรม', duration: 'ระยะเวลา', symptom: 'อาการ', date: 'วันที่' }[chartFilter.kind] || chartFilter.kind;
-                    const valLabel = chartFilter.kind === 'date' ? fmtThaiDate(chartFilter.value) : chartFilter.value;
+                    const kindLabel = { unit: 'หน่วยงาน', activity: 'กิจกรรม', duration: 'ระยะเวลา', symptom: 'อาการ', lab: 'ผลตรวจ (+)', date: 'วันที่' }[chartFilter.kind] || chartFilter.kind;
+                    const valLabel = chartFilter.kind === 'date' ? fmtThaiDate(chartFilter.value) : (chartFilter.kind === 'lab' ? labLabel(chartFilter.value) : chartFilter.value);
                     chipBox.innerHTML = `<span class="inline-flex items-center gap-2 bg-teal-100 text-teal-800 border border-teal-300 rounded-full px-3 py-1 text-sm font-medium">กรองจากกราฟ: ${kindLabel} = ${escHtml(valLabel)} <button onclick="clearChartFilter()" class="text-teal-600 hover:text-teal-900 font-bold">✕</button></span>`;
                     chipBox.hidden = false;
                 } else { chipBox.innerHTML = ''; chipBox.hidden = true; }

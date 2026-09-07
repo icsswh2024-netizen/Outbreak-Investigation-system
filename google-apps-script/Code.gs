@@ -240,7 +240,23 @@ function appendRecord(rec) {
   ];
   cols.forEach(function (c) { row.push(flatten(ans[c.id])); });
   row.push(JSON.stringify(rec)); // เก็บ JSON เต็มไว้ให้เว็บแอปอ่านกลับได้ครบ
-  sh.appendRow(row);
+  // Upsert: ถ้ามีแถว id เดิมอยู่แล้ว (กรณีแก้ไข) ให้เขียนทับแถวนั้นแบบ atomic
+  // แทนการลบก่อนแล้วเพิ่มใหม่ ป้องกันข้อมูลหายถ้าการเพิ่มไม่สำเร็จ
+  var existRow = -1;
+  if (rec.id) {
+    var last = sh.getLastRow();
+    if (last >= 2) {
+      var idVals = sh.getRange(2, 2, last - 1, 1).getValues(); // คอลัมน์ B = id
+      for (var i = 0; i < idVals.length; i++) {
+        if (String(idVals[i][0]) === String(rec.id)) { existRow = i + 2; break; }
+      }
+    }
+  }
+  if (existRow > 0) {
+    sh.getRange(existRow, 1, 1, row.length).setValues([row]);
+  } else {
+    sh.appendRow(row);
+  }
 }
 
 function deleteRecord(id) {

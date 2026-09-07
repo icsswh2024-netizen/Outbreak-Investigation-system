@@ -1412,8 +1412,9 @@
                         answers: answers
                     });
                     saveRecords();
-                    serverDelete(editingId);    // ลบแถวเก่าบนชีต
-                    serverSubmit(records[idx]); // แล้วเพิ่มเวอร์ชันแก้ไข (id เดิม)
+                    // อัปเดตแบบ upsert (เขียนทับแถว id เดิมบนชีตในคำขอเดียว)
+                    // ไม่ลบก่อนเพิ่ม เพื่อป้องกันข้อมูลหายถ้าการเพิ่มไม่สำเร็จ
+                    serverSubmit(records[idx]);
                 }
                 const doneId = editingId;
                 editingId = null;

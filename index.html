@@ -251,6 +251,15 @@
                     <label class="text-base font-medium text-slate-700">เลือกโลโก้/ชื่อหน่วยงานที่จะแสดงบนหัวรายงาน</label>
                     <div id="rep-logo-list" class="flex flex-wrap gap-x-6 gap-y-2 mt-2 text-base"></div>
                 </div>
+                <div class="flex items-center gap-2">
+                    <label for="rep-logo-size" class="text-base font-medium text-slate-700">ขนาดโลโก้บนหัวรายงาน:</label>
+                    <select id="rep-logo-size" class="text-base rounded-lg border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 cursor-pointer">
+                        <option value="40">เล็ก (40px)</option>
+                        <option value="52">กลาง (52px)</option>
+                        <option value="68">ใหญ่ (68px)</option>
+                        <option value="88">ใหญ่มาก (88px)</option>
+                    </select>
+                </div>
                 <p id="rep-logo-empty" class="text-sm text-amber-600" hidden>ยังไม่มีข้อมูลแท็บ "logo-name" — เพิ่มคอลัมน์ code, ชื่อ ในชีต แล้ว Deploy Code.gs ใหม่</p>
                 <p class="text-sm text-slate-400">ข้อความรายงาน (ผลการวิเคราะห์ / ข้อเสนอแนะ) และผู้ลงนาม ย้ายไปที่ปุ่ม <b>Comment</b> ในหน้ารายงานสรุปแล้ว</p>
                 <button id="btn-save-repmeta" class="bg-gradient-to-r from-indigo-500 to-violet-600 hover:from-indigo-600 hover:to-violet-700 text-white px-5 py-2 rounded-lg text-base font-semibold flex items-center transition-all shadow-sm"><i data-feather="save" class="w-4 h-4 mr-2"></i> บันทึกโลโก้</button>
@@ -738,8 +747,8 @@
         // การเลือกโลโก้หัวรายงาน + ผู้ลงนาม 3 ช่อง
         const REPMETA_KEY = 'oi-repmeta';
         function getRepMeta() {
-            try { const d = localStorage.getItem(REPMETA_KEY); if (d) return Object.assign({ logos: [], signers: ['', '', ''] }, JSON.parse(d)); } catch (e) {}
-            return { logos: [], signers: ['', '', ''] };
+            try { const d = localStorage.getItem(REPMETA_KEY); if (d) return Object.assign({ logos: [], signers: ['', '', ''], logoSize: 52 }, JSON.parse(d)); } catch (e) {}
+            return { logos: [], signers: ['', '', ''], logoSize: 52 };
         }
         // ใช้โลโก้จากแท็บ logo-name (แถว code=logo หรือชื่อมีคำว่า "ศรีสังวร") มาแสดงบนหัวเว็บ
         function applySiteLogo() {
@@ -2229,6 +2238,8 @@
                     return `<label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" class="rep-logo-cb w-5 h-5 text-indigo-600" value="${escAttr(val)}" ${on ? 'checked' : ''}> ${logoLabel(x)}</label>`;
                 }).join('') || '<span class="text-slate-400 text-sm">— ไม่มีรายการ —</span>';
             }
+            const sizeSel = document.getElementById('rep-logo-size');
+            if (sizeSel) sizeSel.value = String(meta.logoSize || 52);
             for (let i = 0; i < 3; i++) {
                 const sel = document.getElementById('rep-sign-' + i);
                 if (!sel) continue;
@@ -2244,8 +2255,9 @@
             if (btn) btn.addEventListener('click', () => {
                 const logos = Array.from(document.querySelectorAll('.rep-logo-cb')).filter(c => c.checked).map(c => c.value);
                 const signers = [0, 1, 2].map(i => (document.getElementById('rep-sign-' + i) || {}).value || '');
+                const logoSize = parseInt((document.getElementById('rep-logo-size') || {}).value || '52', 10) || 52;
                 confirmSave('บันทึกการเลือกโลโก้และผู้ลงนามใช่หรือไม่?', () => {
-                    try { localStorage.setItem(REPMETA_KEY, JSON.stringify({ logos, signers })); } catch (e) {}
+                    try { localStorage.setItem(REPMETA_KEY, JSON.stringify({ logos, signers, logoSize })); } catch (e) {}
                     serverSaveSettings(currentSettings());
                 }, 'บันทึกโลโก้ & ผู้ลงนามแล้ว' + (USE_SERVER ? ' (ทุกเครื่อง)' : ''));
             });
@@ -2275,7 +2287,7 @@
                 const meta = getRepMeta();
                 const signers = [0, 1, 2].map(i => (document.getElementById('rep-sign-' + i) || {}).value || '');
                 try { localStorage.setItem(REPNOTES_KEY, JSON.stringify(notes)); } catch (e) {}
-                try { localStorage.setItem(REPMETA_KEY, JSON.stringify({ logos: meta.logos || [], signers })); } catch (e) {}
+                try { localStorage.setItem(REPMETA_KEY, JSON.stringify({ logos: meta.logos || [], signers, logoSize: meta.logoSize || 52 })); } catch (e) {}
                 serverSaveSettings(currentSettings());
                 closeComment();
                 // รีเฟรชรายงานให้เห็นผลทันที
@@ -2493,10 +2505,12 @@
             };
 
             // โลโก้หัวรายงาน: ถ้ามีลิงก์รูป แสดงรูป ไม่งั้นแสดงข้อความ
+            const logoSz = parseInt(meta.logoSize, 10) || 52;
+            const logoMaxW = Math.round(logoSz * 3.5);
             const logosLine = (meta.logos && meta.logos.length)
                 ? `<div style="display:flex;flex-wrap:wrap;gap:14px;justify-content:center;align-items:center;margin:6px 0">${meta.logos.map(v => {
                     const e = logoEntry(v);
-                    if (e && e.link) return `<img src="${escAttr(repImgUrl(e.link))}" alt="${escAttr(v)}" referrerpolicy="no-referrer" onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:this.alt,style:'font-weight:600;color:#0f766e'}))" style="height:52px;max-width:180px;object-fit:contain">`;
+                    if (e && e.link) return `<img src="${escAttr(repImgUrl(e.link))}" alt="${escAttr(v)}" referrerpolicy="no-referrer" onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:this.alt,style:'font-weight:600;color:#0f766e'}))" style="height:${logoSz}px;max-width:${logoMaxW}px;object-fit:contain">`;
                     return `<span style="font-weight:600;color:#0f766e">${repEsc(v)}</span>`;
                 }).join('')}</div>` : '';
             const headBlock = `

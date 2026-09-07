@@ -1262,13 +1262,24 @@
                     </div>
                 </div>`;
             });
-            html += `<div class="pt-6 flex justify-end">
+            html += `<div class="pt-6 flex justify-end gap-3">
+                <button type="button" id="btn-cancel-edit" ${editingId != null ? '' : 'hidden'} class="bg-white border border-slate-300 text-slate-600 hover:bg-slate-50 text-lg font-semibold py-2.5 px-6 rounded-lg transition-all">ยกเลิกการแก้ไข</button>
                 <button type="submit" class="bg-gradient-to-r ${btnGrad} text-white text-lg font-semibold py-2.5 px-8 rounded-lg transition-all transform hover:-translate-y-0.5">บันทึกข้อมูล</button>
             </div>`;
 
             form.innerHTML = html;
             feather.replace();
             if (typeof refreshPatternPreviews === 'function') refreshPatternPreviews(form);
+            const cancelBtn = document.getElementById('btn-cancel-edit');
+            if (cancelBtn) cancelBtn.addEventListener('click', cancelEdit);
+        }
+        // ยกเลิกการแก้ไข: ล้างโหมดแก้ไขและรีเซ็ตฟอร์มกลับเป็นการบันทึกใหม่
+        function cancelEdit() {
+            if (editingId == null) return;
+            const t = editingType || 'staff';
+            editingId = null;
+            renderForm(t);
+            showModal('ยกเลิกการแก้ไขแล้ว', 'กลับสู่โหมดบันทึกข้อมูลใหม่', false);
         }
 
         /* ============================================================
@@ -1377,6 +1388,7 @@
         }
 
         let editingId = null; // ถ้ากำลังแก้ไขเรกคอร์ด จะเก็บ id ไว้
+        let editingType = 'staff'; // ชนิดฟอร์มที่กำลังแก้ไข (staff/patient)
 
         function doSaveForm(form, formKey) {
             const { answers, risk } = collectAnswers(form, formKey);
@@ -1486,6 +1498,7 @@
             // ไปหน้าฟอร์มก่อน (nav handler จะเคลียร์ editingId) แล้วค่อยตั้งค่าใหม่
             document.querySelector('nav .nav-btn[data-target="view-' + formKey + '"]').click();
             editingId = rec.id;
+            editingType = formKey;
             renderForm(formKey);
             fillForm(formKey, rec.answers || {});
             showModal('โหมดแก้ไข', 'แก้ไขข้อมูลแล้วกด "บันทึกข้อมูล" ด้านล่างเพื่ออัปเดต', false);

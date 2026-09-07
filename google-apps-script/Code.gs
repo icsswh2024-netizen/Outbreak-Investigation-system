@@ -166,16 +166,46 @@ function readSchemaFromStruct() {
 }
 
 /* ---------------- SETTINGS (เก็บใน SHEET_SCHEMA เซลล์ A4) ---------------- */
+var SHEET_REPNOTE = 'หมายเหตุรายงาน'; // แท็บอ่าน/แก้ไขข้อความในรายงานสรุปได้จากในชีต
+
 function readSettings() {
   var sh = getSheet(SHEET_SCHEMA);
   var v = sh.getRange(4, 1).getValue();
-  if (!v) return {};
-  try { return JSON.parse(v); } catch (e) { return {}; }
+  var obj = {};
+  if (v) { try { obj = JSON.parse(v); } catch (e) { obj = {}; } }
+  // ★ ให้ข้อความรายงาน (ผลการวิเคราะห์ / ข้อเสนอแนะ) ที่แก้ในแท็บ "หมายเหตุรายงาน" มีผลด้วย
+  var rn = ss().getSheetByName(SHEET_REPNOTE);
+  if (rn && rn.getLastRow() >= 3) {
+    var risk = String(rn.getRange(2, 2).getValue() || '');
+    var manage = String(rn.getRange(3, 2).getValue() || '');
+    if (risk !== '' || manage !== '') {
+      obj.reportNotes = obj.reportNotes || {};
+      obj.reportNotes.risk = risk;
+      obj.reportNotes.manage = manage;
+    }
+  }
+  return obj;
 }
 function writeSettings(obj) {
   var sh = getSheet(SHEET_SCHEMA);
   sh.getRange(3, 1).setValue('SETTINGS_JSON (การตั้งค่าเมนู ฯลฯ — จัดการผ่านหน้าแอดมิน)');
   sh.getRange(4, 1).setValue(JSON.stringify(obj || {}));
+  // เขียนสำเนาข้อความรายงานลงแท็บที่อ่าน/แก้ไขง่ายในชีต
+  writeReportNoteTab(obj);
+}
+// สร้าง/อัปเดตแท็บ "หมายเหตุรายงาน" ให้แก้ไขข้อความรายงานได้จากในชีตโดยตรง
+function writeReportNoteTab(obj) {
+  var rn = (obj && obj.reportNotes) ? obj.reportNotes : {};
+  var sh = ss().getSheetByName(SHEET_REPNOTE) || ss().insertSheet(SHEET_REPNOTE);
+  sh.getRange(1, 1, 1, 2).setValues([['หัวข้อ', 'ข้อความ (แก้ไขได้ที่นี่ หรือที่ปุ่ม Comment ในเว็บ)']]);
+  sh.getRange(1, 1, 1, 2).setFontWeight('bold');
+  sh.getRange(2, 1).setValue('ผลการวิเคราะห์ความเสี่ยง');
+  sh.getRange(2, 2).setValue(String(rn.risk || ''));
+  sh.getRange(3, 1).setValue('ข้อเสนอแนะและการจัดการ');
+  sh.getRange(3, 2).setValue(String(rn.manage || ''));
+  sh.setColumnWidth(1, 220); sh.setColumnWidth(2, 620);
+  sh.getRange(2, 2, 2, 1).setWrap(true);
+  sh.setFrozenRows(1);
 }
 
 /* ---------------- RECORDS (แท็บข้อมูลแบบสอบถาม) ---------------- */

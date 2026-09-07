@@ -305,6 +305,10 @@
                         </h3>
                         <div class="flex items-center gap-3">
                             <span id="flt-count" class="text-sm text-slate-500"></span>
+                            <details id="col-picker" class="relative">
+                                <summary class="list-none cursor-pointer bg-white border border-slate-300 text-slate-600 hover:bg-slate-50 px-4 py-2 rounded-lg text-sm font-semibold flex items-center transition-all shadow-sm select-none"><i data-feather="columns" class="w-4 h-4 mr-2"></i> คอลัมน์</summary>
+                                <div id="col-picker-list" class="absolute z-20 mt-1 right-0 bg-white border border-slate-200 rounded-lg shadow-lg p-3 w-60 max-h-80 overflow-auto space-y-1.5"></div>
+                            </details>
                             <button id="btn-list-print" class="bg-white border border-teal-300 text-teal-700 hover:bg-teal-50 px-4 py-2 rounded-lg text-sm font-semibold flex items-center transition-all shadow-sm" title="พิมพ์/บันทึกรายชื่อที่กรองไว้เป็น PDF ข้อความคัดลอกได้ คมชัด"><i data-feather="printer" class="w-4 h-4 mr-2"></i> พิมพ์ / PDF ข้อความ</button>
                             <button id="btn-list-excel" class="bg-white border border-green-400 text-green-700 hover:bg-green-50 px-4 py-2 rounded-lg text-sm font-semibold flex items-center transition-all shadow-sm" title="ส่งออกรายชื่อที่กรองไว้เป็นไฟล์ Excel"><i data-feather="file-text" class="w-4 h-4 mr-2"></i> ส่งออก Excel</button>
                         </div>
@@ -343,24 +347,24 @@
                     <table class="w-full text-base text-left">
                         <thead class="text-sm text-slate-500 uppercase bg-slate-100 border-b border-slate-200">
                             <tr>
-                                <th class="px-6 py-4 whitespace-nowrap font-semibold tracking-wider">ลำดับ</th>
-                                <th class="px-6 py-4 whitespace-nowrap font-semibold tracking-wider">วันที่บันทึก</th>
-                                <th class="px-6 py-4 whitespace-nowrap font-semibold tracking-wider">ชื่อ-นามสกุล</th>
-                                <th class="px-6 py-4 whitespace-nowrap font-semibold tracking-wider">HN</th>
-                                <th class="px-6 py-4 whitespace-nowrap font-semibold tracking-wider">กลุ่ม/ตำแหน่ง</th>
-                                <th class="px-6 py-4 whitespace-nowrap font-semibold tracking-wider">หน่วยงาน</th>
-                                <th class="px-6 py-4 whitespace-nowrap font-semibold tracking-wider">กิจกรรม</th>
-                                <th class="px-6 py-4 whitespace-nowrap font-semibold tracking-wider">หน้ากาก</th>
-                                <th class="px-6 py-4 whitespace-nowrap font-semibold tracking-wider">ระยะเวลา</th>
-                                <th class="px-6 py-4 whitespace-nowrap font-semibold tracking-wider">ขนาดห้อง</th>
-                                <th class="px-6 py-4 whitespace-nowrap font-semibold tracking-wider">อาการ</th>
-                                <th class="px-6 py-4 whitespace-nowrap font-semibold tracking-wider">ชม./เดือน</th>
-                                <th class="px-6 py-4 whitespace-nowrap font-semibold tracking-wider">ระดับความเสี่ยง</th>
-                                <th class="px-6 py-4 whitespace-nowrap font-semibold tracking-wider">Chest X-ray</th>
-                                <th class="px-6 py-4 whitespace-nowrap font-semibold tracking-wider">Sputum AFB</th>
-                                <th class="px-6 py-4 whitespace-nowrap font-semibold tracking-wider">TST</th>
-                                <th class="px-6 py-4 whitespace-nowrap font-semibold tracking-wider">LAB</th>
-                                <th class="px-6 py-4 whitespace-nowrap font-semibold tracking-wider text-right">รายละเอียด</th>
+                                <th class="col-seq px-6 py-4 whitespace-nowrap font-semibold tracking-wider">ลำดับ</th>
+                                <th class="col-date px-6 py-4 whitespace-nowrap font-semibold tracking-wider">วันที่บันทึก</th>
+                                <th class="col-name px-6 py-4 whitespace-nowrap font-semibold tracking-wider">ชื่อ-นามสกุล</th>
+                                <th class="col-hn px-6 py-4 whitespace-nowrap font-semibold tracking-wider">HN</th>
+                                <th class="col-group px-6 py-4 whitespace-nowrap font-semibold tracking-wider">กลุ่ม/ตำแหน่ง</th>
+                                <th class="col-unit px-6 py-4 whitespace-nowrap font-semibold tracking-wider">หน่วยงาน</th>
+                                <th class="col-activity px-6 py-4 whitespace-nowrap font-semibold tracking-wider">กิจกรรม</th>
+                                <th class="col-mask px-6 py-4 whitespace-nowrap font-semibold tracking-wider">หน้ากาก</th>
+                                <th class="col-duration px-6 py-4 whitespace-nowrap font-semibold tracking-wider">ระยะเวลา</th>
+                                <th class="col-room px-6 py-4 whitespace-nowrap font-semibold tracking-wider">ขนาดห้อง</th>
+                                <th class="col-symptom px-6 py-4 whitespace-nowrap font-semibold tracking-wider">อาการ</th>
+                                <th class="col-hours px-6 py-4 whitespace-nowrap font-semibold tracking-wider">ชม./เดือน</th>
+                                <th class="col-risk px-6 py-4 whitespace-nowrap font-semibold tracking-wider">ระดับความเสี่ยง</th>
+                                <th class="col-cxr px-6 py-4 whitespace-nowrap font-semibold tracking-wider">Chest X-ray</th>
+                                <th class="col-afb px-6 py-4 whitespace-nowrap font-semibold tracking-wider">Sputum AFB</th>
+                                <th class="col-tst px-6 py-4 whitespace-nowrap font-semibold tracking-wider">TST</th>
+                                <th class="col-lab px-6 py-4 whitespace-nowrap font-semibold tracking-wider">LAB</th>
+                                <th class="col-actions px-6 py-4 whitespace-nowrap font-semibold tracking-wider text-right">รายละเอียด</th>
                             </tr>
                         </thead>
                         <tbody id="table-body" class="divide-y divide-slate-100 text-slate-700"></tbody>
@@ -2180,22 +2184,22 @@
                 const cset = contactSets(record);
                 const actCode = cset.activities.map(a => ACT_CODE[a] || a).join(', ') || '-';
                 const roomCode = cset.rooms.map(r => ROOM_CODE[r] || r).join(', ') || '-';
-                const cell = v => `<td class="px-6 py-5 text-sm text-slate-600" style="max-width:220px"><div class="whitespace-normal break-words">${v}</div></td>`;
+                const cell = (v, cls) => `<td class="${cls} px-6 py-5 text-sm text-slate-600" style="max-width:220px"><div class="whitespace-normal break-words">${v}</div></td>`;
                 tr.innerHTML = `
-                    <td class="px-6 py-5 whitespace-nowrap text-slate-400 text-center">${idx + 1}</td>
-                    <td class="px-6 py-5 whitespace-nowrap text-slate-600">${record.date}</td>
-                    <td class="px-6 py-5 font-medium text-slate-900 whitespace-nowrap">${record.name || '-'}</td>
-                    <td class="px-6 py-5 whitespace-nowrap text-slate-500">${record.hn || '-'}</td>
-                    <td class="px-6 py-5 whitespace-nowrap">${record.group || '-'}</td>
-                    <td class="px-6 py-5 whitespace-nowrap text-slate-700">${unitVal}</td>
-                    <td class="px-6 py-5 whitespace-nowrap text-slate-700 font-medium">${actCode}</td>${cell(cset.masks.join(', ') || '-')}${cell(cset.durations.join(', ') || '-')}<td class="px-6 py-5 whitespace-nowrap text-slate-700 font-medium">${roomCode}</td>${cell(symptomsOf(record))}
-                    <td class="px-6 py-5 whitespace-nowrap text-slate-700">${riskInfo.hasData ? riskInfo.hours + ' ชม.' : '-'}</td>
-                    <td class="px-6 py-5 whitespace-nowrap">${riskDisplay}</td>
-                    <td class="px-6 py-4 text-sm text-slate-600">${labCellHtml(record, 'cxr')}</td>
-                    <td class="px-6 py-4 text-sm text-slate-600">${labCellHtml(record, 'afb')}</td>
-                    <td class="px-6 py-4 text-sm text-slate-600">${labCellHtml(record, 'tst')}</td>
-                    <td class="px-6 py-4 text-sm text-slate-600">${labCellHtml(record, 'lab')}</td>
-                    <td class="px-6 py-5 whitespace-nowrap text-right">
+                    <td class="col-seq px-6 py-5 whitespace-nowrap text-slate-400 text-center">${idx + 1}</td>
+                    <td class="col-date px-6 py-5 whitespace-nowrap text-slate-600">${record.date}</td>
+                    <td class="col-name px-6 py-5 font-medium text-slate-900 whitespace-nowrap">${record.name || '-'}</td>
+                    <td class="col-hn px-6 py-5 whitespace-nowrap text-slate-500">${record.hn || '-'}</td>
+                    <td class="col-group px-6 py-5 whitespace-nowrap">${record.group || '-'}</td>
+                    <td class="col-unit px-6 py-5 whitespace-nowrap text-slate-700">${unitVal}</td>
+                    <td class="col-activity px-6 py-5 whitespace-nowrap text-slate-700 font-medium">${actCode}</td>${cell(cset.masks.join(', ') || '-', 'col-mask')}${cell(cset.durations.join(', ') || '-', 'col-duration')}<td class="col-room px-6 py-5 whitespace-nowrap text-slate-700 font-medium">${roomCode}</td>${cell(symptomsOf(record), 'col-symptom')}
+                    <td class="col-hours px-6 py-5 whitespace-nowrap text-slate-700">${riskInfo.hasData ? riskInfo.hours + ' ชม.' : '-'}</td>
+                    <td class="col-risk px-6 py-5 whitespace-nowrap">${riskDisplay}</td>
+                    <td class="col-cxr px-6 py-4 text-sm text-slate-600">${labCellHtml(record, 'cxr')}</td>
+                    <td class="col-afb px-6 py-4 text-sm text-slate-600">${labCellHtml(record, 'afb')}</td>
+                    <td class="col-tst px-6 py-4 text-sm text-slate-600">${labCellHtml(record, 'tst')}</td>
+                    <td class="col-lab px-6 py-4 text-sm text-slate-600">${labCellHtml(record, 'lab')}</td>
+                    <td class="col-actions px-6 py-5 whitespace-nowrap text-right">
                         <div class="inline-flex items-center gap-3">
                             <button class="btn-detail text-blue-600 hover:text-blue-800 font-medium inline-flex items-center" data-id="${record.id}" title="ดูรายละเอียด"><i data-feather="eye" class="w-4 h-4 mr-1"></i> ดู</button>
                             <button class="btn-lab text-teal-600 hover:text-teal-800 font-medium inline-flex items-center" data-id="${record.id}" title="บันทึกผลตรวจ"><i data-feather="clipboard" class="w-4 h-4 mr-1"></i> ผลตรวจ</button>
@@ -3116,6 +3120,48 @@
         document.getElementById('btn-report-print').addEventListener('click', printReport);
         (function () { const b = document.getElementById('btn-list-print'); if (b) b.addEventListener('click', printContactList); })();
         (function () { const b = document.getElementById('btn-list-excel'); if (b) b.addEventListener('click', exportContactListExcel); })();
+        // ----- ตัวเลือกซ่อน/แสดงคอลัมน์ (Contact List) -----
+        const COL_DEFS = [
+            { key: 'seq', label: 'ลำดับ', lock: true }, { key: 'date', label: 'วันที่บันทึก' },
+            { key: 'name', label: 'ชื่อ-นามสกุล', lock: true }, { key: 'hn', label: 'HN' },
+            { key: 'group', label: 'กลุ่ม/ตำแหน่ง' }, { key: 'unit', label: 'หน่วยงาน' },
+            { key: 'activity', label: 'กิจกรรม' }, { key: 'mask', label: 'หน้ากาก' },
+            { key: 'duration', label: 'ระยะเวลา' }, { key: 'room', label: 'ขนาดห้อง' },
+            { key: 'symptom', label: 'อาการ' }, { key: 'hours', label: 'ชม./เดือน' },
+            { key: 'risk', label: 'ระดับความเสี่ยง' }, { key: 'cxr', label: 'Chest X-ray' },
+            { key: 'afb', label: 'Sputum AFB' }, { key: 'tst', label: 'TST' },
+            { key: 'lab', label: 'LAB' }, { key: 'actions', label: 'รายละเอียด', lock: true }
+        ];
+        const COL_HIDE_KEY = 'oi-hidden-cols';
+        function getHiddenCols() { try { return new Set(JSON.parse(localStorage.getItem(COL_HIDE_KEY) || '[]')); } catch (e) { return new Set(); } }
+        function applyColVisibility() {
+            const hidden = getHiddenCols();
+            let st = document.getElementById('col-vis-style');
+            if (!st) { st = document.createElement('style'); st.id = 'col-vis-style'; document.head.appendChild(st); }
+            st.textContent = Array.from(hidden).map(k => `.col-${k}{display:none!important}`).join('');
+            if (typeof syncTopScrollbar === 'function') requestAnimationFrame(syncTopScrollbar);
+        }
+        function renderColPicker() {
+            const box = document.getElementById('col-picker-list');
+            if (!box) return;
+            const hidden = getHiddenCols();
+            box.innerHTML = COL_DEFS.map(c => `<label class="flex items-center gap-2 text-sm ${c.lock ? 'text-slate-400' : 'text-slate-700 cursor-pointer'}">
+                <input type="checkbox" class="col-cb w-4 h-4" data-key="${c.key}" ${hidden.has(c.key) ? '' : 'checked'} ${c.lock ? 'disabled' : ''}> ${c.label}</label>`).join('')
+                + `<button id="col-reset" type="button" class="mt-2 w-full text-xs text-teal-600 hover:text-teal-800 border-t border-slate-100 pt-2">แสดงทุกคอลัมน์</button>`;
+            box.querySelectorAll('.col-cb').forEach(cb => cb.addEventListener('change', () => {
+                const h = getHiddenCols(); const k = cb.getAttribute('data-key');
+                if (cb.checked) h.delete(k); else h.add(k);
+                try { localStorage.setItem(COL_HIDE_KEY, JSON.stringify(Array.from(h))); } catch (e) {}
+                applyColVisibility();
+            }));
+            const rb = document.getElementById('col-reset');
+            if (rb) rb.addEventListener('click', () => { try { localStorage.setItem(COL_HIDE_KEY, '[]'); } catch (e) {} renderColPicker(); applyColVisibility(); });
+        }
+        (function () {
+            renderColPicker(); applyColVisibility();
+            // ปิดดรอปดาวน์เมื่อคลิกนอกกล่อง
+            document.addEventListener('click', (e) => { const dd = document.getElementById('col-picker'); if (dd && dd.open && !dd.contains(e.target)) dd.open = false; });
+        })();
         // แถบเลื่อนซ้าย-ขวาด้านบนของตาราง (ซิงก์กับตัวตารางด้านล่าง)
         function syncTopScrollbar() {
             const top = document.getElementById('tbl-scroll-top');

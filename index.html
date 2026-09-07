@@ -352,6 +352,7 @@
                                 <th class="px-6 py-4 whitespace-nowrap font-semibold tracking-wider">หน้ากาก</th>
                                 <th class="px-6 py-4 whitespace-nowrap font-semibold tracking-wider">ระยะเวลา</th>
                                 <th class="px-6 py-4 whitespace-nowrap font-semibold tracking-wider">ขนาดห้อง</th>
+                                <th class="px-6 py-4 whitespace-nowrap font-semibold tracking-wider">อาการ</th>
                                 <th class="px-6 py-4 whitespace-nowrap font-semibold tracking-wider">ชม./เดือน</th>
                                 <th class="px-6 py-4 whitespace-nowrap font-semibold tracking-wider">ระดับความเสี่ยง</th>
                                 <th class="px-6 py-4 whitespace-nowrap font-semibold tracking-wider text-right">รายละเอียด</th>
@@ -1725,6 +1726,15 @@
         function recordHasActivity(rec, v) { return contactSets(rec).activities.indexOf(v) >= 0; }
         function recordHasDuration(rec, v) { return contactSets(rec).durations.indexOf(v) >= 0; }
         function recordHasRoom(rec, v) { return contactSets(rec).rooms.indexOf(v) >= 0; }
+        // อาการ (symptoms) จากแบบสอบถาม — รวมตัวเลือก + อาการอื่นๆ ที่ระบุ
+        function symptomsOf(rec) {
+            const a = rec.answers || {};
+            let s = a.symptoms;
+            let arr = Array.isArray(s) ? s.slice() : (s ? [String(s)] : []);
+            if (a.symptomOther) arr.push(String(a.symptomOther));
+            arr = arr.map(x => String(x).trim()).filter(Boolean);
+            return arr.length ? arr.join(', ') : '-';
+        }
         function recordOnDate(rec, iso) {
             const ans = rec.answers || {}; let pv = null;
             Object.keys(ans).forEach(k => { if (isPatternObj(ans[k])) pv = ans[k]; });
@@ -1972,7 +1982,7 @@
             if (cnt) cnt.textContent = `แสดง ${filtered.length} / ${records.length} รายการ`;
 
             if (filtered.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="13" class="px-6 py-8 text-center text-slate-500 text-lg">${records.length ? 'ไม่พบข้อมูลตามตัวกรอง' : 'ไม่มีข้อมูลการบันทึก'}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="14" class="px-6 py-8 text-center text-slate-500 text-lg">${records.length ? 'ไม่พบข้อมูลตามตัวกรอง' : 'ไม่มีข้อมูลการบันทึก'}</td></tr>`;
                 return;
             }
 
@@ -2006,7 +2016,7 @@
                     <td class="px-6 py-5 whitespace-nowrap text-slate-500">${record.hn || '-'}</td>
                     <td class="px-6 py-5 whitespace-nowrap">${record.group || '-'}</td>
                     <td class="px-6 py-5 whitespace-nowrap text-slate-700">${unitVal}</td>
-                    <td class="px-6 py-5 whitespace-nowrap text-slate-700 font-medium">${actCode}</td>${cell(cset.masks.join(', ') || '-')}${cell(cset.durations.join(', ') || '-')}<td class="px-6 py-5 whitespace-nowrap text-slate-700 font-medium">${roomCode}</td>
+                    <td class="px-6 py-5 whitespace-nowrap text-slate-700 font-medium">${actCode}</td>${cell(cset.masks.join(', ') || '-')}${cell(cset.durations.join(', ') || '-')}<td class="px-6 py-5 whitespace-nowrap text-slate-700 font-medium">${roomCode}</td>${cell(symptomsOf(record))}
                     <td class="px-6 py-5 whitespace-nowrap text-slate-700">${riskInfo.hasData ? riskInfo.hours + ' ชม.' : '-'}</td>
                     <td class="px-6 py-5 whitespace-nowrap">${riskDisplay}</td>
                     <td class="px-6 py-5 whitespace-nowrap text-right">
@@ -2463,6 +2473,7 @@
                 <td>${repEsc(unitVal)}</td>
                 <td class="c">${repEsc(actCode)}</td>
                 <td>${repEsc(maskVal)}</td>
+                <td>${repEsc(symptomsOf(r))}</td>
                 <td class="c">${ri.hasData ? ri.days : '-'}</td>
                 <td class="c">${ri.hasData ? ri.hours : '-'}</td>
                 <td class="c">${badge}</td>
@@ -2529,10 +2540,10 @@
                 </div>`;
 
             const tHead = `<thead><tr>
-                        <th class="nowrap" style="width:5%">ลำดับ</th><th style="width:18%">ชื่อ-สกุล</th><th style="width:8%">HN</th>
-                        <th style="width:14%">ตำแหน่ง</th><th style="width:14%">หน่วยงาน</th>
-                        <th style="width:9%">กิจกรรม</th><th style="width:10%">หน้ากาก</th>
-                        <th class="nowrap" style="width:7%">วันสัมผัส</th><th class="nowrap" style="width:6%">ชม.รวม</th><th style="width:9%">ความเสี่ยง</th>
+                        <th class="nowrap" style="width:4%">ลำดับ</th><th style="width:15%">ชื่อ-สกุล</th><th style="width:7%">HN</th>
+                        <th style="width:12%">ตำแหน่ง</th><th style="width:12%">หน่วยงาน</th>
+                        <th style="width:8%">กิจกรรม</th><th style="width:9%">หน้ากาก</th><th style="width:12%">อาการ</th>
+                        <th class="nowrap" style="width:6%">วันสัมผัส</th><th class="nowrap" style="width:6%">ชม.รวม</th><th style="width:9%">ความเสี่ยง</th>
                     </tr></thead>`;
 
             // แบ่งตารางเจ้าหน้าที่เป็นหลายหน้า (หน้าแรกมี KPI จึงใส่ได้น้อยกว่า)
@@ -2542,7 +2553,7 @@
                     <div class="kpi"><div class="n">${maxH}</div><div class="t">ชม.สัมผัสสูงสุด</div></div>
                     <div class="kpi"><div class="n">${patient.length}</div><div class="t">ผู้ป่วยในระบบ (ราย)</div></div>
                 </div>`;
-            const ROWS_FIRST = 11, ROWS_REST = 16;
+            const ROWS_FIRST = 10, ROWS_REST = 15;
             const chunks = [];
             if (!staff.length) chunks.push('');
             else { let idx = 0; while (idx < staff.length) { const n = chunks.length === 0 ? ROWS_FIRST : ROWS_REST; chunks.push(staff.slice(idx, idx + n)); idx += n; } }
@@ -2553,7 +2564,7 @@
             const tablePages = chunks.map((chunk, ci) => {
                 const body = staff.length
                     ? chunk.map(r => repStaffRow(r, seq++)).join('')
-                    : `<tr><td class="c" colspan="10" style="color:#94a3b8">ไม่มีข้อมูลเจ้าหน้าที่</td></tr>`;
+                    : `<tr><td class="c" colspan="11" style="color:#94a3b8">ไม่มีข้อมูลเจ้าหน้าที่</td></tr>`;
                 const contd = ci > 0 ? ' (ต่อ)' : '';
                 const actLegend = (ci === tablePagesCount - 1 && Object.keys(ACT_CODE).length)
                     ? `<div style="font-size:10.5px;color:#475569;margin-top:8px;line-height:1.7"><b>หมายเหตุ · รหัสกิจกรรม:</b> ${Object.keys(ACT_CODE).map(k => `${repEsc(ACT_CODE[k])} = ${repEsc(k)}`).join(' &nbsp;·&nbsp; ')}</div>` : '';
@@ -2704,9 +2715,9 @@
                     <td class="c">${i + 1}</td><td class="c">${esc(r.date)}</td><td>${esc(r.name || '-')}</td>
                     <td class="c">${esc(r.hn || '-')}</td><td>${esc(r.group || '-')}</td><td>${esc(unitVal)}</td>
                     <td class="c">${esc(actCode)}</td><td>${esc(cset.masks.join(', ') || '-')}</td><td>${esc(cset.durations.join(', ') || '-')}</td>
-                    <td class="c">${esc(roomCode)}</td><td class="c">${ri.hasData ? ri.hours : '-'}</td><td class="c">${risk}</td>
+                    <td class="c">${esc(roomCode)}</td><td>${esc(symptomsOf(r))}</td><td class="c">${ri.hasData ? ri.hours : '-'}</td><td class="c">${risk}</td>
                 </tr>`;
-            }).join('') || `<tr><td class="c" colspan="12" style="padding:20px;color:#64748b">ไม่พบข้อมูลตามตัวกรอง</td></tr>`;
+            }).join('') || `<tr><td class="c" colspan="13" style="padding:20px;color:#64748b">ไม่พบข้อมูลตามตัวกรอง</td></tr>`;
 
             const legRow = (map, title) => { const ks = Object.keys(map); if (!ks.length) return ''; return `<div class="leg"><b>${title}:</b> ${ks.map(k => `${esc(map[k])} = ${esc(k)}`).join(' &nbsp;·&nbsp; ')}</div>`; };
             const legend = legRow(ACT_CODE, 'รหัสกิจกรรม (ก)') + legRow(ROOM_CODE, 'รหัสขนาดห้อง (ห)');
@@ -2741,8 +2752,8 @@
                     <thead><tr>
                         <th style="width:34px">ลำดับ</th><th style="width:70px">วันที่บันทึก</th><th>ชื่อ-นามสกุล</th>
                         <th style="width:58px">HN</th><th>กลุ่ม/ตำแหน่ง</th><th>หน่วยงาน</th>
-                        <th style="width:70px">กิจกรรม</th><th style="width:70px">หน้ากาก</th><th style="width:70px">ระยะเวลา</th>
-                        <th style="width:52px">ขนาดห้อง</th><th style="width:44px">ชม.</th><th style="width:78px">ความเสี่ยง</th>
+                        <th style="width:64px">กิจกรรม</th><th style="width:64px">หน้ากาก</th><th style="width:64px">ระยะเวลา</th>
+                        <th style="width:48px">ขนาดห้อง</th><th>อาการ</th><th style="width:40px">ชม.</th><th style="width:70px">ความเสี่ยง</th>
                     </tr></thead>
                     <tbody>${body}</tbody>
                 </table>
@@ -2778,7 +2789,7 @@
         function exportContactListExcel() {
             buildContactCodes();
             const rows = records.filter(passAdminFilters);
-            const headers = ['ลำดับ', 'วันที่บันทึก', 'ชื่อ-นามสกุล', 'HN', 'กลุ่ม/ตำแหน่ง', 'หน่วยงาน', 'กิจกรรม', 'หน้ากาก', 'ระยะเวลา', 'ขนาดห้อง', 'ชั่วโมงรวม', 'ระดับความเสี่ยง'];
+            const headers = ['ลำดับ', 'วันที่บันทึก', 'ชื่อ-นามสกุล', 'HN', 'กลุ่ม/ตำแหน่ง', 'หน่วยงาน', 'กิจกรรม', 'หน้ากาก', 'ระยะเวลา', 'ขนาดห้อง', 'อาการ', 'ชั่วโมงรวม', 'ระดับความเสี่ยง'];
             const data = rows.map((r, i) => {
                 const unitVal = (r.answers && (r.answers.unit || r.answers.ward)) || '';
                 const cset = contactSets(r);
@@ -2786,7 +2797,7 @@
                 const risk = !ri.hasData ? '-' : (ri.isClose ? 'เสี่ยงสูง (Close Contact)' : 'เสี่ยงทั่วไป');
                 return [i + 1, r.date || '', r.name || '', r.hn || '', r.group || '', unitVal,
                     cset.activities.join(', '), cset.masks.join(', '), cset.durations.join(', '),
-                    cset.rooms.join(', '), ri.hasData ? ri.hours : '-', risk];
+                    cset.rooms.join(', '), symptomsOf(r), ri.hasData ? ri.hours : '-', risk];
             });
             exportToExcel(`ContactList-${isoToday()}.xls`, headers, data, `รายชื่อผู้สัมผัส (Contact List) — จำนวน ${rows.length} ราย`);
         }
@@ -2798,14 +2809,14 @@
             let rows = records.filter(passAdminFilters);
             if (selUnits.length) rows = rows.filter(r => selUnits.indexOf(unitOfRec(r)) >= 0);
             const staff = rows.filter(r => r.type !== 'patient');
-            const headers = ['ลำดับ', 'ชื่อ-สกุล', 'HN', 'ตำแหน่ง', 'หน่วยงาน', 'กิจกรรม', 'หน้ากาก', 'วันสัมผัส', 'ชม.รวม', 'ระดับความเสี่ยง'];
+            const headers = ['ลำดับ', 'ชื่อ-สกุล', 'HN', 'ตำแหน่ง', 'หน่วยงาน', 'กิจกรรม', 'หน้ากาก', 'อาการ', 'วันสัมผัส', 'ชม.รวม', 'ระดับความเสี่ยง'];
             const data = staff.map((r, i) => {
                 const unitVal = (r.answers && (r.answers.unit || r.answers.ward)) || '';
                 const cset = contactSets(r);
                 const ri = computeRecordRisk(r);
                 const risk = !ri.hasData ? '-' : (ri.isClose ? 'เสี่ยงสูง' : 'เสี่ยงทั่วไป');
                 return [i + 1, r.name || '', r.hn || '', r.group || '', unitVal,
-                    cset.activities.join(', '), cset.masks.join(', '),
+                    cset.activities.join(', '), cset.masks.join(', '), symptomsOf(r),
                     ri.hasData ? ri.days : '-', ri.hasData ? ri.hours : '-', risk];
             });
             const unitLabel = selUnits.length ? selUnits.join(' / ') : 'ทุกหน่วยงาน';

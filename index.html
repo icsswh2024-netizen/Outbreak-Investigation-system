@@ -338,7 +338,8 @@
                         </div>
                     </div>
                 </div>
-                <div class="overflow-x-auto">
+                <div id="tbl-scroll-top" class="overflow-x-auto" style="overflow-y:hidden"><div id="tbl-scroll-top-inner" style="height:1px"></div></div>
+                <div id="tbl-scroll" class="overflow-x-auto">
                     <table class="w-full text-base text-left">
                         <thead class="text-sm text-slate-500 uppercase bg-slate-100 border-b border-slate-200">
                             <tr>
@@ -2033,6 +2034,7 @@
             tbody.querySelectorAll('.btn-edit').forEach(b => b.addEventListener('click', () => startEdit(b.getAttribute('data-id'))));
             tbody.querySelectorAll('.btn-del').forEach(b => b.addEventListener('click', () => deleteRecord(b.getAttribute('data-id'))));
             feather.replace();
+            if (typeof syncTopScrollbar === 'function') requestAnimationFrame(syncTopScrollbar);
             // หมายเหตุท้ายตาราง: รหัสกิจกรรม / ขนาดห้อง
             const legend = document.getElementById('tbl-legend');
             if (legend) {
@@ -2936,6 +2938,23 @@
         document.getElementById('btn-report-print').addEventListener('click', printReport);
         (function () { const b = document.getElementById('btn-list-print'); if (b) b.addEventListener('click', printContactList); })();
         (function () { const b = document.getElementById('btn-list-excel'); if (b) b.addEventListener('click', exportContactListExcel); })();
+        // แถบเลื่อนซ้าย-ขวาด้านบนของตาราง (ซิงก์กับตัวตารางด้านล่าง)
+        function syncTopScrollbar() {
+            const top = document.getElementById('tbl-scroll-top');
+            const inner = document.getElementById('tbl-scroll-top-inner');
+            const bottom = document.getElementById('tbl-scroll');
+            if (!top || !inner || !bottom) return;
+            const table = bottom.querySelector('table');
+            const w = table ? table.scrollWidth : bottom.scrollWidth;
+            inner.style.width = w + 'px';
+            top.style.display = w > bottom.clientWidth ? 'block' : 'none';
+            if (top.dataset.bound) return;
+            top.dataset.bound = '1';
+            let lock = false;
+            top.addEventListener('scroll', () => { if (lock) return; lock = true; bottom.scrollLeft = top.scrollLeft; lock = false; });
+            bottom.addEventListener('scroll', () => { if (lock) return; lock = true; top.scrollLeft = bottom.scrollLeft; lock = false; });
+            window.addEventListener('resize', syncTopScrollbar);
+        }
         (function () { const b = document.getElementById('btn-report-excel'); if (b) b.addEventListener('click', exportReportExcel); })();
 
         /* ============================================================

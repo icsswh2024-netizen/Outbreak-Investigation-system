@@ -1940,11 +1940,13 @@
                 </div>
                 ${card('รายชื่อที่ยังไม่ได้ตอบ (จำแนกตามหน่วยงาน)', 'user-x', remainHtml)}
                 ${card('กราฟเส้น: ชั่วโมงการสัมผัสรวมรายวัน (ตามช่วงวันที่)', 'trending-up', lineChartSVG(linePairs))}
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
                     ${card('กิจกรรมที่สัมผัส (มาก→น้อย)', 'activity', actRows.length ? barList(actRows, '#6366f1', 'activity') : '<div class="text-slate-400 text-sm">ยังไม่มีข้อมูล</div>')}
-                    ${card('ระยะเวลาที่สัมผัสต่อวัน (มาก→น้อย)', 'clock', durRows.length ? barList(durRows, '#f59e0b', 'duration') : '<div class="text-slate-400 text-sm">ยังไม่มีข้อมูล</div>')}
-                </div>
-                ${card('อาการที่พบ (มาก→น้อย)', 'thermometer', symRows.length ? barList(symRows, '#e11d48', 'symptom') : '<div class="text-slate-400 text-sm">ยังไม่มีข้อมูลอาการ</div>')}`;
+                    <div class="space-y-4">
+                        ${card('ระยะเวลาที่สัมผัสต่อวัน (มาก→น้อย)', 'clock', durRows.length ? barList(durRows, '#f59e0b', 'duration') : '<div class="text-slate-400 text-sm">ยังไม่มีข้อมูล</div>')}
+                        ${card('อาการที่พบ (มาก→น้อย)', 'thermometer', symRows.length ? barList(symRows, '#e11d48', 'symptom') : '<div class="text-slate-400 text-sm">ยังไม่มีข้อมูลอาการ</div>')}
+                    </div>
+                </div>`;
             feather.replace();
             // คลิกกราฟ → กรองรายชื่อผู้สัมผัส
             box.querySelectorAll('.chart-clk').forEach(el => el.addEventListener('click', () => {

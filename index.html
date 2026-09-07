@@ -3182,10 +3182,9 @@
             .pgno { position:absolute; right:38px; bottom:18px; font-size:11px; color:#94a3b8; }
             .foot { position:absolute; left:38px; bottom:18px; font-size:11px; color:#94a3b8; }
             @media print {
+                /* ทุกหน้าเหมือนกัน (รวมหน้าสรุป+ลงนาม) ความสูงคงที่ ไม่ล้นไปหน้าใหม่ที่ไม่มีหัวกระดาษ */
                 .pg { box-shadow:none; margin:0; border-radius:0; width:100%; min-height:auto;
                       height:196mm; padding:7mm 8mm 6mm; overflow:hidden; break-after:page; break-inside:avoid; }
-                /* หน้าลงชื่อ: ความสูงตามเนื้อหา (ไม่บังคับเต็มหน้า) เพื่อไม่ให้ส่วนลงนามล้นไปหน้าใหม่ และไม่ถูกตัดทิ้ง */
-                .pg.signpage { height:auto; min-height:0; overflow:visible; break-inside:avoid; }
                 .pg:last-child { break-after:auto; }
                 .pg::before { height:5px; }
             }

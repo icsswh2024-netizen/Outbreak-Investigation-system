@@ -2750,6 +2750,40 @@
             </tr>`;
         }
 
+        // แบ่งแถวตารางลงหน้าโดย "วัดความสูงจริง" ของแต่ละแถว (A4 แนวนอน)
+        // ทนต่อข้อมูลยาว/ตัดหลายบรรทัด — ไม่พึ่งจำนวนแถวคงที่
+        function paginateByHeight(rowHtmls, theadHtml) {
+            if (!rowHtmls.length) return [];
+            // พื้นที่ใช้งานจริงต่อหน้า (px) — อิงหน้าพิมพ์ 196mm ที่แคบกว่าพรีวิว จึงปลอดภัยทั้งคู่
+            const PAGE_USABLE = 690;   // ความสูงเนื้อหาตารางต่อหน้าปกติ
+            const FIRST_LESS = 185;    // หน้าแรกมี KPI + ชื่อหัวข้อ จึงเหลือน้อยกว่า
+            let heights = null, headH = 34;
+            try {
+                const wrap = document.createElement('div');
+                wrap.style.cssText = 'position:absolute;left:-99999px;top:0;width:1123px;visibility:hidden;padding:0 38px';
+                wrap.innerHTML = `<table class="rtab">${theadHtml}<tbody>${rowHtmls.join('')}</tbody></table>`;
+                document.body.appendChild(wrap);
+                const th = wrap.querySelector('thead');
+                if (th) headH = th.offsetHeight || headH;
+                heights = Array.from(wrap.querySelectorAll('tbody tr')).map(tr => tr.offsetHeight || 30);
+                document.body.removeChild(wrap);
+            } catch (e) { heights = null; }
+            // ถอยไปใช้จำนวนแถวคงที่ ถ้าวัดไม่ได้
+            if (!heights || heights.length !== rowHtmls.length) {
+                const out = []; let idx = 0;
+                while (idx < rowHtmls.length) { const n = out.length === 0 ? 8 : 12; out.push(rowHtmls.slice(idx, idx + n)); idx += n; }
+                return out;
+            }
+            const chunks = []; let cur = [], curH = 0;
+            for (let i = 0; i < rowHtmls.length; i++) {
+                const cap = (chunks.length === 0 ? PAGE_USABLE - FIRST_LESS : PAGE_USABLE) - headH;
+                if (cur.length && curH + heights[i] > cap) { chunks.push(cur); cur = []; curH = 0; }
+                cur.push(rowHtmls[i]); curH += heights[i];
+            }
+            if (cur.length) chunks.push(cur);
+            return chunks;
+        }
+
         function buildReport() {
             buildContactCodes();
             const selUnits = (typeof repSelectedUnits === 'function') ? repSelectedUnits() : [];
@@ -2823,17 +2857,17 @@
                     <div class="kpi"><div class="n">${maxH}</div><div class="t">ชม.สัมผัสสูงสุด</div></div>
                     <div class="kpi"><div class="n">${patient.length}</div><div class="t">ผู้ป่วยในระบบ (ราย)</div></div>
                 </div>`;
-            const ROWS_FIRST = 8, ROWS_REST = 12;
-            const chunks = [];
-            if (!staff.length) chunks.push('');
-            else { let idx = 0; while (idx < staff.length) { const n = chunks.length === 0 ? ROWS_FIRST : ROWS_REST; chunks.push(staff.slice(idx, idx + n)); idx += n; } }
-            const tablePagesCount = chunks.length;
+            // สร้าง HTML ของทุกแถวไว้ก่อน (เลขลำดับต่อเนื่อง) เพื่อวัดความสูงจริง
+            const rowHtmls = staff.map((r, i) => repStaffRow(r, i));
+            // แบ่งหน้าแบบ "วัดความสูงจริง" — ทนต่อข้อมูลยาว/ตัดหลายบรรทัดในอนาคต
+            // (ถ้าวัดไม่ได้ เช่นยังไม่มี DOM จะถอยไปใช้จำนวนแถวคงที่)
+            const chunks = paginateByHeight(rowHtmls, tHead);
+            const tablePagesCount = chunks.length || 1;
             const totalPages = tablePagesCount + 1;
 
-            let seq = 0;
-            const tablePages = chunks.map((chunk, ci) => {
+            const tablePages = (chunks.length ? chunks : [[]]).map((chunk, ci) => {
                 const body = staff.length
-                    ? chunk.map(r => repStaffRow(r, seq++)).join('')
+                    ? chunk.join('')
                     : `<tr><td class="c" colspan="11" style="color:#94a3b8">ไม่มีข้อมูลเจ้าหน้าที่</td></tr>`;
                 const contd = ci > 0 ? ' (ต่อ)' : '';
                 const actLegend = (ci === tablePagesCount - 1 && Object.keys(ACT_CODE).length)

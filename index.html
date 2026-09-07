@@ -2754,29 +2754,28 @@
         // ทนต่อข้อมูลยาว/ตัดหลายบรรทัด — ไม่พึ่งจำนวนแถวคงที่
         function paginateByHeight(rowHtmls, theadHtml) {
             if (!rowHtmls.length) return [];
-            // พื้นที่ใช้งานจริงต่อหน้า (px) — อิงหน้าพิมพ์ 196mm ที่แคบกว่าพรีวิว จึงปลอดภัยทั้งคู่
-            const PAGE_USABLE = 690;   // ความสูงเนื้อหาตารางต่อหน้าปกติ
-            const FIRST_LESS = 185;    // หน้าแรกมี KPI + ชื่อหัวข้อ จึงเหลือน้อยกว่า
-            let heights = null, headH = 34;
+            // พื้นที่ "แถวตาราง (tbody)" ที่ใส่ได้จริงต่อหน้า (px) — อิงหน้าพิมพ์ A4 นอน 196mm
+            // (หักหัวกระดาษ/หัวตาราง/ท้ายกระดาษออกแล้ว) หน้าแรกมี KPI จึงเหลือน้อยกว่า
+            const REST_CAP = 470;   // หน้าปกติ (เผื่อหมายเหตุท้ายหน้าสุดท้าย)
+            const FIRST_CAP = 345;  // หน้าแรก (มีการ์ด KPI)
+            let heights = null;
             try {
                 const wrap = document.createElement('div');
-                wrap.style.cssText = 'position:absolute;left:-99999px;top:0;width:1123px;visibility:hidden;padding:0 38px';
+                wrap.style.cssText = 'position:absolute;left:-99999px;top:0;width:1047px;visibility:hidden';
                 wrap.innerHTML = `<table class="rtab">${theadHtml}<tbody>${rowHtmls.join('')}</tbody></table>`;
                 document.body.appendChild(wrap);
-                const th = wrap.querySelector('thead');
-                if (th) headH = th.offsetHeight || headH;
                 heights = Array.from(wrap.querySelectorAll('tbody tr')).map(tr => tr.offsetHeight || 30);
                 document.body.removeChild(wrap);
             } catch (e) { heights = null; }
             // ถอยไปใช้จำนวนแถวคงที่ ถ้าวัดไม่ได้
             if (!heights || heights.length !== rowHtmls.length) {
                 const out = []; let idx = 0;
-                while (idx < rowHtmls.length) { const n = out.length === 0 ? 8 : 12; out.push(rowHtmls.slice(idx, idx + n)); idx += n; }
+                while (idx < rowHtmls.length) { const n = out.length === 0 ? 7 : 11; out.push(rowHtmls.slice(idx, idx + n)); idx += n; }
                 return out;
             }
             const chunks = []; let cur = [], curH = 0;
             for (let i = 0; i < rowHtmls.length; i++) {
-                const cap = (chunks.length === 0 ? PAGE_USABLE - FIRST_LESS : PAGE_USABLE) - headH;
+                const cap = (chunks.length === 0 ? FIRST_CAP : REST_CAP);
                 if (cur.length && curH + heights[i] > cap) { chunks.push(cur); cur = []; curH = 0; }
                 cur.push(rowHtmls[i]); curH += heights[i];
             }

@@ -356,6 +356,10 @@
                                 <th class="px-6 py-4 whitespace-nowrap font-semibold tracking-wider">อาการ</th>
                                 <th class="px-6 py-4 whitespace-nowrap font-semibold tracking-wider">ชม./เดือน</th>
                                 <th class="px-6 py-4 whitespace-nowrap font-semibold tracking-wider">ระดับความเสี่ยง</th>
+                                <th class="px-6 py-4 whitespace-nowrap font-semibold tracking-wider">Chest X-ray</th>
+                                <th class="px-6 py-4 whitespace-nowrap font-semibold tracking-wider">Sputum AFB</th>
+                                <th class="px-6 py-4 whitespace-nowrap font-semibold tracking-wider">TST</th>
+                                <th class="px-6 py-4 whitespace-nowrap font-semibold tracking-wider">LAB</th>
                                 <th class="px-6 py-4 whitespace-nowrap font-semibold tracking-wider text-right">รายละเอียด</th>
                             </tr>
                         </thead>
@@ -537,6 +541,24 @@
             <div class="px-6 py-4 border-t border-slate-200 bg-slate-50 flex justify-end gap-3">
                 <button onclick="closeComment()" class="px-5 py-2 rounded-lg border border-slate-300 bg-white text-slate-600 hover:bg-slate-100 text-base font-medium">ยกเลิก</button>
                 <button id="btn-save-comment" class="bg-gradient-to-r from-indigo-500 to-violet-600 hover:from-indigo-600 hover:to-violet-700 text-white px-5 py-2 rounded-lg text-base font-semibold flex items-center shadow-sm"><i data-feather="save" class="w-4 h-4 mr-2"></i> บันทึก</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: บันทึกผลตรวจทางห้องปฏิบัติการ (แอดมิน) -->
+    <div id="lab-modal" class="fixed inset-0 z-[60] hidden items-center justify-center bg-slate-900/50 backdrop-blur-sm fade-in p-4">
+        <div class="bg-white rounded-2xl shadow-[0_15px_40px_rgba(0,0,0,0.2)] w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-200 flex justify-between items-center bg-teal-50">
+                <h3 class="text-xl font-bold text-slate-800 flex items-center"><i data-feather="clipboard" class="w-5 h-5 mr-2 text-teal-600"></i> บันทึกผลตรวจ — <span id="lab-name" class="ml-1 text-teal-700"></span></h3>
+                <button onclick="closeLabModal()" class="text-slate-400 hover:text-slate-700"><i data-feather="x" class="w-6 h-6"></i></button>
+            </div>
+            <div class="p-6 overflow-y-auto space-y-4">
+                <p class="text-sm text-slate-400">เพิ่มได้หลายครั้งต่อรายการตรวจ แต่ละครั้งเลือกวันที่และผล (+ / - / n/a)</p>
+                <div id="lab-body" class="space-y-4"></div>
+            </div>
+            <div class="px-6 py-4 border-t border-slate-200 bg-slate-50 flex justify-end gap-3">
+                <button onclick="closeLabModal()" class="px-5 py-2 rounded-lg border border-slate-300 bg-white text-slate-600 hover:bg-slate-100 text-base font-medium">ยกเลิก</button>
+                <button id="btn-save-lab" class="bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 text-white px-5 py-2 rounded-lg text-base font-semibold flex items-center shadow-sm"><i data-feather="save" class="w-4 h-4 mr-2"></i> บันทึกผลตรวจ</button>
             </div>
         </div>
     </div>
@@ -1756,6 +1778,121 @@
             if (a.symptomOther) arr.push(String(a.symptomOther));
             return arr.map(x => String(x).trim()).indexOf(v) >= 0;
         }
+
+        /* ===== ผลตรวจทางห้องปฏิบัติการ (แอดมินบันทึกรายคน หลายครั้ง ผล +/-/na) ===== */
+        const LAB_TESTS = [
+            { key: 'cxr', label: 'Chest X-ray' },
+            { key: 'afb', label: 'Sputum AFB' },
+            { key: 'tst', label: 'TST' },
+            { key: 'lab', label: 'LAB' }
+        ];
+        const LAB_RESULTS = ['+', '-', 'na'];
+        function recordLabs(rec) {
+            const L = rec && rec.labs && typeof rec.labs === 'object' ? rec.labs : {};
+            const out = {};
+            LAB_TESTS.forEach(t => { out[t.key] = Array.isArray(L[t.key]) ? L[t.key] : []; });
+            return out;
+        }
+        function labResultBadge(res) {
+            const r = String(res || '').trim();
+            if (r === '+') return '<span class="inline-block px-1.5 rounded font-bold bg-rose-100 text-rose-700">+</span>';
+            if (r === '-') return '<span class="inline-block px-1.5 rounded font-bold bg-emerald-100 text-emerald-700">-</span>';
+            if (r === 'na') return '<span class="inline-block px-1.5 rounded bg-slate-100 text-slate-500">n/a</span>';
+            return '<span class="text-slate-400">-</span>';
+        }
+        // สรุปผลตรวจของ 1 test เป็น HTML (ครั้งที่ N (วันที่) ผล)
+        function labCellHtml(rec, key) {
+            const rounds = recordLabs(rec)[key];
+            if (!rounds.length) return '<span class="text-slate-300">-</span>';
+            return rounds.map((r, i) => `<div class="whitespace-nowrap">ครั้งที่ ${i + 1}${r.date ? ' (' + escHtml(r.date) + ')' : ''}: ${labResultBadge(r.result)}</div>`).join('');
+        }
+        // สรุปผลตรวจเป็นข้อความล้วน (สำหรับ Excel/พิมพ์)
+        function labCellText(rec, key) {
+            const rounds = recordLabs(rec)[key];
+            if (!rounds.length) return '-';
+            return rounds.map((r, i) => `ครั้งที่ ${i + 1}${r.date ? ' (' + r.date + ')' : ''}: ${r.result || '-'}`).join(' | ');
+        }
+
+        // ----- Modal บันทึกผลตรวจ -----
+        let labEditId = null;
+        let labDraft = {}; // {cxr:[{date,result}], ...}
+        function renderLabBody() {
+            const box = document.getElementById('lab-body');
+            if (!box) return;
+            box.innerHTML = LAB_TESTS.map(t => {
+                const rounds = labDraft[t.key] || [];
+                const rows = rounds.map((r, i) => `
+                    <div class="flex items-center gap-2 flex-wrap" data-test="${t.key}" data-idx="${i}">
+                        <span class="text-sm text-slate-500 w-16">ครั้งที่ ${i + 1}</span>
+                        <input type="date" class="lab-date text-base rounded-lg border border-slate-300 bg-white px-2 py-1.5" value="${escAttr(r.date || '')}">
+                        <select class="lab-result text-base rounded-lg border border-slate-300 bg-white px-2 py-1.5">
+                            ${LAB_RESULTS.map(v => `<option value="${v}" ${r.result === v ? 'selected' : ''}>${v === 'na' ? 'n/a' : v}</option>`).join('')}
+                        </select>
+                        <button type="button" class="lab-del text-rose-500 hover:text-rose-700" title="ลบครั้งนี้"><i data-feather="trash-2" class="w-4 h-4"></i></button>
+                    </div>`).join('') || '<div class="text-sm text-slate-300 pl-16">— ยังไม่มีผล —</div>';
+                return `<div class="border border-slate-200 rounded-xl p-3">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="font-semibold text-slate-700">${t.label}</div>
+                        <button type="button" class="lab-add text-teal-600 hover:text-teal-800 text-sm font-medium inline-flex items-center" data-test="${t.key}"><i data-feather="plus" class="w-4 h-4 mr-1"></i> เพิ่มครั้ง</button>
+                    </div>
+                    <div class="space-y-2">${rows}</div>
+                </div>`;
+            }).join('');
+            // sync draft ก่อน rerender: อ่านค่าปัจจุบันกลับเข้า labDraft ทุกครั้งที่ผู้ใช้แก้
+            box.querySelectorAll('.lab-add').forEach(b => b.addEventListener('click', () => { syncLabDraft(); labDraft[b.getAttribute('data-test')].push({ date: '', result: 'na' }); renderLabBody(); }));
+            box.querySelectorAll('.lab-del').forEach(b => b.addEventListener('click', () => {
+                syncLabDraft();
+                const row = b.closest('[data-test]'); const k = row.getAttribute('data-test'); const i = +row.getAttribute('data-idx');
+                labDraft[k].splice(i, 1); renderLabBody();
+            }));
+            feather.replace();
+        }
+        function syncLabDraft() {
+            const box = document.getElementById('lab-body');
+            if (!box) return;
+            LAB_TESTS.forEach(t => { labDraft[t.key] = []; });
+            box.querySelectorAll('[data-test][data-idx]').forEach(row => {
+                const k = row.getAttribute('data-test');
+                const date = (row.querySelector('.lab-date') || {}).value || '';
+                const result = (row.querySelector('.lab-result') || {}).value || 'na';
+                labDraft[k].push({ date: date, result: result });
+            });
+        }
+        function openLabModal(id) {
+            const rec = records.find(r => String(r.id) === String(id));
+            if (!rec) return;
+            labEditId = rec.id;
+            const src = recordLabs(rec);
+            labDraft = {}; LAB_TESTS.forEach(t => { labDraft[t.key] = (src[t.key] || []).map(x => ({ date: x.date || '', result: x.result || 'na' })); });
+            document.getElementById('lab-name').textContent = rec.name || '-';
+            renderLabBody();
+            const m = document.getElementById('lab-modal');
+            m.classList.remove('hidden'); m.classList.add('flex');
+            feather.replace();
+        }
+        function closeLabModal() {
+            const m = document.getElementById('lab-modal');
+            m.classList.add('hidden'); m.classList.remove('flex');
+            labEditId = null;
+        }
+        (function () {
+            const b = document.getElementById('btn-save-lab');
+            if (b) b.addEventListener('click', () => {
+                if (labEditId == null) return;
+                syncLabDraft();
+                const idx = records.findIndex(r => String(r.id) === String(labEditId));
+                if (idx < 0) return;
+                // เก็บเฉพาะ test ที่มีข้อมูล
+                const labs = {};
+                LAB_TESTS.forEach(t => { if ((labDraft[t.key] || []).length) labs[t.key] = labDraft[t.key]; });
+                records[idx] = Object.assign({}, records[idx], { labs: labs });
+                saveRecords();
+                serverSubmit(records[idx]); // upsert ลงชีต
+                closeLabModal();
+                renderAdminTable();
+                showModal('บันทึกผลตรวจแล้ว', 'อัปเดตผลตรวจทางห้องปฏิบัติการเรียบร้อย' + (USE_SERVER ? ' (ทุกเครื่อง)' : ''), false);
+            });
+        })();
         function recordOnDate(rec, iso) {
             const ans = rec.answers || {}; let pv = null;
             Object.keys(ans).forEach(k => { if (isPatternObj(ans[k])) pv = ans[k]; });
@@ -2017,7 +2154,7 @@
             if (cnt) cnt.textContent = `แสดง ${filtered.length} / ${records.length} รายการ`;
 
             if (filtered.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="14" class="px-6 py-8 text-center text-slate-500 text-lg">${records.length ? 'ไม่พบข้อมูลตามตัวกรอง' : 'ไม่มีข้อมูลการบันทึก'}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="18" class="px-6 py-8 text-center text-slate-500 text-lg">${records.length ? 'ไม่พบข้อมูลตามตัวกรอง' : 'ไม่มีข้อมูลการบันทึก'}</td></tr>`;
                 return;
             }
 
@@ -2054,9 +2191,14 @@
                     <td class="px-6 py-5 whitespace-nowrap text-slate-700 font-medium">${actCode}</td>${cell(cset.masks.join(', ') || '-')}${cell(cset.durations.join(', ') || '-')}<td class="px-6 py-5 whitespace-nowrap text-slate-700 font-medium">${roomCode}</td>${cell(symptomsOf(record))}
                     <td class="px-6 py-5 whitespace-nowrap text-slate-700">${riskInfo.hasData ? riskInfo.hours + ' ชม.' : '-'}</td>
                     <td class="px-6 py-5 whitespace-nowrap">${riskDisplay}</td>
+                    <td class="px-6 py-4 text-sm text-slate-600">${labCellHtml(record, 'cxr')}</td>
+                    <td class="px-6 py-4 text-sm text-slate-600">${labCellHtml(record, 'afb')}</td>
+                    <td class="px-6 py-4 text-sm text-slate-600">${labCellHtml(record, 'tst')}</td>
+                    <td class="px-6 py-4 text-sm text-slate-600">${labCellHtml(record, 'lab')}</td>
                     <td class="px-6 py-5 whitespace-nowrap text-right">
                         <div class="inline-flex items-center gap-3">
                             <button class="btn-detail text-blue-600 hover:text-blue-800 font-medium inline-flex items-center" data-id="${record.id}" title="ดูรายละเอียด"><i data-feather="eye" class="w-4 h-4 mr-1"></i> ดู</button>
+                            <button class="btn-lab text-teal-600 hover:text-teal-800 font-medium inline-flex items-center" data-id="${record.id}" title="บันทึกผลตรวจ"><i data-feather="clipboard" class="w-4 h-4 mr-1"></i> ผลตรวจ</button>
                             <button class="btn-edit text-amber-600 hover:text-amber-800 font-medium inline-flex items-center" data-id="${record.id}" title="แก้ไข"><i data-feather="edit-2" class="w-4 h-4 mr-1"></i> แก้ไข</button>
                             <button class="btn-del text-rose-600 hover:text-rose-800 font-medium inline-flex items-center" data-id="${record.id}" title="ลบ"><i data-feather="trash-2" class="w-4 h-4 mr-1"></i> ลบ</button>
                         </div>
@@ -2065,6 +2207,7 @@
             });
 
             tbody.querySelectorAll('.btn-detail').forEach(b => b.addEventListener('click', () => showDetail(b.getAttribute('data-id'))));
+            tbody.querySelectorAll('.btn-lab').forEach(b => b.addEventListener('click', () => openLabModal(b.getAttribute('data-id'))));
             tbody.querySelectorAll('.btn-edit').forEach(b => b.addEventListener('click', () => startEdit(b.getAttribute('data-id'))));
             tbody.querySelectorAll('.btn-del').forEach(b => b.addEventListener('click', () => deleteRecord(b.getAttribute('data-id'))));
             feather.replace();
@@ -2825,7 +2968,7 @@
         function exportContactListExcel() {
             buildContactCodes();
             const rows = records.filter(passAdminFilters);
-            const headers = ['ลำดับ', 'วันที่บันทึก', 'ชื่อ-นามสกุล', 'HN', 'กลุ่ม/ตำแหน่ง', 'หน่วยงาน', 'กิจกรรม', 'หน้ากาก', 'ระยะเวลา', 'ขนาดห้อง', 'อาการ', 'ชั่วโมงรวม', 'ระดับความเสี่ยง'];
+            const headers = ['ลำดับ', 'วันที่บันทึก', 'ชื่อ-นามสกุล', 'HN', 'กลุ่ม/ตำแหน่ง', 'หน่วยงาน', 'กิจกรรม', 'หน้ากาก', 'ระยะเวลา', 'ขนาดห้อง', 'อาการ', 'ชั่วโมงรวม', 'ระดับความเสี่ยง', 'Chest X-ray', 'Sputum AFB', 'TST', 'LAB'];
             const data = rows.map((r, i) => {
                 const unitVal = (r.answers && (r.answers.unit || r.answers.ward)) || '';
                 const cset = contactSets(r);
@@ -2833,7 +2976,8 @@
                 const risk = !ri.hasData ? '-' : (ri.isClose ? 'เสี่ยงสูง (Close Contact)' : 'เสี่ยงทั่วไป');
                 return [i + 1, r.date || '', r.name || '', r.hn || '', r.group || '', unitVal,
                     cset.activities.join(', '), cset.masks.join(', '), cset.durations.join(', '),
-                    cset.rooms.join(', '), symptomsOf(r), ri.hasData ? ri.hours : '-', risk];
+                    cset.rooms.join(', '), symptomsOf(r), ri.hasData ? ri.hours : '-', risk,
+                    labCellText(r, 'cxr'), labCellText(r, 'afb'), labCellText(r, 'tst'), labCellText(r, 'lab')];
             });
             exportToExcel(`ContactList-${isoToday()}.xls`, headers, data, `รายชื่อผู้สัมผัส (Contact List) — จำนวน ${rows.length} ราย`);
         }

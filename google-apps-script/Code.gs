@@ -13,6 +13,8 @@ var SHEET_DATA = 'ข้อมูลแบบสอบถาม';
 var SHEET_SCHEMA = 'การจัดการแบบสอบถาม';      // เก็บ JSON สำรอง (A2)
 var SHEET_STRUCT = 'โครงสร้างแบบสอบถาม';      // ตารางแก้ไขคำถามแบบมือ (source of truth)
 var META_COLS = ['เวลาบันทึก', 'id', 'ประเภท', 'ชื่อ-สกุล', 'HN', 'กลุ่ม/ตำแหน่ง', 'สถานะ'];
+// คอลัมน์ผลตรวจทางห้องปฏิบัติการ (แอดมินบันทึกรายคน) — วางก่อน _JSON
+var LAB_COLS = [['cxr', 'Chest X-ray'], ['afb', 'Sputum AFB'], ['tst', 'TST'], ['lab', 'LAB']];
 
 // ★ ถ้าสคริปต์ไม่ได้ผูกกับชีต (สร้างแบบ standalone) ให้วาง ID ของ Google Sheet ที่นี่
 //   ID คือส่วนระหว่าง /d/ กับ /edit ใน URL ของชีต เช่น
@@ -210,8 +212,17 @@ function flatten(v) {
 }
 
 // ให้แถวหัวตารางครบตาม schema (เพิ่ม/ปรับอัตโนมัติเมื่อ schema เปลี่ยน)
+// แปลงผลตรวจ 1 test เป็นข้อความ: "ครั้งที่ 1 (วันที่): + | ครั้งที่ 2 ..."
+function labText(rounds) {
+  if (!rounds || !rounds.length) return '';
+  return rounds.map(function (r, i) {
+    return 'ครั้งที่ ' + (i + 1) + (r.date ? ' (' + r.date + ')' : '') + ': ' + (r.result || '-');
+  }).join(' | ');
+}
+
 function ensureHeader(sh, cols) {
-  var need = META_COLS.concat(cols.map(function (c) { return c.label; })).concat(['_JSON']);
+  var need = META_COLS.concat(cols.map(function (c) { return c.label; }))
+    .concat(LAB_COLS.map(function (c) { return c[1]; })).concat(['_JSON']);
   var lastCol = sh.getLastColumn();
   var cur = lastCol > 0 ? sh.getRange(1, 1, 1, lastCol).getValues()[0] : [];
   var ok = cur.length === need.length && need.every(function (h, i) { return cur[i] === h; });
@@ -239,6 +250,8 @@ function appendRecord(rec) {
     rec.status || ''
   ];
   cols.forEach(function (c) { row.push(flatten(ans[c.id])); });
+  var labs = (rec.labs && typeof rec.labs === 'object') ? rec.labs : {};
+  LAB_COLS.forEach(function (c) { row.push(labText(labs[c[0]])); });
   row.push(JSON.stringify(rec)); // เก็บ JSON เต็มไว้ให้เว็บแอปอ่านกลับได้ครบ
   // Upsert: ถ้ามีแถว id เดิมอยู่แล้ว (กรณีแก้ไข) ให้เขียนทับแถวนั้นแบบ atomic
   // แทนการลบก่อนแล้วเพิ่มใหม่ ป้องกันข้อมูลหายถ้าการเพิ่มไม่สำเร็จ

@@ -615,6 +615,12 @@
         const API_URL = 'https://script.google.com/macros/s/AKfycbyfciwFmknrZC7D_ZFC9dpElvaZChBpausXNeNJoWpEeW7HX44biyuA-EzvkH1T9pnQ/exec'; // Google Sheets Web App
         const USE_SERVER = !!API_URL;
 
+        // เปิดหน้าต่าง Comment อยู่หรือไม่ (กันการรีเฟรชพื้นหลังมาล้างข้อความที่กำลังพิมพ์)
+        function commentModalOpen() {
+            const m = document.getElementById('comment-modal');
+            return m && !m.classList.contains('hidden');
+        }
+
         // อ่านข้อมูลผ่าน JSONP (เลี่ยง CORS ของ GAS)
         function serverLoad() {
             if (!USE_SERVER) return Promise.resolve();
@@ -646,7 +652,7 @@
                 logoList = data.logo;
                 try { localStorage.setItem('oi-logolist', JSON.stringify(logoList)); } catch (e) {}
                 try { applySiteLogo(); } catch (e) {}
-                if (!document.getElementById('view-admin').classList.contains('hidden')) { try { renderRepMetaForm(); } catch (e) {} }
+                if (!document.getElementById('view-admin').classList.contains('hidden') && !commentModalOpen()) { try { renderRepMetaForm(); } catch (e) {} }
             }
             // แท็บ "การจัดการแบบสอบถาม": มีบนชีต -> ใช้; ยังว่าง -> เติม schema ปัจจุบันขึ้นไป
             if (data && data.schema) {
@@ -680,11 +686,11 @@
                 }
                 if (data.settings.reportNotes) {
                     try { localStorage.setItem('oi-repnotes', JSON.stringify(data.settings.reportNotes)); } catch (e) {}
-                    if (typeof renderRepNotesForm === 'function' && !document.getElementById('view-admin').classList.contains('hidden')) renderRepNotesForm();
+                    if (typeof renderRepNotesForm === 'function' && !document.getElementById('view-admin').classList.contains('hidden') && !commentModalOpen()) renderRepNotesForm();
                 }
                 if (data.settings.reportMeta) {
                     try { localStorage.setItem('oi-repmeta', JSON.stringify(data.settings.reportMeta)); } catch (e) {}
-                    if (typeof renderRepMetaForm === 'function' && !document.getElementById('view-admin').classList.contains('hidden')) renderRepMetaForm();
+                    if (typeof renderRepMetaForm === 'function' && !document.getElementById('view-admin').classList.contains('hidden') && !commentModalOpen()) renderRepMetaForm();
                 }
             }
             renderForm('staff'); renderForm('patient');

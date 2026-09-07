@@ -2537,7 +2537,7 @@
                     <div class="kpi"><div class="n">${maxH}</div><div class="t">ชม.สัมผัสสูงสุด</div></div>
                     <div class="kpi"><div class="n">${patient.length}</div><div class="t">ผู้ป่วยในระบบ (ราย)</div></div>
                 </div>`;
-            const ROWS_FIRST = 15, ROWS_REST = 21;
+            const ROWS_FIRST = 11, ROWS_REST = 16;
             const chunks = [];
             if (!staff.length) chunks.push('');
             else { let idx = 0; while (idx < staff.length) { const n = chunks.length === 0 ? ROWS_FIRST : ROWS_REST; chunks.push(staff.slice(idx, idx + n)); idx += n; } }
@@ -2571,7 +2571,7 @@
             const manageBul = toBullets(notes.manage) || '<li>-</li>';
 
             const page2 = `
-              <section class="pg pdf-page">
+              <section class="pg pdf-page signpage">
                 ${headBlock}
                 <div class="sech">สรุปผลการสอบสวน</div>
                 <div class="cols">
@@ -2863,7 +2863,9 @@
             .foot { position:absolute; left:38px; bottom:18px; font-size:11px; color:#94a3b8; }
             @media print {
                 .pg { box-shadow:none; margin:0; border-radius:0; width:100%; min-height:auto;
-                      height:190mm; padding:8mm 8mm 6mm; overflow:hidden; break-after:page; break-inside:avoid; }
+                      height:196mm; padding:7mm 8mm 6mm; overflow:hidden; break-after:page; break-inside:avoid; }
+                /* หน้าลงชื่อ: ปล่อยความสูงตามเนื้อหา ไม่ตัดส่วนลงนามทิ้ง */
+                .pg.signpage { height:auto; min-height:196mm; overflow:visible; }
                 .pg:last-child { break-after:auto; }
                 .pg::before { height:5px; }
             }

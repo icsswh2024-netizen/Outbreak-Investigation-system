@@ -289,6 +289,7 @@ function readRoster() {
   var cFirst = find(['ชื่อ']), cLast = find(['นามสกุล', 'สกุล']);
   var cPre = find(['คำนำหน้า']), cPos = find(['ตำแหน่ง', 'ตำแหน่งการพยาบาล']);
   var cUnit = find(['หน่วยงาน', 'หน่วย']);
+  var cStatus = find(['status', 'สถานะ', 'สถานะการปฏิบัติงาน']);
   var out = [];
   for (var r = 1; r < vals.length; r++) {
     var row = vals[r];
@@ -300,7 +301,8 @@ function readRoster() {
       prefix: cPre >= 0 ? String(row[cPre] || '').trim() : '',
       name: name,
       position: cPos >= 0 ? String(row[cPos] || '').trim() : '',
-      unit: cUnit >= 0 ? String(row[cUnit] || '').trim() : ''
+      unit: cUnit >= 0 ? String(row[cUnit] || '').trim() : '',
+      status: cStatus >= 0 ? String(row[cStatus] || '').trim() : ''
     });
   }
   return out;

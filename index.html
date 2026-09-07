@@ -1855,9 +1855,14 @@
                 + `<tr class="font-bold bg-slate-50"><td class="py-1.5">รวม</td><td class="text-center">${total}</td><td class="text-center text-emerald-700">${responded}</td><td class="text-center text-rose-700">${total - responded}</td><td class="text-center">${pct}%</td></tr></tbody></table>`;
 
             const remainByUnit = {};
-            remaining.forEach(p => { const u = p.unit || 'ไม่ระบุหน่วยงาน'; (remainByUnit[u] = remainByUnit[u] || []).push((p.prefix || '') + p.name); });
+            remaining.forEach(p => { const u = p.unit || 'ไม่ระบุหน่วยงาน'; (remainByUnit[u] = remainByUnit[u] || []).push(p); });
+            const nameChip = p => {
+                const nm = escHtml((p.prefix || '') + p.name);
+                const st = (p.status || '').trim();
+                return st ? `${nm} <span class="text-rose-600 font-medium">(${escHtml(st)})</span>` : nm;
+            };
             const remainHtml = Object.keys(remainByUnit).length
-                ? Object.keys(remainByUnit).sort().map(u => `<div class="mb-2"><div class="text-sm font-semibold text-slate-700">${escHtml(u)} (${remainByUnit[u].length})</div><div class="text-sm text-slate-500">${remainByUnit[u].map(escHtml).join(' · ')}</div></div>`).join('')
+                ? Object.keys(remainByUnit).sort().map(u => `<div class="mb-2"><div class="text-sm font-semibold text-slate-700">${escHtml(u)} (${remainByUnit[u].length})</div><div class="text-sm text-slate-500">${remainByUnit[u].map(nameChip).join(' · ')}</div></div>`).join('')
                 : '<div class="text-emerald-600 text-sm">ตอบครบทุกคนแล้ว 🎉</div>';
 
             // ---- ชั่วโมงการสัมผัสรายวัน (กราฟเส้น) ----

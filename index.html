@@ -2433,12 +2433,17 @@
                 ? '<span class="st-watch">เฝ้าระวัง</span>'
                 : `<span class="st-ok">${repEsc(r.status || 'ปกติ')}</span>`;
             const unitVal = (r.answers && (r.answers.unit || r.answers.ward)) || '-';
+            const cset = contactSets(r);
+            const actCode = cset.activities.map(a => ACT_CODE[a] || a).join(', ') || '-';
+            const maskVal = cset.masks.join(', ') || '-';
             return `<tr>
                 <td class="c">${i + 1}</td>
                 <td>${repEsc(r.name || '-')}</td>
                 <td class="c">${repEsc(r.hn || '-')}</td>
                 <td>${repEsc(r.group || '-')}</td>
                 <td>${repEsc(unitVal)}</td>
+                <td class="c">${repEsc(actCode)}</td>
+                <td>${repEsc(maskVal)}</td>
                 <td class="c">${ri.hasData ? ri.days : '-'}</td>
                 <td class="c">${ri.hasData ? ri.hours : '-'}</td>
                 <td class="c">${badge}</td>
@@ -2446,6 +2451,7 @@
         }
 
         function buildReport() {
+            buildContactCodes();
             const selUnits = (typeof repSelectedUnits === 'function') ? repSelectedUnits() : [];
             const unit = selUnits.length ? selUnits.join(' / ') : 'ทุกหน่วยงาน';
             let rows = repCollect();
@@ -2480,7 +2486,7 @@
                     <div>${nameLine}</div>
                     <div class="role">${title}</div>
                     ${posLine}${groupLine}
-                    <div class="role">วันที่ ......... / ......... / .........</div>
+                    <div class="role">${repThaiToday()}</div>
                 </div>`;
             };
 
@@ -2502,9 +2508,10 @@
                 </div>`;
 
             const tHead = `<thead><tr>
-                        <th class="nowrap" style="width:6%">ลำดับ</th><th style="width:22%">ชื่อ-สกุล</th><th style="width:10%">HN</th>
-                        <th style="width:18%">ตำแหน่ง</th><th style="width:17%">หน่วยงาน</th><th class="nowrap" style="width:9%">วันสัมผัส</th>
-                        <th class="nowrap" style="width:8%">ชม.รวม</th><th style="width:10%">ความเสี่ยง</th>
+                        <th class="nowrap" style="width:5%">ลำดับ</th><th style="width:18%">ชื่อ-สกุล</th><th style="width:8%">HN</th>
+                        <th style="width:14%">ตำแหน่ง</th><th style="width:14%">หน่วยงาน</th>
+                        <th style="width:9%">กิจกรรม</th><th style="width:10%">หน้ากาก</th>
+                        <th class="nowrap" style="width:7%">วันสัมผัส</th><th class="nowrap" style="width:6%">ชม.รวม</th><th style="width:9%">ความเสี่ยง</th>
                     </tr></thead>`;
 
             // แบ่งตารางเจ้าหน้าที่เป็นหลายหน้า (หน้าแรกมี KPI จึงใส่ได้น้อยกว่า)
@@ -2525,14 +2532,17 @@
             const tablePages = chunks.map((chunk, ci) => {
                 const body = staff.length
                     ? chunk.map(r => repStaffRow(r, seq++)).join('')
-                    : `<tr><td class="c" colspan="8" style="color:#94a3b8">ไม่มีข้อมูลเจ้าหน้าที่</td></tr>`;
+                    : `<tr><td class="c" colspan="10" style="color:#94a3b8">ไม่มีข้อมูลเจ้าหน้าที่</td></tr>`;
                 const contd = ci > 0 ? ' (ต่อ)' : '';
+                const actLegend = (ci === tablePagesCount - 1 && Object.keys(ACT_CODE).length)
+                    ? `<div style="font-size:10.5px;color:#475569;margin-top:8px;line-height:1.7"><b>หมายเหตุ · รหัสกิจกรรม:</b> ${Object.keys(ACT_CODE).map(k => `${repEsc(ACT_CODE[k])} = ${repEsc(k)}`).join(' &nbsp;·&nbsp; ')}</div>` : '';
                 return `
               <section class="pg pdf-page">
                 ${headBlock}
                 ${ci === 0 ? kpis : ''}
                 <div class="sech">รายชื่อเจ้าหน้าที่ผู้สัมผัส (${staff.length} ราย)${contd}</div>
                 <table class="rtab">${tHead}<tbody>${body}</tbody></table>
+                ${actLegend}
                 <div class="foot">รพ.ศรีสังวรสุโขทัย • IPC/ICN</div>
                 <div class="pgno">หน้า ${ci + 1}/${totalPages}</div>
               </section>`;

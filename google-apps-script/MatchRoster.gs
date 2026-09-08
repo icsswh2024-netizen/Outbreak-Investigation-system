@@ -40,18 +40,18 @@ function onOpen() {
     .createMenu('🩺 แมตรายชื่อ')
     .addItem('แมตรายชื่อจริง → ข้อมูลแบบสอบถาม', 'matchRoster');
   // เพิ่มเมนูเติม HN + เมนูรวม ถ้ามีสคริปต์ FillRosterHN อยู่ในโปรเจกต์
-  if (typeof fillRosterHN === 'function') {
-    menu.addItem('เติม HN ลงทะเบียน', 'fillRosterHN');
-    menu.addSeparator().addItem('▶ แมตรายชื่อ + เติม HN (ทำทั้งคู่)', 'matchAllAndHN');
-  }
+  if (typeof fillRosterHN === 'function') menu.addItem('เติม HN ลงทะเบียน', 'fillRosterHN');
+  if (typeof fillDataHN === 'function')  menu.addItem('เติม HN ลงข้อมูลแบบสอบถาม', 'fillDataHN');
+  if (typeof fillRosterHN === 'function' || typeof fillDataHN === 'function')
+    menu.addSeparator().addItem('▶ แมตรายชื่อ + เติม HN ทั้งหมด (ทำทีเดียว)', 'matchAllAndHN');
   menu.addToUi();
 }
 
-// รันทั้งแมตรายชื่อและเติม HN ในคลิกเดียว
+// รันแมตรายชื่อ + เติม HN ทั้งทะเบียนและข้อมูลแบบสอบถาม ในคลิกเดียว
 function matchAllAndHN() {
-  var quiet = true; // ไม่ให้ matchRoster เด้ง alert ระหว่างทาง (ถ้ารองรับ)
-  try { matchRoster(quiet); } catch (e) { try { matchRoster(); } catch (e2) {} }
-  if (typeof fillRosterHN === 'function') fillRosterHN();
+  try { matchRoster(); } catch (e) {}
+  if (typeof fillRosterHN === 'function') try { fillRosterHN(); } catch (e) {}
+  if (typeof fillDataHN === 'function') fillDataHN();
 }
 
 // ---------- helpers ----------

@@ -146,3 +146,57 @@ function fillRosterHN() {
   SpreadsheetApp.getUi().alert('เติม HN แล้ว ' + matched + ' คน\nไม่พบ ' + notFound.length + ' คน' +
     (notFound.length ? ':\n- ' + notFound.join('\n- ') : ''));
 }
+
+/**
+ * เติม HN ลงในแท็บ "ข้อมูลแบบสอบถาม" (ที่เว็บ/รายงานอ่าน) โดยจับคู่ตามชื่อ
+ * เขียนทั้งคอลัมน์ HN และก้อน _JSON (rec.hn + answers.hn) ให้ตรงกัน
+ */
+var HN_DATA_SHEET = 'ข้อมูลแบบสอบถาม';
+function fillDataHN() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sh = ss.getSheetByName(HN_DATA_SHEET);
+  if (!sh) { SpreadsheetApp.getUi().alert('ไม่พบแท็บ "' + HN_DATA_SHEET + '"'); return; }
+  var last = sh.getLastRow();
+  if (last < 2) { SpreadsheetApp.getUi().alert('ไม่มีข้อมูล'); return; }
+  var lastCol = sh.getLastColumn();
+  var vals = sh.getRange(1, 1, last, lastCol).getValues();
+  var header = vals[0];
+  function findCol(names) {
+    for (var i = 0; i < header.length; i++) {
+      var h = String(header[i] || '').replace(/\s+/g, '').trim();
+      for (var j = 0; j < names.length; j++) if (h === names[j]) return i;
+    }
+    return -1;
+  }
+  var cName = findCol(['ชื่อ-สกุล', 'ชื่อ-นามสกุล', 'ชื่อสกุล']);
+  var cHN = findCol(['HN', 'hn']);
+  var cJson = findCol(['_JSON']);
+  if (cName < 0) { SpreadsheetApp.getUi().alert('ไม่พบคอลัมน์ "ชื่อ-สกุล"'); return; }
+  if (cHN < 0) { cHN = lastCol; sh.getRange(1, cHN + 1).setValue('HN'); sh.getRange(1, cHN + 1).setFontWeight('bold'); lastCol++; }
+
+  var matched = 0, notFound = [];
+  for (var r = 1; r < vals.length; r++) {
+    var row = vals[r];
+    var name = String(row[cName] || '').trim();
+    if (!name) continue;
+    var hn = HN_MAP[hnNameKey(name)];
+    var cell = sh.getRange(r + 1, cHN + 1);
+    if (hn) {
+      cell.setNumberFormat('@'); cell.setValue(hn); cell.setBackground(null);
+      // อัปเดต _JSON ให้ hn เปลี่ยนตามด้วย (เว็บ/รายงานอ่านจากตรงนี้)
+      if (cJson >= 0 && row[cJson]) {
+        try {
+          var rec = JSON.parse(row[cJson]);
+          rec.hn = hn; rec.answers = rec.answers || {}; rec.answers.hn = hn;
+          sh.getRange(r + 1, cJson + 1).setValue(JSON.stringify(rec));
+        } catch (e) {}
+      }
+      matched++;
+    } else {
+      cell.setBackground('#fff3cd');
+      notFound.push(name);
+    }
+  }
+  SpreadsheetApp.getUi().alert('เติม HN ในข้อมูลแบบสอบถามแล้ว ' + matched + ' คน\nไม่พบ ' + notFound.length + ' คน' +
+    (notFound.length ? ':\n- ' + notFound.join('\n- ') : ''));
+}

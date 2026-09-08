@@ -48,10 +48,11 @@ function onOpen() {
 
   // เมนูลงผลตรวจในชีต (ถ้ามี LabDropdown.gs)
   if (typeof setupLabDropdowns === 'function' && typeof syncLabResults === 'function') {
-    SpreadsheetApp.getUi().createMenu('🧪 ผลตรวจ')
-      .addItem('ใส่ดรอปดาวน์ผลตรวจ (+/-/na)', 'setupLabDropdowns')
-      .addItem('ซิงก์ผลตรวจเข้าระบบ (→ เว็บ/รายงาน)', 'syncLabResults')
-      .addToUi();
+    var labMenu = SpreadsheetApp.getUi().createMenu('🧪 ผลตรวจ')
+      .addItem('ใส่ดรอปดาวน์ผลตรวจ', 'setupLabDropdowns');
+    if (typeof editLabChoices === 'function') labMenu.addItem('แก้ไขตัวเลือกดรอปดาวน์เอง', 'editLabChoices');
+    labMenu.addSeparator().addItem('ซิงก์ผลตรวจเข้าระบบ (→ เว็บ/รายงาน)', 'syncLabResults');
+    labMenu.addToUi();
   }
 }
 

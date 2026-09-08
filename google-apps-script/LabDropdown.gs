@@ -10,9 +10,29 @@
  */
 var LAB_SHEET = 'ข้อมูลแบบสอบถาม';
 var LAB_DEFS  = [['cxr', 'Chest X-ray'], ['afb', 'Sputum AFB'], ['tst', 'TST'], ['lab', 'LAB']];
-var LAB_CHOICES = ['+', '-', 'na'];
+var LAB_OPT_SHEET = 'ตัวเลือกผลตรวจ';        // แท็บกำหนดตัวเลือกดรอปดาวน์เอง (คอลัมน์ A บรรทัดละ 1 ตัวเลือก)
+var LAB_CHOICES_DEFAULT = ['+', '-', 'na'];   // ค่าเริ่มต้นถ้ายังไม่มีแท็บ
 
 function _labSheet() { return SpreadsheetApp.getActiveSpreadsheet().getSheetByName(LAB_SHEET); }
+
+// อ่านตัวเลือกดรอปดาวน์จากแท็บ "ตัวเลือกผลตรวจ" (สร้างให้พร้อมค่าเริ่มต้นถ้ายังไม่มี)
+function _labChoices() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sh = ss.getSheetByName(LAB_OPT_SHEET);
+  if (!sh) {
+    sh = ss.insertSheet(LAB_OPT_SHEET);
+    sh.getRange(1, 1).setValue('ตัวเลือกผลตรวจ (แก้ไข/เพิ่มได้ บรรทัดละ 1 ตัวเลือก)').setFontWeight('bold');
+    var rows = LAB_CHOICES_DEFAULT.map(function (v) { return [v]; });
+    sh.getRange(2, 1, rows.length, 1).setValues(rows);
+    return LAB_CHOICES_DEFAULT.slice();
+  }
+  var last = sh.getLastRow();
+  if (last < 2) return LAB_CHOICES_DEFAULT.slice();
+  var vals = sh.getRange(2, 1, last - 1, 1).getValues();
+  var out = [];
+  vals.forEach(function (r) { var v = String(r[0] == null ? '' : r[0]).trim(); if (v && out.indexOf(v) < 0) out.push(v); });
+  return out.length ? out : LAB_CHOICES_DEFAULT.slice();
+}
 function _labNorm(s) { return String(s == null ? '' : s).replace(/\s+/g, '').trim(); }
 function _labFindCols(header) {
   // คืน map key -> index (0-based) ; หาแบบตรงตัวก่อน แล้วค่อย "มีคำว่า"
@@ -24,6 +44,13 @@ function _labFindCols(header) {
     idx[d[0]] = found;
   });
   return idx;
+}
+
+// เปิด/สร้างแท็บตัวเลือกดรอปดาวน์ ให้ผู้ใช้แก้ไขเอง
+function editLabChoices() {
+  _labChoices(); // สร้างแท็บถ้ายังไม่มี
+  var sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(LAB_OPT_SHEET);
+  if (sh) { sh.activate(); SpreadsheetApp.getUi().alert('แก้ไขตัวเลือกดรอปดาวน์ที่แท็บ "' + LAB_OPT_SHEET + '" (คอลัมน์ A บรรทัดละ 1 ตัวเลือก)\nเสร็จแล้วสั่ง "ใส่ดรอปดาวน์ผลตรวจ" อีกครั้งเพื่ออัปเดต'); }
 }
 
 function setupLabDropdowns() {
@@ -50,12 +77,15 @@ function setupLabDropdowns() {
         idx = _labFindCols(header);
       }
     });
-    var rule = SpreadsheetApp.newDataValidation().requireValueInList(LAB_CHOICES, true).setAllowInvalid(false).build();
+    var choices = _labChoices();
+    var rule = SpreadsheetApp.newDataValidation().requireValueInList(choices, true).setAllowInvalid(false).build();
     LAB_DEFS.forEach(function (d) {
       var c = idx[d[0]];
       if (c >= 0) sh.getRange(2, c + 1, last - 1, 1).setDataValidation(rule);
     });
-    ui.alert('ใส่ดรอปดาวน์ผลตรวจ (+/-/na) ให้คอลัมน์ Chest X-ray, Sputum AFB, TST, LAB แล้ว\n\nลงผลในชีตได้เลย จากนั้นเลือกเมนู "🧪 ผลตรวจ → ซิงก์ผลตรวจเข้าระบบ"');
+    ui.alert('ใส่ดรอปดาวน์ผลตรวจให้คอลัมน์ Chest X-ray, Sputum AFB, TST, LAB แล้ว\n\nตัวเลือก: ' + choices.join(' / ') +
+      '\n(แก้ไข/เพิ่มตัวเลือกได้ที่แท็บ "' + LAB_OPT_SHEET + '" แล้วสั่งเมนูนี้อีกครั้ง)' +
+      '\n\nลงผลในชีตได้เลย จากนั้นเลือกเมนู "🧪 ผลตรวจ → ซิงก์ผลตรวจเข้าระบบ"');
   } catch (err) { ui.alert('setupLabDropdowns error: ' + (err && err.message ? err.message : err)); }
 }
 
@@ -72,6 +102,7 @@ function syncLabResults() {
     for (var i = 0; i < header.length; i++) if (_labNorm(header[i]) === '_JSON') jsonIdx = i;
     if (jsonIdx < 0) { ui.alert('ไม่พบคอลัมน์ _JSON'); return; }
     var idx = _labFindCols(header);
+    var choices = _labChoices();
     var block = sh.getRange(2, 1, last - 1, lastCol).getValues();
     var changed = 0;
     for (var r = 0; r < block.length; r++) {
@@ -84,7 +115,7 @@ function syncLabResults() {
         var c = idx[d[0]];
         if (c >= 0) {
           var v = String(row[c] == null ? '' : row[c]).trim();
-          if (v === '+' || v === '-' || v === 'na') { labs[d[0]] = [{ date: '', result: v }]; any = true; }
+          if (v && choices.indexOf(v) >= 0) { labs[d[0]] = [{ date: '', result: v }]; any = true; }
         }
       });
       if (any) { rec.labs = labs; row[jsonIdx] = JSON.stringify(rec); changed++; }

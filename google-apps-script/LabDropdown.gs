@@ -15,23 +15,56 @@ var LAB_CHOICES_DEFAULT = ['+', '-', 'na'];   // ค่าเริ่มต้�
 
 function _labSheet() { return SpreadsheetApp.getActiveSpreadsheet().getSheetByName(LAB_SHEET); }
 
-// อ่านตัวเลือกดรอปดาวน์จากแท็บ "ตัวเลือกผลตรวจ" (สร้างให้พร้อมค่าเริ่มต้นถ้ายังไม่มี)
-function _labChoices() {
+// จับคู่ชื่อรายการ (คอลัมน์ A) กับ key ของ 4 รายการตรวจ
+function _labKeyOf(name) {
+  var n = _labNorm(name).toLowerCase();
+  if (!n || n === 'ทั้งหมด' || n === 'ทุกรายการ' || n === 'all' || n === 'หัวข้อ') return '*';
+  for (var i = 0; i < LAB_DEFS.length; i++) if (_labNorm(LAB_DEFS[i][1]).toLowerCase() === n || n.indexOf(_labNorm(LAB_DEFS[i][1]).toLowerCase()) >= 0) return LAB_DEFS[i][0];
+  return '*'; // ไม่ตรงรายการไหน = ใช้กับทุกรายการ
+}
+
+// อ่านตัวเลือกดรอปดาวน์แยกตามรายการตรวจ จากแท็บ "ตัวเลือกผลตรวจ"
+// รูปแบบแท็บ: คอลัมน์ A = ชื่อรายการ (Chest X-ray/Sputum AFB/TST/LAB หรือเว้นว่าง = ทุกรายการ), คอลัมน์ B = ตัวเลือก
+// (รองรับรูปแบบเก่าคอลัมน์เดียว: A = ตัวเลือก ใช้กับทุกรายการ)
+// คืน { cxr:[...], afb:[...], tst:[...], lab:[...] }
+function _labOptions() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sh = ss.getSheetByName(LAB_OPT_SHEET);
+  var res = { cxr: [], afb: [], tst: [], lab: [] }, globalOpts = [];
   if (!sh) {
     sh = ss.insertSheet(LAB_OPT_SHEET);
-    sh.getRange(1, 1).setValue('ตัวเลือกผลตรวจ (แก้ไข/เพิ่มได้ บรรทัดละ 1 ตัวเลือก)').setFontWeight('bold');
-    var rows = LAB_CHOICES_DEFAULT.map(function (v) { return [v]; });
-    sh.getRange(2, 1, rows.length, 1).setValues(rows);
-    return LAB_CHOICES_DEFAULT.slice();
+    sh.getRange(1, 1, 1, 2).setValues([['หัวข้อ (เว้นว่าง = ทุกรายการ)', 'ตัวเลือก (บรรทัดละ 1)']]).setFontWeight('bold');
+    var seed = [];
+    LAB_CHOICES_DEFAULT.forEach(function (v) { seed.push(['', v]); });
+    sh.getRange(2, 1, seed.length, 2).setValues(seed);
+    LAB_DEFS.forEach(function (d) { res[d[0]] = LAB_CHOICES_DEFAULT.slice(); });
+    return res;
   }
-  var last = sh.getLastRow();
-  if (last < 2) return LAB_CHOICES_DEFAULT.slice();
-  var vals = sh.getRange(2, 1, last - 1, 1).getValues();
-  var out = [];
-  vals.forEach(function (r) { var v = String(r[0] == null ? '' : r[0]).trim(); if (v && out.indexOf(v) < 0) out.push(v); });
-  return out.length ? out : LAB_CHOICES_DEFAULT.slice();
+  var last = sh.getLastRow(), lastCol = Math.max(2, sh.getLastColumn());
+  if (last >= 2) {
+    var vals = sh.getRange(2, 1, last - 1, lastCol).getValues();
+    // ถ้าไม่มีคอลัมน์ B เลย = รูปแบบเก่า (A=ตัวเลือกทั้งหมด)
+    var hasB = false;
+    for (var t = 0; t < vals.length; t++) if (String(vals[t][1] == null ? '' : vals[t][1]).trim()) { hasB = true; break; }
+    vals.forEach(function (r) {
+      if (hasB) {
+        var opt = String(r[1] == null ? '' : r[1]).trim();
+        if (!opt) return;
+        var key = _labKeyOf(r[0]);
+        if (key === '*') { if (globalOpts.indexOf(opt) < 0) globalOpts.push(opt); }
+        else if (res[key].indexOf(opt) < 0) res[key].push(opt);
+      } else {
+        var v = String(r[0] == null ? '' : r[0]).trim();
+        if (v && globalOpts.indexOf(v) < 0) globalOpts.push(v);
+      }
+    });
+  }
+  // เติม global / default ให้รายการที่ไม่มีตัวเลือกเฉพาะ
+  LAB_DEFS.forEach(function (d) {
+    if (!res[d[0]].length) res[d[0]] = (globalOpts.length ? globalOpts.slice() : LAB_CHOICES_DEFAULT.slice());
+    else if (globalOpts.length) globalOpts.forEach(function (g) { if (res[d[0]].indexOf(g) < 0) res[d[0]].push(g); });
+  });
+  return res;
 }
 function _labNorm(s) { return String(s == null ? '' : s).replace(/\s+/g, '').trim(); }
 function _labFindCols(header) {
@@ -48,9 +81,9 @@ function _labFindCols(header) {
 
 // เปิด/สร้างแท็บตัวเลือกดรอปดาวน์ ให้ผู้ใช้แก้ไขเอง
 function editLabChoices() {
-  _labChoices(); // สร้างแท็บถ้ายังไม่มี
+  _labOptions(); // สร้างแท็บถ้ายังไม่มี
   var sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(LAB_OPT_SHEET);
-  if (sh) { sh.activate(); SpreadsheetApp.getUi().alert('แก้ไขตัวเลือกดรอปดาวน์ที่แท็บ "' + LAB_OPT_SHEET + '" (คอลัมน์ A บรรทัดละ 1 ตัวเลือก)\nเสร็จแล้วสั่ง "ใส่ดรอปดาวน์ผลตรวจ" อีกครั้งเพื่ออัปเดต'); }
+  if (sh) { sh.activate(); SpreadsheetApp.getUi().alert('แก้ไขตัวเลือกที่แท็บ "' + LAB_OPT_SHEET + '"\n• คอลัมน์ A = ชื่อรายการ (Chest X-ray / Sputum AFB / TST / LAB) — เว้นว่าง = ใช้กับทุกรายการ\n• คอลัมน์ B = ตัวเลือก (บรรทัดละ 1)\n\nเสร็จแล้วสั่ง "ใส่ดรอปดาวน์ผลตรวจ" อีกครั้งเพื่ออัปเดต'); }
 }
 
 function setupLabDropdowns() {
@@ -77,15 +110,20 @@ function setupLabDropdowns() {
         idx = _labFindCols(header);
       }
     });
-    var choices = _labChoices();
-    var rule = SpreadsheetApp.newDataValidation().requireValueInList(choices, true).setAllowInvalid(false).build();
+    var opts = _labOptions();
+    var summary = [];
     LAB_DEFS.forEach(function (d) {
       var c = idx[d[0]];
-      if (c >= 0) sh.getRange(2, c + 1, last - 1, 1).setDataValidation(rule);
+      var list = opts[d[0]];
+      if (c >= 0 && list && list.length) {
+        var rule = SpreadsheetApp.newDataValidation().requireValueInList(list, true).setAllowInvalid(false).build();
+        sh.getRange(2, c + 1, last - 1, 1).setDataValidation(rule);
+        summary.push(d[1] + ': ' + list.join(' / '));
+      }
     });
-    ui.alert('ใส่ดรอปดาวน์ผลตรวจให้คอลัมน์ Chest X-ray, Sputum AFB, TST, LAB แล้ว\n\nตัวเลือก: ' + choices.join(' / ') +
-      '\n(แก้ไข/เพิ่มตัวเลือกได้ที่แท็บ "' + LAB_OPT_SHEET + '" แล้วสั่งเมนูนี้อีกครั้ง)' +
-      '\n\nลงผลในชีตได้เลย จากนั้นเลือกเมนู "🧪 ผลตรวจ → ซิงก์ผลตรวจเข้าระบบ"');
+    ui.alert('ใส่ดรอปดาวน์ผลตรวจแยกตามรายการแล้ว\n\n' + summary.join('\n') +
+      '\n\n(แก้ตัวเลือกได้ที่แท็บ "' + LAB_OPT_SHEET + '" คอลัมน์ A=รายการ, B=ตัวเลือก แล้วสั่งเมนูนี้อีกครั้ง)' +
+      '\n\nลงผลในชีตได้เลย จากนั้นเลือก "🧪 ผลตรวจ → ซิงก์ผลตรวจเข้าระบบ"');
   } catch (err) { ui.alert('setupLabDropdowns error: ' + (err && err.message ? err.message : err)); }
 }
 
@@ -102,7 +140,7 @@ function syncLabResults() {
     for (var i = 0; i < header.length; i++) if (_labNorm(header[i]) === '_JSON') jsonIdx = i;
     if (jsonIdx < 0) { ui.alert('ไม่พบคอลัมน์ _JSON'); return; }
     var idx = _labFindCols(header);
-    var choices = _labChoices();
+    var opts = _labOptions();
     var block = sh.getRange(2, 1, last - 1, lastCol).getValues();
     var changed = 0;
     for (var r = 0; r < block.length; r++) {
@@ -115,7 +153,8 @@ function syncLabResults() {
         var c = idx[d[0]];
         if (c >= 0) {
           var v = String(row[c] == null ? '' : row[c]).trim();
-          if (v && choices.indexOf(v) >= 0) { labs[d[0]] = [{ date: '', result: v }]; any = true; }
+          // รับค่าที่อยู่ในรายการตัวเลือกของรายการนั้น (หรือมีค่าใดๆ ก็ได้ถ้าไม่ได้จำกัด)
+          if (v && (!opts[d[0]] || !opts[d[0]].length || opts[d[0]].indexOf(v) >= 0)) { labs[d[0]] = [{ date: '', result: v }]; any = true; }
         }
       });
       if (any) { rec.labs = labs; row[jsonIdx] = JSON.stringify(rec); changed++; }

@@ -1874,6 +1874,7 @@
             return rounds.map(x => `<div class="whitespace-nowrap">ครั้งที่ ${x.n}${x.r.date ? ' (' + escHtml(x.r.date) + ')' : ''}: ${labResultBadge(x.r.result)}</div>`).join('');
         }
         function recordLabPositive(rec, key) { return recordLabs(rec)[key].some(x => x.result === '+'); }
+        function recordLabTested(rec, key) { return recordLabs(rec)[key].some(x => x && String(x.result || '').trim() !== ''); }
         function labLabel(key) { const t = LAB_TESTS.find(x => x.key === key); return t ? t.label : key; }
         // สรุปผลตรวจเป็นข้อความล้วน (สำหรับ Excel/พิมพ์) — แสดงเฉพาะครั้งที่มีผล
         function labCellText(rec, key) {
@@ -2004,7 +2005,7 @@
                 if (cf.kind === 'activity' && !recordHasActivity(r, cf.value)) return false;
                 if (cf.kind === 'duration' && !recordHasDuration(r, cf.value)) return false;
                 if (cf.kind === 'symptom' && !recordHasSymptom(r, cf.value)) return false;
-                if (cf.kind === 'lab' && !recordLabPositive(r, cf.value)) return false;
+                if (cf.kind === 'lab' && !recordLabTested(r, cf.value)) return false;
                 if (cf.kind === 'date' && !recordOnDate(r, cf.value)) return false;
             }
             return true;
@@ -2162,25 +2163,28 @@
             };
             const LAB_GRAD = { cxr: 'from-sky-500 to-indigo-600', afb: 'from-rose-500 to-pink-600', tst: 'from-amber-500 to-orange-600', lab: 'from-teal-500 to-emerald-600' };
             const labStat = LAB_TESTS.map(t => {
-                let tested = 0, pos = 0, neg = 0, na = 0;
+                let tested = 0;
+                const tally = {}; // ผลจริง -> จำนวน (นับผลล่าสุดที่มีค่าต่อคน)
                 records.forEach(r => {
-                    const rounds = recordLabs(r)[t.key];
+                    const rounds = recordLabs(r)[t.key].filter(x => x && String(x.result || '').trim() !== '');
                     if (!rounds.length) return;
                     tested++;
-                    const hasPos = rounds.some(x => x.result === '+');
-                    if (hasPos) pos++;
-                    else if (rounds.some(x => x.result === '-')) neg++;
-                    else na++;
+                    const val = String(rounds[rounds.length - 1].result).trim();
+                    tally[val] = (tally[val] || 0) + 1;
                 });
-                const pct = tested ? Math.round(pos / tested * 100) : 0;
-                return { key: t.key, label: t.label, tested: tested, pos: pos, neg: neg, na: na, pct: pct };
+                const rows = Object.keys(tally).map(v => ({ v: v, n: tally[v], pct: tested ? Math.round(tally[v] / tested * 100) : 0 }))
+                    .sort((a, b) => b.n - a.n);
+                return { key: t.key, label: t.label, tested: tested, rows: rows };
             });
             const labTiles = labStat.map(s => `
                 <div class="chart-clk cursor-pointer rounded-2xl p-4 text-white bg-gradient-to-br ${LAB_GRAD[s.key]} shadow-[0_6px_18px_rgba(15,23,42,0.18)] hover:brightness-105 transition" data-kind="lab" data-value="${s.key}" title="คลิกดูรายชื่อที่ตรวจ ${escAttr(s.label)}">
                     <div class="flex items-center gap-2 text-white/90 text-sm font-semibold">${LAB_SVG[s.key]} ${escHtml(s.label)}</div>
-                    <div class="mt-2 flex items-end gap-1"><span class="text-3xl font-extrabold drop-shadow">${s.pos}</span><span class="text-sm text-white/80 mb-0.5">ราย (+)</span></div>
-                    <div class="mt-1 h-2 bg-white/25 rounded-full overflow-hidden"><div class="h-2 rounded-full bg-white" style="width:${s.pct}%"></div></div>
-                    <div class="text-xs text-white/90 mt-1">คิดเป็น <b>${s.pct}%</b> ของผู้ตรวจ ${s.tested} ราย</div>
+                    <div class="mt-2 flex items-end gap-1"><span class="text-3xl font-extrabold drop-shadow">${s.tested}</span><span class="text-sm text-white/80 mb-0.5">ราย (ตรวจแล้ว)</span></div>
+                    <div class="mt-2 space-y-1">
+                        ${s.rows.length
+                            ? s.rows.map(r => `<div class="flex items-center justify-between text-xs"><span class="truncate pr-2 text-white/95">${escHtml(r.v)}</span><span class="whitespace-nowrap font-semibold">${r.n} (${r.pct}%)</span></div><div class="h-1.5 bg-white/25 rounded-full overflow-hidden"><div class="h-1.5 rounded-full bg-white" style="width:${r.pct}%"></div></div>`).join('')
+                            : '<div class="text-xs text-white/70">— ยังไม่มีผล —</div>'}
+                    </div>
                 </div>`).join('');
             const anyLab = labStat.some(s => s.tested > 0);
 
@@ -2205,9 +2209,9 @@
                         ${card('อาการที่พบ (มาก→น้อย)', 'thermometer', symRows.length ? barList(symRows, '#e11d48', 'symptom') : '<div class="text-slate-400 text-sm">ยังไม่มีข้อมูลอาการ</div>')}
                     </div>
                 </div>
-                ${card('ผลตรวจทางห้องปฏิบัติการ — ผลบวก (+) จำนวน / ร้อยละ', 'clipboard',
+                ${card('ผลตรวจทางห้องปฏิบัติการ — สรุปผล จำนวน / ร้อยละ', 'clipboard',
                     anyLab
-                        ? `<div class="grid grid-cols-2 lg:grid-cols-4 gap-3">${labTiles}</div><div class="text-xs text-slate-400 mt-3">* ร้อยละคำนวณจากผู้ที่มีผลตรวจในรายการนั้น (นับผู้มีผล + อย่างน้อย 1 ครั้ง) — คลิกการ์ดเพื่อดูรายชื่อ</div>`
+                        ? `<div class="grid grid-cols-2 lg:grid-cols-4 gap-3">${labTiles}</div><div class="text-xs text-slate-400 mt-3">* จำนวนใหญ่ = ผู้ที่มีผลตรวจในรายการนั้น ; ด้านล่างแยกตามผลจริง (นับผลล่าสุดต่อคน) พร้อมร้อยละ — คลิกการ์ดเพื่อดูรายชื่อ</div>`
                         : '<div class="text-slate-400 text-sm">ยังไม่มีการบันทึกผลตรวจ — เพิ่มได้ที่ปุ่ม "ผลตรวจ" ในรายชื่อผู้สัมผัส</div>')}`;
             feather.replace();
             // คลิกกราฟ → กรองรายชื่อผู้สัมผัส
@@ -2255,7 +2259,7 @@
             const chipBox = document.getElementById('chart-filter-chip');
             if (chipBox) {
                 if (chartFilter) {
-                    const kindLabel = { unit: 'หน่วยงาน', activity: 'กิจกรรม', duration: 'ระยะเวลา', symptom: 'อาการ', lab: 'ผลตรวจ (+)', date: 'วันที่' }[chartFilter.kind] || chartFilter.kind;
+                    const kindLabel = { unit: 'หน่วยงาน', activity: 'กิจกรรม', duration: 'ระยะเวลา', symptom: 'อาการ', lab: 'ผลตรวจ', date: 'วันที่' }[chartFilter.kind] || chartFilter.kind;
                     const valLabel = chartFilter.kind === 'date' ? fmtThaiDate(chartFilter.value) : (chartFilter.kind === 'lab' ? labLabel(chartFilter.value) : chartFilter.value);
                     chipBox.innerHTML = `<span class="inline-flex items-center gap-2 bg-teal-100 text-teal-800 border border-teal-300 rounded-full px-3 py-1 text-sm font-medium">กรองจากกราฟ: ${kindLabel} = ${escHtml(valLabel)} <button onclick="clearChartFilter()" class="text-teal-600 hover:text-teal-900 font-bold">✕</button></span>`;
                     chipBox.hidden = false;

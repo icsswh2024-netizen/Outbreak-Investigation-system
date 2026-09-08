@@ -1859,19 +1859,25 @@
             if (r === 'na') return '<span class="inline-block px-1.5 rounded bg-slate-100 text-slate-500">n/a</span>';
             return '<span class="text-slate-400">-</span>';
         }
-        // สรุปผลตรวจของ 1 test เป็น HTML (ครั้งที่ N (วันที่) ผล)
+        // เอาเฉพาะครั้งที่มีผลจริง (result ไม่ว่าง) — คงเลขครั้งเดิมไว้
+        function labRoundsWithResult(rec, key) {
+            return recordLabs(rec)[key]
+                .map((r, i) => ({ r: r, n: i + 1 }))
+                .filter(x => x.r && String(x.r.result || '').trim() !== '');
+        }
+        // สรุปผลตรวจของ 1 test เป็น HTML (ครั้งที่ N (วันที่) ผล) — แสดงเฉพาะครั้งที่มีผล
         function labCellHtml(rec, key) {
-            const rounds = recordLabs(rec)[key];
+            const rounds = labRoundsWithResult(rec, key);
             if (!rounds.length) return '<span class="text-slate-300">-</span>';
-            return rounds.map((r, i) => `<div class="whitespace-nowrap">ครั้งที่ ${i + 1}${r.date ? ' (' + escHtml(r.date) + ')' : ''}: ${labResultBadge(r.result)}</div>`).join('');
+            return rounds.map(x => `<div class="whitespace-nowrap">ครั้งที่ ${x.n}${x.r.date ? ' (' + escHtml(x.r.date) + ')' : ''}: ${labResultBadge(x.r.result)}</div>`).join('');
         }
         function recordLabPositive(rec, key) { return recordLabs(rec)[key].some(x => x.result === '+'); }
         function labLabel(key) { const t = LAB_TESTS.find(x => x.key === key); return t ? t.label : key; }
-        // สรุปผลตรวจเป็นข้อความล้วน (สำหรับ Excel/พิมพ์)
+        // สรุปผลตรวจเป็นข้อความล้วน (สำหรับ Excel/พิมพ์) — แสดงเฉพาะครั้งที่มีผล
         function labCellText(rec, key) {
-            const rounds = recordLabs(rec)[key];
+            const rounds = labRoundsWithResult(rec, key);
             if (!rounds.length) return '-';
-            return rounds.map((r, i) => `ครั้งที่ ${i + 1}${r.date ? ' (' + r.date + ')' : ''}: ${r.result || '-'}`).join(' | ');
+            return rounds.map(x => `ครั้งที่ ${x.n}${x.r.date ? ' (' + x.r.date + ')' : ''}: ${x.r.result}`).join(' | ');
         }
 
         // ----- Modal บันทึกผลตรวจ -----

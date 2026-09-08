@@ -1854,10 +1854,12 @@
         }
         function labResultBadge(res) {
             const r = String(res || '').trim();
+            if (r === '') return '<span class="text-slate-400">-</span>';
             if (r === '+') return '<span class="inline-block px-1.5 rounded font-bold bg-rose-100 text-rose-700">+</span>';
             if (r === '-') return '<span class="inline-block px-1.5 rounded font-bold bg-emerald-100 text-emerald-700">-</span>';
-            if (r === 'na') return '<span class="inline-block px-1.5 rounded bg-slate-100 text-slate-500">n/a</span>';
-            return '<span class="text-slate-400">-</span>';
+            if (r === 'na' || r.toLowerCase() === 'n/a') return '<span class="inline-block px-1.5 rounded bg-slate-100 text-slate-500">n/a</span>';
+            // ค่าตัวเลือกอื่นๆ ที่กำหนดเอง (เช่น Unremarkable study, Positive, Negative) — แสดงข้อความจริง
+            return '<span class="inline-block px-1.5 rounded bg-teal-50 text-teal-800 border border-teal-100">' + escHtml(r) + '</span>';
         }
         // เอาเฉพาะครั้งที่มีผลจริง (result ไม่ว่าง) — คงเลขครั้งเดิมไว้
         function labRoundsWithResult(rec, key) {

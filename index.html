@@ -654,6 +654,11 @@
                 try { applySiteLogo(); } catch (e) {}
                 if (!document.getElementById('view-admin').classList.contains('hidden') && !commentModalOpen()) { try { renderRepMetaForm(); } catch (e) {} }
             }
+            // ตัวเลือกผลตรวจแยกตามรายการ (แท็บ "ตัวเลือกผลตรวจ")
+            if (data && data.labOptions && typeof data.labOptions === 'object') {
+                labOptions = data.labOptions;
+                try { localStorage.setItem('oi-laboptions', JSON.stringify(labOptions)); } catch (e) {}
+            }
             // แท็บ "การจัดการแบบสอบถาม": มีบนชีต -> ใช้; ยังว่าง -> เติม schema ปัจจุบันขึ้นไป
             if (data && data.schema) {
                 schema = data.schema;
@@ -1834,6 +1839,13 @@
             { key: 'lab', label: 'LAB' }
         ];
         const LAB_RESULTS = ['+', '-', 'na'];
+        // ตัวเลือกผลตรวจแยกตามรายการ (จากแท็บ "ตัวเลือกผลตรวจ" ในชีต) — ถ้าไม่มีใช้ค่าเริ่มต้น
+        let labOptions = {};
+        try { const lo = localStorage.getItem('oi-laboptions'); if (lo) labOptions = JSON.parse(lo); } catch (e) {}
+        function labOptsFor(key) {
+            const a = labOptions && labOptions[key];
+            return (Array.isArray(a) && a.length) ? a : LAB_RESULTS;
+        }
         function recordLabs(rec) {
             const L = rec && rec.labs && typeof rec.labs === 'object' ? rec.labs : {};
             const out = {};
@@ -1875,7 +1887,7 @@
                         <span class="text-sm text-slate-500 w-16">ครั้งที่ ${i + 1}</span>
                         <input type="text" readonly data-datepicker class="lab-date field-input cursor-pointer bg-white text-base" style="width:auto;min-width:150px" data-value="${escAttr(r.date || '')}" value="${r.date ? fmtThaiDate(r.date) : ''}" placeholder="แตะเพื่อเลือกวันที่">
                         <select class="lab-result text-base rounded-lg border border-slate-300 bg-white px-2 py-1.5">
-                            ${LAB_RESULTS.map(v => `<option value="${v}" ${r.result === v ? 'selected' : ''}>${v === 'na' ? 'n/a' : v}</option>`).join('')}
+                            ${labOptsFor(t.key).map(v => `<option value="${escAttr(v)}" ${r.result === v ? 'selected' : ''}>${escHtml(v === 'na' ? 'n/a' : v)}</option>`).join('')}
                         </select>
                         <button type="button" class="lab-del text-rose-500 hover:text-rose-700" title="ลบครั้งนี้"><i data-feather="trash-2" class="w-4 h-4"></i></button>
                     </div>`).join('') || '<div class="text-sm text-slate-300 pl-16">— ยังไม่มีผล —</div>';

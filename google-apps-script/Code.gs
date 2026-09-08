@@ -26,7 +26,7 @@ var SPREADSHEET_ID = '1-vvdG18uzzn9EQgSAnQ1G4aCLdUvNIQA6deWZrk92EI';
 function doGet(e) {
   var action = (e && e.parameter && e.parameter.action) || 'load';
   var out;
-  if (action === 'load') out = { schema: readSchema(), records: readRecords(), settings: readSettings(), roster: readRoster(), logo: readLogo() };
+  if (action === 'load') out = { schema: readSchema(), records: readRecords(), settings: readSettings(), roster: readRoster(), logo: readLogo(), labOptions: readLabOptions() };
   else out = { error: 'unknown action' };
 
   // รองรับ JSONP (เรียกจากเว็บสถิตข้ามโดเมนได้ ผ่าน callback)
@@ -445,4 +445,44 @@ function readLogo() {
     });
   }
   return out;
+}
+
+// อ่านตัวเลือกผลตรวจแยกตามรายการ จากแท็บ "ตัวเลือกผลตรวจ" (A=รายการ, B=ตัวเลือก)
+// คืน { cxr:[...], afb:[...], tst:[...], lab:[...] } ให้เว็บใช้ทำดรอปดาวน์
+function readLabOptions() {
+  var defs = [['cxr', 'Chest X-ray'], ['afb', 'Sputum AFB'], ['tst', 'TST'], ['lab', 'LAB']];
+  var DEFAULT = ['+', '-', 'na'];
+  var res = { cxr: [], afb: [], tst: [], lab: [] };
+  var sh = ss().getSheetByName('ตัวเลือกผลตรวจ');
+  var norm = function (s) { return String(s == null ? '' : s).replace(/\s+/g, '').toLowerCase().trim(); };
+  var keyOf = function (name) {
+    var n = norm(name);
+    if (!n || n === 'ทั้งหมด' || n === 'ทุกรายการ' || n === 'all' || n === 'หัวข้อ') return '*';
+    for (var i = 0; i < defs.length; i++) { var dn = norm(defs[i][1]); if (n === dn || n.indexOf(dn) >= 0) return defs[i][0]; }
+    return '*';
+  };
+  var globalOpts = [];
+  if (sh && sh.getLastRow() >= 2) {
+    var lastCol = Math.max(2, sh.getLastColumn());
+    var vals = sh.getRange(2, 1, sh.getLastRow() - 1, lastCol).getValues();
+    var hasB = false;
+    for (var t = 0; t < vals.length; t++) if (String(vals[t][1] == null ? '' : vals[t][1]).trim()) { hasB = true; break; }
+    vals.forEach(function (r) {
+      if (hasB) {
+        var opt = String(r[1] == null ? '' : r[1]).trim();
+        if (!opt) return;
+        var k = keyOf(r[0]);
+        if (k === '*') { if (globalOpts.indexOf(opt) < 0) globalOpts.push(opt); }
+        else if (res[k].indexOf(opt) < 0) res[k].push(opt);
+      } else {
+        var v = String(r[0] == null ? '' : r[0]).trim();
+        if (v && globalOpts.indexOf(v) < 0) globalOpts.push(v);
+      }
+    });
+  }
+  defs.forEach(function (d) {
+    if (!res[d[0]].length) res[d[0]] = (globalOpts.length ? globalOpts.slice() : DEFAULT.slice());
+    else globalOpts.forEach(function (g) { if (res[d[0]].indexOf(g) < 0) res[d[0]].push(g); });
+  });
+  return res;
 }

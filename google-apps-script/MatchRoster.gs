@@ -45,6 +45,14 @@ function onOpen() {
   if (typeof fillRosterHN === 'function' || typeof fillDataHN === 'function')
     menu.addSeparator().addItem('▶ แมตรายชื่อ + เติม HN ทั้งหมด (ทำทีเดียว)', 'matchAllAndHN');
   menu.addToUi();
+
+  // เมนูลงผลตรวจในชีต (ถ้ามี LabDropdown.gs)
+  if (typeof setupLabDropdowns === 'function' && typeof syncLabResults === 'function') {
+    SpreadsheetApp.getUi().createMenu('🧪 ผลตรวจ')
+      .addItem('ใส่ดรอปดาวน์ผลตรวจ (+/-/na)', 'setupLabDropdowns')
+      .addItem('ซิงก์ผลตรวจเข้าระบบ (→ เว็บ/รายงาน)', 'syncLabResults')
+      .addToUi();
+  }
 }
 
 // รันแมตรายชื่อ + เติม HN ทั้งทะเบียนและข้อมูลแบบสอบถาม ในคลิกเดียว

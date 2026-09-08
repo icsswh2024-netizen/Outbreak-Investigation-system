@@ -153,50 +153,64 @@ function fillRosterHN() {
  */
 var HN_DATA_SHEET = 'ข้อมูลแบบสอบถาม';
 function fillDataHN() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sh = ss.getSheetByName(HN_DATA_SHEET);
-  if (!sh) { SpreadsheetApp.getUi().alert('ไม่พบแท็บ "' + HN_DATA_SHEET + '"'); return; }
-  var last = sh.getLastRow();
-  if (last < 2) { SpreadsheetApp.getUi().alert('ไม่มีข้อมูล'); return; }
-  var lastCol = sh.getLastColumn();
-  var vals = sh.getRange(1, 1, last, lastCol).getValues();
-  var header = vals[0];
-  function findCol(names) {
-    for (var i = 0; i < header.length; i++) {
-      var h = String(header[i] || '').replace(/\s+/g, '').trim();
-      for (var j = 0; j < names.length; j++) if (h === names[j]) return i;
-    }
-    return -1;
-  }
-  var cName = findCol(['ชื่อ-สกุล', 'ชื่อ-นามสกุล', 'ชื่อสกุล']);
-  var cHN = findCol(['HN', 'hn']);
-  var cJson = findCol(['_JSON']);
-  if (cName < 0) { SpreadsheetApp.getUi().alert('ไม่พบคอลัมน์ "ชื่อ-สกุล"'); return; }
-  if (cHN < 0) { cHN = lastCol; sh.getRange(1, cHN + 1).setValue('HN'); sh.getRange(1, cHN + 1).setFontWeight('bold'); lastCol++; }
+  var ui = SpreadsheetApp.getUi();
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sh = ss.getSheetByName(HN_DATA_SHEET);
+    if (!sh) { ui.alert('ไม่พบแท็บ "' + HN_DATA_SHEET + '"'); return; }
+    var last = sh.getLastRow(), lastCol = sh.getLastColumn();
+    if (last < 2) { ui.alert('ไม่มีข้อมูล'); return; }
 
-  var matched = 0, notFound = [];
-  for (var r = 1; r < vals.length; r++) {
-    var row = vals[r];
-    var name = String(row[cName] || '').trim();
-    if (!name) continue;
-    var hn = HN_MAP[hnNameKey(name)];
-    var cell = sh.getRange(r + 1, cHN + 1);
-    if (hn) {
-      cell.setNumberFormat('@'); cell.setValue(hn); cell.setBackground(null);
-      // อัปเดต _JSON ให้ hn เปลี่ยนตามด้วย (เว็บ/รายงานอ่านจากตรงนี้)
-      if (cJson >= 0 && row[cJson]) {
-        try {
-          var rec = JSON.parse(row[cJson]);
-          rec.hn = hn; rec.answers = rec.answers || {}; rec.answers.hn = hn;
-          sh.getRange(r + 1, cJson + 1).setValue(JSON.stringify(rec));
-        } catch (e) {}
+    var vals = sh.getRange(1, 1, last, lastCol).getValues();
+    var header = vals[0];
+    var norm = function (s) { return String(s == null ? '' : s).replace(/\s+/g, '').trim(); };
+    // หาแบบตรงตัวก่อน แล้วค่อยหาแบบ "มีคำว่า"
+    var exact = function (kws) { for (var i = 0; i < header.length; i++) { var h = norm(header[i]); for (var j = 0; j < kws.length; j++) if (h === kws[j]) return i; } return -1; };
+    var has = function (kw) { for (var i = 0; i < header.length; i++) if (norm(header[i]).indexOf(kw) >= 0) return i; return -1; };
+
+    // คอลัมน์ชื่อ-สกุลหลัก (คอลัมน์ D ของ META) — ใช้ตัวที่ตรงกับ _JSON
+    var cName = exact(['ชื่อ-สกุล', 'ชื่อ-นามสกุล', 'ชื่อสกุล']);
+    if (cName < 0) cName = has('ชื่อ-สกุล');
+    var cJson = exact(['_JSON']);
+    // คอลัมน์ HN หลัก (META คือ "HN"); ถ้าไม่มีให้เพิ่มท้ายตาราง
+    var cHN = exact(['HN', 'hn']);
+    if (cHN < 0) cHN = has('HN');
+    if (cName < 0) { ui.alert('ไม่พบคอลัมน์ชื่อ-สกุล'); return; }
+    if (cHN < 0) { cHN = lastCol; header[cHN] = 'HN'; }
+
+    // เตรียมช่วงเขียนกลับทั้งบล็อก (เขียนทีเดียว เร็ว/กัน timeout)
+    var width = Math.max(lastCol, cHN + 1, (cJson >= 0 ? cJson + 1 : 0));
+    var block = sh.getRange(2, 1, last - 1, width).getValues();
+    var bg = [];
+    var matched = 0, notFound = [];
+    for (var r = 0; r < block.length; r++) {
+      var row = block[r];
+      while (row.length < width) row.push('');
+      var name = String(row[cName] || '').replace(/\s+/g, ' ').trim();
+      if (!name) { bg.push([null]); continue; }
+      var hn = HN_MAP[hnNameKey(name)];
+      if (hn) {
+        row[cHN] = "'" + hn;  // นำหน้าด้วย ' เพื่อบังคับเป็นข้อความ กันเลข 0 หาย
+        if (cJson >= 0 && row[cJson]) {
+          try {
+            var rec = JSON.parse(row[cJson]);
+            rec.hn = hn; rec.answers = rec.answers || {}; rec.answers.hn = hn;
+            row[cJson] = JSON.stringify(rec);
+          } catch (e) {}
+        }
+        bg.push([null]); matched++;
+      } else {
+        bg.push(['#fff3cd']); if (notFound.length < 30) notFound.push(name);
       }
-      matched++;
-    } else {
-      cell.setBackground('#fff3cd');
-      notFound.push(name);
     }
+    // เขียนหัวตาราง (เผื่อเพิ่มคอลัมน์ HN) + ข้อมูลกลับทีเดียว
+    if (width > lastCol) sh.getRange(1, 1, 1, width).setValues([header]);
+    sh.getRange(2, 1, block.length, width).setValues(block);
+    sh.getRange(2, cHN + 1, bg.length, 1).setBackgrounds(bg);
+
+    ui.alert('เติม HN ในข้อมูลแบบสอบถามแล้ว ' + matched + ' คน\nไม่พบ ' + notFound.length + ' คน' +
+      (notFound.length ? ':\n- ' + notFound.join('\n- ') : ''));
+  } catch (err) {
+    ui.alert('fillDataHN error: ' + (err && err.message ? err.message : err));
   }
-  SpreadsheetApp.getUi().alert('เติม HN ในข้อมูลแบบสอบถามแล้ว ' + matched + ' คน\nไม่พบ ' + notFound.length + ' คน' +
-    (notFound.length ? ':\n- ' + notFound.join('\n- ') : ''));
 }

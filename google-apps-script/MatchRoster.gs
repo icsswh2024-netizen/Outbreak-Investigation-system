@@ -36,7 +36,10 @@ var PREFIXES = ['นางสาว', 'น.ส.', 'นส.', 'นาย', 'น�
                 'นพ.', 'พญ.', 'ทพ.', 'ทพญ.', 'ภก.', 'ภญ.', 'ว่าที่ร้อยตรี', 'ว่าที่ ร.ต.'];
 
 function onOpen() {
-  var menu = SpreadsheetApp.getUi()
+  // onOpen ทำงานเองตอน "เปิด/รีเฟรชหน้าชีต" — ถ้ากด ▶ เรียกใช้ ในตัวแก้ไขจะไม่มี UI (ข้ามไป)
+  var ui;
+  try { ui = SpreadsheetApp.getUi(); } catch (e) { return; }
+  var menu = ui
     .createMenu('🩺 แมตรายชื่อ')
     .addItem('แมตรายชื่อจริง → ข้อมูลแบบสอบถาม', 'matchRoster');
   // เพิ่มเมนูเติม HN + เมนูรวม ถ้ามีสคริปต์ FillRosterHN อยู่ในโปรเจกต์
@@ -48,7 +51,7 @@ function onOpen() {
 
   // เมนูลงผลตรวจในชีต (ถ้ามี LabDropdown.gs)
   if (typeof setupLabDropdowns === 'function' && typeof syncLabResults === 'function') {
-    var labMenu = SpreadsheetApp.getUi().createMenu('🧪 ผลตรวจ')
+    var labMenu = ui.createMenu('🧪 ผลตรวจ')
       .addItem('ใส่ดรอปดาวน์ผลตรวจ', 'setupLabDropdowns');
     if (typeof editLabChoices === 'function') labMenu.addItem('แก้ไขตัวเลือกดรอปดาวน์เอง', 'editLabChoices');
     labMenu.addSeparator().addItem('ซิงก์ผลตรวจเข้าระบบ (→ เว็บ/รายงาน)', 'syncLabResults');

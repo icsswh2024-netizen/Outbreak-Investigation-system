@@ -39,9 +39,19 @@ function onOpen() {
   var menu = SpreadsheetApp.getUi()
     .createMenu('🩺 แมตรายชื่อ')
     .addItem('แมตรายชื่อจริง → ข้อมูลแบบสอบถาม', 'matchRoster');
-  // เพิ่มเมนูเติม HN ถ้ามีสคริปต์ FillRosterHN อยู่ในโปรเจกต์
-  if (typeof fillRosterHN === 'function') menu.addItem('เติม HN ลงทะเบียน', 'fillRosterHN');
+  // เพิ่มเมนูเติม HN + เมนูรวม ถ้ามีสคริปต์ FillRosterHN อยู่ในโปรเจกต์
+  if (typeof fillRosterHN === 'function') {
+    menu.addItem('เติม HN ลงทะเบียน', 'fillRosterHN');
+    menu.addSeparator().addItem('▶ แมตรายชื่อ + เติม HN (ทำทั้งคู่)', 'matchAllAndHN');
+  }
   menu.addToUi();
+}
+
+// รันทั้งแมตรายชื่อและเติม HN ในคลิกเดียว
+function matchAllAndHN() {
+  var quiet = true; // ไม่ให้ matchRoster เด้ง alert ระหว่างทาง (ถ้ารองรับ)
+  try { matchRoster(quiet); } catch (e) { try { matchRoster(); } catch (e2) {} }
+  if (typeof fillRosterHN === 'function') fillRosterHN();
 }
 
 // ---------- helpers ----------

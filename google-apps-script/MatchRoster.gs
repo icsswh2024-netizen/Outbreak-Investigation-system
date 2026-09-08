@@ -36,10 +36,12 @@ var PREFIXES = ['นางสาว', 'น.ส.', 'นส.', 'นาย', 'น�
                 'นพ.', 'พญ.', 'ทพ.', 'ทพญ.', 'ภก.', 'ภญ.', 'ว่าที่ร้อยตรี', 'ว่าที่ ร.ต.'];
 
 function onOpen() {
-  SpreadsheetApp.getUi()
+  var menu = SpreadsheetApp.getUi()
     .createMenu('🩺 แมตรายชื่อ')
-    .addItem('แมตรายชื่อจริง → ข้อมูลแบบสอบถาม', 'matchRoster')
-    .addToUi();
+    .addItem('แมตรายชื่อจริง → ข้อมูลแบบสอบถาม', 'matchRoster');
+  // เพิ่มเมนูเติม HN ถ้ามีสคริปต์ FillRosterHN อยู่ในโปรเจกต์
+  if (typeof fillRosterHN === 'function') menu.addItem('เติม HN ลงทะเบียน', 'fillRosterHN');
+  menu.addToUi();
 }
 
 // ---------- helpers ----------

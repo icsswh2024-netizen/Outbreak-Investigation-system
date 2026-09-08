@@ -93,11 +93,11 @@ function hnNameKey(s) {
   return s.replace(/[\s.()\-]/g, '');
 }
 
-function onOpen() {
-  SpreadsheetApp.getUi().createMenu('จับคู่ HN')
-    .addItem('เติม HN ลงทะเบียน', 'fillRosterHN')
-    .addToUi();
-}
+// หมายเหตุ: เมนูรวมอยู่ใน onOpen ของ MatchRoster.gs แล้ว (Apps Script มี onOpen ได้ตัวเดียวต่อโปรเจกต์)
+// ถ้าไม่มี MatchRoster.gs ในโปรเจกต์ ให้เอาคอมเมนต์ออกจากฟังก์ชัน onOpen ด้านล่างเพื่อสร้างเมนูเอง
+// function onOpen() {
+//   SpreadsheetApp.getUi().createMenu('จับคู่ HN').addItem('เติม HN ลงทะเบียน', 'fillRosterHN').addToUi();
+// }
 
 function fillRosterHN() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();

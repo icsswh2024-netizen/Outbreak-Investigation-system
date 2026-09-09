@@ -2348,7 +2348,20 @@
                         <th class="px-2 py-1.5 text-left">กิจกรรม</th><th class="px-2 py-1.5 text-left">อาการ</th><th class="px-2 py-1.5 text-left">Chest X-ray</th>
                     </tr></thead><tbody>${perPersonRows || '<tr><td colspan="6" class="px-2 py-3 text-center text-slate-400">ไม่มีข้อมูล</td></tr>'}</tbody>
                 </table></div></details>`;
+            corrExport = {
+                tabs: [
+                    { title: 'กิจกรรม × อาการ', ct: ctActSym, rowMap: ACT_CODE, colMap: null },
+                    { title: 'กิจกรรม × ผล Chest X-ray', ct: ctActCxr, rowMap: ACT_CODE, colMap: null },
+                    { title: 'อาการ × ผล Chest X-ray', ct: ctSymCxr, rowMap: null, colMap: null }
+                ],
+                persons: corrRecs.map((r, i) => ({ n: i + 1, name: r.name || '-', unit: unitOfRec(r) || '-', acts: actFn(r).map(a => ACT_CODE[a] || a).join(', ') || '-', syms: symFn(r).join(', ') || '-', cxr: cxrFn(r)[0] || '-' })),
+                actCode: Object.assign({}, ACT_CODE)
+            };
             const corrHtml = `
+                <div class="flex flex-wrap justify-end gap-2 mb-3">
+                    <button onclick="printCorrelation()" class="bg-white border border-teal-300 text-teal-700 hover:bg-teal-50 px-4 py-1.5 rounded-lg text-sm font-semibold flex items-center shadow-sm"><i data-feather="printer" class="w-4 h-4 mr-2"></i> พิมพ์ / PDF ข้อความ</button>
+                    <button onclick="exportCorrelationExcel()" class="bg-white border border-green-400 text-green-700 hover:bg-green-50 px-4 py-1.5 rounded-lg text-sm font-semibold flex items-center shadow-sm"><i data-feather="file-text" class="w-4 h-4 mr-2"></i> ส่งออก Excel</button>
+                </div>
                 <p class="text-xs text-slate-500 mb-3">ตารางไขว้แสดง "จำนวนคนที่มีทั้งสองอย่างพร้อมกัน" — สีเข้ม = พบร่วมมาก ; <b>Cramér's V</b> บอกความแรงของความสัมพันธ์ (0 = ไม่สัมพันธ์, ยิ่งเข้าใกล้ 1 ยิ่งสัมพันธ์กันมาก)</p>
                 <div class="space-y-5">
                     <div>${crossTabHtml('กิจกรรม × อาการ', ctActSym, ACT_CODE, null)}</div>
@@ -2382,12 +2395,12 @@
                     anyLab
                         ? `<div class="grid grid-cols-2 lg:grid-cols-4 gap-3">${labTiles}</div><div class="text-xs text-slate-400 mt-3">* จำนวนใหญ่ = ผู้ที่มีผลตรวจในรายการนั้น ; ด้านล่างแยกตามผลจริง (นับผลล่าสุดต่อคน) พร้อมร้อยละ — คลิกการ์ดเพื่อดูรายชื่อ</div>`
                         : '<div class="text-slate-400 text-sm">ยังไม่มีการบันทึกผลตรวจ — เพิ่มได้ที่ปุ่ม "ผลตรวจ" ในรายชื่อผู้สัมผัส</div>')}
-                <details class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden group">
-                    <summary class="list-none cursor-pointer text-lg font-semibold text-white flex items-center justify-between px-5 py-3 bg-gradient-to-r from-violet-600 to-indigo-700 select-none">
+                <details class="bg-white border-y border-slate-200 shadow-sm overflow-hidden group" style="width:100vw;position:relative;left:50%;right:50%;margin-left:-50vw;margin-right:-50vw">
+                    <summary class="list-none cursor-pointer text-lg font-semibold text-white flex items-center justify-between px-6 py-3 bg-gradient-to-r from-violet-600 to-indigo-700 select-none">
                         <span class="flex items-center"><i data-feather="git-merge" class="w-5 h-5 mr-2"></i> วิเคราะห์ความสัมพันธ์ — กิจกรรม × อาการ × Chest X-ray</span>
                         <i data-feather="chevron-down" class="w-5 h-5 transition-transform group-open:rotate-180"></i>
                     </summary>
-                    <div class="p-5">${corrHtml}</div>
+                    <div class="px-6 py-5">${corrHtml}</div>
                 </details>`;
             feather.replace();
             // คลิกกราฟ → กรองรายชื่อผู้สัมผัส
@@ -3288,6 +3301,63 @@
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url; a.download = filename;
+            document.body.appendChild(a); a.click();
+            setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 1000);
+        }
+
+        // ===== พิมพ์ / ส่งออก การวิเคราะห์ความสัมพันธ์ =====
+        let corrExport = null;
+        function corrEsc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+        // สร้าง HTML ตารางไขว้ (ข้อความล้วน) สำหรับพิมพ์/Excel
+        function corrTabTableHtml(o) {
+            const ct = o.ct;
+            const rlab = v => o.rowMap ? (o.rowMap[v] || v) : v;
+            const clab = v => o.colMap ? (o.colMap[v] || v) : v;
+            const head = `<tr><th></th>${ct.cols.map(b => `<th>${corrEsc(clab(b))}</th>`).join('')}<th>รวม</th></tr>`;
+            const body = ct.rows.map(a => `<tr><th style="text-align:left">${corrEsc(rlab(a))}</th>${ct.cols.map(b => `<td style="text-align:center">${(ct.M[a] && ct.M[a][b]) || ''}</td>`).join('')}<td style="text-align:center;font-weight:bold">${ct.rowTot[a] || 0}</td></tr>`).join('');
+            const pTxt = ct.p < 0.0001 ? 'p < 0.0001' : 'p = ' + ct.p.toFixed(4);
+            const sig = ct.p < 0.05 ? 'มีนัยสำคัญ (p<0.05)' : 'ไม่มีนัยสำคัญ';
+            const stat = `χ² = ${ct.chi2.toFixed(2)}, df = ${ct.df}, ${pTxt} — ${sig} ; Cramér's V = ${ct.V.toFixed(2)}`;
+            return `<h3 style="margin:14px 0 4px;color:#4338ca">${corrEsc(o.title)}</h3><div style="font-size:12px;color:#475569;margin-bottom:4px">${corrEsc(stat)}</div>`
+                + `<table border="1" cellspacing="0" cellpadding="4" style="border-collapse:collapse;font-size:12px">${head}${body}</table>`;
+        }
+        function corrPersonTableHtml(persons) {
+            const head = '<tr><th>#</th><th style="text-align:left">ชื่อ-สกุล</th><th style="text-align:left">หน่วยงาน</th><th style="text-align:left">กิจกรรม</th><th style="text-align:left">อาการ</th><th style="text-align:left">Chest X-ray</th></tr>';
+            const body = persons.map(p => `<tr><td style="text-align:center">${p.n}</td><td>${corrEsc(p.name)}</td><td>${corrEsc(p.unit)}</td><td>${corrEsc(p.acts)}</td><td>${corrEsc(p.syms)}</td><td>${corrEsc(p.cxr)}</td></tr>`).join('');
+            return `<h3 style="margin:16px 0 4px;color:#4338ca">ตารางรายคน (${persons.length} คน)</h3><table border="1" cellspacing="0" cellpadding="4" style="border-collapse:collapse;font-size:11px">${head}${body}</table>`;
+        }
+        function corrLegendHtml() {
+            const ac = corrExport && corrExport.actCode ? corrExport.actCode : {};
+            const ks = Object.keys(ac);
+            return ks.length ? `<div style="font-size:11px;color:#475569;margin-top:10px"><b>รหัสกิจกรรม:</b> ${ks.map(k => corrEsc(ac[k]) + ' = ' + corrEsc(k)).join(' · ')}</div>` : '';
+        }
+        function corrFullHtml() {
+            if (!corrExport) return '';
+            return corrExport.tabs.map(corrTabTableHtml).join('') + corrLegendHtml() + corrPersonTableHtml(corrExport.persons);
+        }
+        function printCorrelation() {
+            if (!corrExport) { showAlert('ยังไม่มีข้อมูล', 'เปิดหน้าแอดมินให้โหลดข้อมูลก่อน'); return; }
+            const html = `<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8"><title>วิเคราะห์ความสัมพันธ์</title>
+                <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+                <style>@page{size:A4 landscape;margin:10mm} body{font-family:'Sarabun',sans-serif;color:#0f172a;margin:0} table{width:auto} th{background:#eef2ff}</style></head><body>
+                <h2 style="color:#4338ca;margin:0 0 4px">วิเคราะห์ความสัมพันธ์ — กิจกรรม × อาการ × Chest X-ray</h2>
+                <div style="font-size:12px;color:#64748b;margin-bottom:8px">รพ.ศรีสังวรสุโขทัย • IPC/ICN — พิมพ์เมื่อ ${fmtThaiDate(isoToday())}</div>
+                ${corrFullHtml()}</body></html>`;
+            const ifr = document.createElement('iframe');
+            ifr.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0';
+            document.body.appendChild(ifr);
+            const d = ifr.contentDocument || ifr.contentWindow.document;
+            d.open(); d.write(html); d.close();
+            setTimeout(() => { try { ifr.contentWindow.focus(); ifr.contentWindow.print(); } catch (e) {} setTimeout(() => ifr.remove(), 60000); }, 500);
+        }
+        function exportCorrelationExcel() {
+            if (!corrExport) { showAlert('ยังไม่มีข้อมูล', 'เปิดหน้าแอดมินให้โหลดข้อมูลก่อน'); return; }
+            const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="UTF-8"></head><body>`
+                + `<h2>วิเคราะห์ความสัมพันธ์ — กิจกรรม × อาการ × Chest X-ray</h2>` + corrFullHtml() + `</body></html>`;
+            const blob = new Blob(['﻿' + html], { type: 'application/vnd.ms-excel;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = `วิเคราะห์ความสัมพันธ์-${isoToday()}.xls`;
             document.body.appendChild(a); a.click();
             setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 1000);
         }

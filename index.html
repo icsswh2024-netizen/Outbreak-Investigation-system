@@ -2061,6 +2061,18 @@
                 <polygon points="${area}" fill="#0d948815"/>
                 <polyline points="${pts}" fill="none" stroke="#0d9488" stroke-width="2"/>
                 ${dots}${vlab}
+                ${(function () {
+                    // พื้นที่คลิกใหญ่ต่อวัน (โปร่งใส) — คลิกที่ไหนในคอลัมน์ก็กรองวันนั้นได้
+                    const step = n > 1 ? (W - padL - padR) / (n - 1) : (W - padL - padR);
+                    const half = Math.max(6, step / 2);
+                    return pairs.map((p, i) => {
+                        const cx = xAt(i);
+                        let x0 = cx - half, w = half * 2;
+                        if (x0 < padL) { w -= (padL - x0); x0 = padL; }
+                        if (x0 + w > W - padR) w = (W - padR) - x0;
+                        return `<rect class="chart-clk" data-kind="date" data-value="${p.x}" x="${x0.toFixed(1)}" y="${padT}" width="${Math.max(1, w).toFixed(1)}" height="${(H - padB - padT).toFixed(1)}" fill="transparent" style="cursor:pointer"><title>${fmtThaiDate(p.x)} — ${Math.round(p.y)} ชม. (คลิกดูรายชื่อ)</title></rect>`;
+                    }).join('');
+                })()}
             </svg>`;
         }
         function renderAnalytics() {

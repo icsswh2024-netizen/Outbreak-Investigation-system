@@ -2395,12 +2395,12 @@
                     anyLab
                         ? `<div class="grid grid-cols-2 lg:grid-cols-4 gap-3">${labTiles}</div><div class="text-xs text-slate-400 mt-3">* จำนวนใหญ่ = ผู้ที่มีผลตรวจในรายการนั้น ; ด้านล่างแยกตามผลจริง (นับผลล่าสุดต่อคน) พร้อมร้อยละ — คลิกการ์ดเพื่อดูรายชื่อ</div>`
                         : '<div class="text-slate-400 text-sm">ยังไม่มีการบันทึกผลตรวจ — เพิ่มได้ที่ปุ่ม "ผลตรวจ" ในรายชื่อผู้สัมผัส</div>')}
-                <details class="bg-white border-y border-slate-200 shadow-sm group" style="margin-left:calc(50% - 50vw);margin-right:calc(50% - 50vw);overflow-x:hidden">
-                    <summary class="list-none cursor-pointer text-lg font-semibold text-white flex items-center justify-between px-6 py-3 bg-gradient-to-r from-violet-600 to-indigo-700 select-none">
+                <details class="bg-white rounded-2xl border border-slate-200 shadow-sm group" style="overflow:hidden">
+                    <summary class="list-none cursor-pointer text-lg font-semibold text-white flex items-center justify-between px-5 py-3 bg-gradient-to-r from-violet-600 to-indigo-700 select-none">
                         <span class="flex items-center"><i data-feather="git-merge" class="w-5 h-5 mr-2"></i> วิเคราะห์ความสัมพันธ์ — กิจกรรม × อาการ × Chest X-ray</span>
                         <i data-feather="chevron-down" class="w-5 h-5 transition-transform group-open:rotate-180"></i>
                     </summary>
-                    <div class="px-6 py-5" style="max-width:100%;overflow-x:auto">${corrHtml}</div>
+                    <div class="p-5" style="max-width:100%;overflow-x:auto">${corrHtml}</div>
                 </details>`;
             feather.replace();
             // คลิกกราฟ → กรองรายชื่อผู้สัมผัส

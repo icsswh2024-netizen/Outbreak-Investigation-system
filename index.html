@@ -381,9 +381,18 @@
                         <select id="flt-duration" class="text-base rounded-lg border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 cursor-pointer">
                             <option value="">ระยะเวลา: ทั้งหมด</option>
                         </select>
+                        <select id="flt-room" class="text-base rounded-lg border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 cursor-pointer">
+                            <option value="">ขนาดห้อง: ทั้งหมด</option>
+                        </select>
                         <div class="flex gap-2">
-                            <select id="flt-room" class="flex-1 text-base rounded-lg border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 cursor-pointer">
-                                <option value="">ขนาดห้อง: ทั้งหมด</option>
+                            <select id="flt-sort" class="flex-1 text-base rounded-lg border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 cursor-pointer" title="เรียงลำดับรายการ">
+                                <option value="">เรียงลำดับ: เริ่มต้น</option>
+                                <option value="date_asc">วันที่ (เก่า→ใหม่)</option>
+                                <option value="date_desc">วันที่ (ใหม่→เก่า)</option>
+                                <option value="name_asc">ชื่อ (ก→ฮ / A→Z)</option>
+                                <option value="name_desc">ชื่อ (ฮ→ก / Z→A)</option>
+                                <option value="hours_asc">ชั่วโมงสัมผัส (น้อย→มาก)</option>
+                                <option value="hours_desc">ชั่วโมงสัมผัส (มาก→น้อย)</option>
                             </select>
                             <button id="btn-flt-clear" class="px-3 py-2 rounded-lg border border-slate-300 bg-white text-slate-500 hover:bg-slate-50" title="ล้างตัวกรอง"><i data-feather="x" class="w-5 h-5"></i></button>
                         </div>
@@ -2478,6 +2487,25 @@
             const qq = q.trim().toLowerCase();
             buildContactCodes();
             const filtered = records.filter(passAdminFilters);
+            // เรียงลำดับ (น้อย→มาก / มาก→น้อย)
+            const sortMode = (document.getElementById('flt-sort') || {}).value || '';
+            if (sortMode) {
+                const nameOf = r => String(r.name || '');
+                const dateKey = r => { const p = String(r.date || '').split('/'); return p.length === 3 ? (p[2] + '-' + ('0' + p[1]).slice(-2) + '-' + ('0' + p[0]).slice(-2)) : String(r.date || ''); };
+                const hoursOf = r => { const ri = computeRecordRisk(r); return ri.hasData ? (parseFloat(ri.hours) || 0) : -1; };
+                const cmpStr = (a, b) => nameOf(a).localeCompare(nameOf(b), 'th');
+                filtered.sort((a, b) => {
+                    switch (sortMode) {
+                        case 'date_asc': return dateKey(a).localeCompare(dateKey(b)) || cmpStr(a, b);
+                        case 'date_desc': return dateKey(b).localeCompare(dateKey(a)) || cmpStr(a, b);
+                        case 'name_asc': return cmpStr(a, b);
+                        case 'name_desc': return cmpStr(b, a);
+                        case 'hours_asc': return hoursOf(a) - hoursOf(b) || cmpStr(a, b);
+                        case 'hours_desc': return hoursOf(b) - hoursOf(a) || cmpStr(a, b);
+                        default: return 0;
+                    }
+                });
+            }
             // ป้ายตัวกรองจากกราฟ (ลบได้)
             const chipBox = document.getElementById('chart-filter-chip');
             if (chipBox) {
@@ -3964,13 +3992,13 @@
         });
 
         // ผูกตัวกรองตารางรายชื่อ
-        ['flt-search', 'flt-group', 'flt-unit', 'flt-risk', 'flt-activity', 'flt-duration', 'flt-room'].forEach(id => {
+        ['flt-search', 'flt-group', 'flt-unit', 'flt-risk', 'flt-activity', 'flt-duration', 'flt-room', 'flt-sort'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.addEventListener('input', renderAdminTable);
         });
         const fltClear = document.getElementById('btn-flt-clear');
         if (fltClear) fltClear.addEventListener('click', () => {
-            ['flt-search', 'flt-group', 'flt-unit', 'flt-risk', 'flt-activity', 'flt-duration', 'flt-room'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+            ['flt-search', 'flt-group', 'flt-unit', 'flt-risk', 'flt-activity', 'flt-duration', 'flt-room', 'flt-sort'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
             chartFilter = null;
             renderAdminTable();
         });

@@ -1875,6 +1875,7 @@
         }
         function recordLabPositive(rec, key) { return recordLabs(rec)[key].some(x => x.result === '+'); }
         function recordLabTested(rec, key) { return recordLabs(rec)[key].some(x => x && String(x.result || '').trim() !== ''); }
+        function recordLabHasValue(rec, key, val) { return recordLabs(rec)[key].some(x => x && String(x.result || '').trim() === val); }
         function labLabel(key) { const t = LAB_TESTS.find(x => x.key === key); return t ? t.label : key; }
         // สรุปผลตรวจเป็นข้อความล้วน (สำหรับ Excel/พิมพ์) — แสดงเฉพาะครั้งที่มีผล
         function labCellText(rec, key) {
@@ -2006,6 +2007,7 @@
                 if (cf.kind === 'duration' && !recordHasDuration(r, cf.value)) return false;
                 if (cf.kind === 'symptom' && !recordHasSymptom(r, cf.value)) return false;
                 if (cf.kind === 'lab' && !recordLabTested(r, cf.value)) return false;
+                if (cf.kind === 'labval') { const p = String(cf.value).split('␟'); if (!recordLabHasValue(r, p[0], p[1] || '')) return false; }
                 if (cf.kind === 'date' && !recordOnDate(r, cf.value)) return false;
             }
             return true;
@@ -2188,13 +2190,14 @@
                     .sort((a, b) => b.n - a.n);
                 return { key: t.key, label: t.label, tested: tested, rows: rows };
             });
+            const LSEP = '␟';
             const labTiles = labStat.map(s => `
-                <div class="chart-clk cursor-pointer rounded-2xl p-4 text-white bg-gradient-to-br ${LAB_GRAD[s.key]} shadow-[0_6px_18px_rgba(15,23,42,0.18)] hover:brightness-105 transition" data-kind="lab" data-value="${s.key}" title="คลิกดูรายชื่อที่ตรวจ ${escAttr(s.label)}">
+                <div class="rounded-2xl p-4 text-white bg-gradient-to-br ${LAB_GRAD[s.key]} shadow-[0_6px_18px_rgba(15,23,42,0.18)]">
                     <div class="flex items-center gap-2 text-white/90 text-sm font-semibold">${LAB_SVG[s.key]} ${escHtml(s.label)}</div>
-                    <div class="mt-2 flex items-end gap-1"><span class="text-3xl font-extrabold drop-shadow">${s.tested}</span><span class="text-sm text-white/80 mb-0.5">ราย (ตรวจแล้ว)</span></div>
+                    <div class="chart-clk cursor-pointer mt-2 flex items-end gap-1 rounded-lg -mx-1 px-1 hover:bg-white/10" data-kind="lab" data-value="${s.key}" title="คลิกดูรายชื่อที่ตรวจ ${escAttr(s.label)} ทั้งหมด"><span class="text-3xl font-extrabold drop-shadow">${s.tested}</span><span class="text-sm text-white/80 mb-0.5">ราย (ตรวจแล้ว)</span></div>
                     <div class="mt-2 space-y-1">
                         ${s.rows.length
-                            ? s.rows.map(r => `<div class="flex items-center justify-between text-xs"><span class="truncate pr-2 text-white/95">${escHtml(r.v)}</span><span class="whitespace-nowrap font-semibold">${r.n} (${r.pct}%)</span></div><div class="h-1.5 bg-white/25 rounded-full overflow-hidden"><div class="h-1.5 rounded-full bg-white" style="width:${r.pct}%"></div></div>`).join('')
+                            ? s.rows.map(r => `<div class="chart-clk cursor-pointer rounded-lg -mx-1 px-1 py-0.5 hover:bg-white/10" data-kind="labval" data-value="${escAttr(s.key + LSEP + r.v)}" title="คลิกดูรายชื่อที่ผล ${escAttr(r.v)}"><div class="flex items-center justify-between text-xs"><span class="truncate pr-2 text-white/95">${escHtml(r.v)}</span><span class="whitespace-nowrap font-semibold">${r.n} (${r.pct}%)</span></div><div class="h-1.5 bg-white/25 rounded-full overflow-hidden"><div class="h-1.5 rounded-full bg-white" style="width:${r.pct}%"></div></div></div>`).join('')
                             : '<div class="text-xs text-white/70">— ยังไม่มีผล —</div>'}
                     </div>
                 </div>`).join('');
@@ -2271,8 +2274,12 @@
             const chipBox = document.getElementById('chart-filter-chip');
             if (chipBox) {
                 if (chartFilter) {
-                    const kindLabel = { unit: 'หน่วยงาน', activity: 'กิจกรรม', duration: 'ระยะเวลา', symptom: 'อาการ', lab: 'ผลตรวจ', date: 'วันที่' }[chartFilter.kind] || chartFilter.kind;
-                    const valLabel = chartFilter.kind === 'date' ? fmtThaiDate(chartFilter.value) : (chartFilter.kind === 'lab' ? labLabel(chartFilter.value) : chartFilter.value);
+                    const kindLabel = { unit: 'หน่วยงาน', activity: 'กิจกรรม', duration: 'ระยะเวลา', symptom: 'อาการ', lab: 'ผลตรวจ', labval: 'ผลตรวจ', date: 'วันที่' }[chartFilter.kind] || chartFilter.kind;
+                    let valLabel;
+                    if (chartFilter.kind === 'date') valLabel = fmtThaiDate(chartFilter.value);
+                    else if (chartFilter.kind === 'lab') valLabel = labLabel(chartFilter.value);
+                    else if (chartFilter.kind === 'labval') { const p = String(chartFilter.value).split('␟'); valLabel = labLabel(p[0]) + ' = ' + (p[1] || ''); }
+                    else valLabel = chartFilter.value;
                     chipBox.innerHTML = `<span class="inline-flex items-center gap-2 bg-teal-100 text-teal-800 border border-teal-300 rounded-full px-3 py-1 text-sm font-medium">กรองจากกราฟ: ${kindLabel} = ${escHtml(valLabel)} <button onclick="clearChartFilter()" class="text-teal-600 hover:text-teal-900 font-bold">✕</button></span>`;
                     chipBox.hidden = false;
                 } else { chipBox.innerHTML = ''; chipBox.hidden = true; }

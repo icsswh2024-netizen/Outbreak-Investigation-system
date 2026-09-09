@@ -2371,10 +2371,10 @@
                     <button onclick="exportCorrelationExcel()" class="bg-white border border-green-400 text-green-700 hover:bg-green-50 px-4 py-1.5 rounded-lg text-sm font-semibold flex items-center shadow-sm"><i data-feather="file-text" class="w-4 h-4 mr-2"></i> ส่งออก Excel</button>
                 </div>
                 <p class="text-xs text-slate-500 mb-3">ตารางไขว้แสดง "จำนวนคนที่มีทั้งสองอย่างพร้อมกัน" — สีเข้ม = พบร่วมมาก ; <b>Cramér's V</b> บอกความแรงของความสัมพันธ์ (0 = ไม่สัมพันธ์, ยิ่งเข้าใกล้ 1 ยิ่งสัมพันธ์กันมาก)</p>
-                <div class="space-y-5">
-                    <div>${crossTabHtml('กิจกรรม × อาการ', ctActSym, ACT_CODE, null)}</div>
-                    <div>${crossTabHtml('กิจกรรม × ผล Chest X-ray', ctActCxr, ACT_CODE, null)}</div>
-                    <div>${crossTabHtml('อาการ × ผล Chest X-ray', ctSymCxr, null, null)}</div>
+                <div class="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-5 items-start">
+                    <div class="min-w-0">${crossTabHtml('กิจกรรม × อาการ', ctActSym, ACT_CODE, null)}</div>
+                    <div class="min-w-0">${crossTabHtml('กิจกรรม × ผล Chest X-ray', ctActCxr, ACT_CODE, null)}</div>
+                    <div class="min-w-0">${crossTabHtml('อาการ × ผล Chest X-ray', ctSymCxr, null, null)}</div>
                 </div>
                 ${perPersonHtml}
                 ${Object.keys(ACT_CODE).length ? `<div class="text-[11px] text-slate-400 mt-3 leading-relaxed"><b>รหัสกิจกรรม:</b> ${Object.keys(ACT_CODE).map(k => `${escHtml(ACT_CODE[k])} = ${escHtml(k)}`).join(' · ')}</div>` : ''}

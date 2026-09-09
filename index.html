@@ -1986,7 +1986,7 @@
                     const alpha = v ? (0.12 + 0.6 * v / max).toFixed(2) : 0;
                     return `<td class="px-2 py-1 text-center" style="background:rgba(13,148,136,${alpha})">${v || ''}</td>`;
                 }).join('');
-                return `<tr><td class="px-2 py-1 whitespace-nowrap bg-slate-50 sticky left-0 font-medium">${escHtml(rlab(a))}</td>${cells}<td class="px-2 py-1 text-center font-semibold bg-slate-100">${ct.rowTot[a] || 0}</td></tr>`;
+                return `<tr><td class="px-2 py-1 bg-slate-50 sticky left-0 font-medium align-top" style="max-width:240px;white-space:normal;line-height:1.35">${escHtml(rlab(a))}</td>${cells}<td class="px-2 py-1 text-center font-semibold bg-slate-100">${ct.rowTot[a] || 0}</td></tr>`;
             }).join('');
             return `<div class="mb-2 flex items-center flex-wrap gap-2">
                     <span class="text-sm font-semibold text-slate-700">${escHtml(title)}</span>
@@ -2365,6 +2365,9 @@
                 persons: corrRecs.map((r, i) => ({ n: i + 1, name: r.name || '-', unit: unitOfRec(r) || '-', acts: actFn(r).map(a => ACT_CODE[a] || a).join(', ') || '-', syms: symFn(r).join(', ') || '-', cxr: cxrFn(r)[0] || '-' })),
                 actCode: Object.assign({}, ACT_CODE)
             };
+            // แผนที่ชื่อกิจกรรมเต็ม (รหัส + ชื่อ) สำหรับหัวแถวตารางไขว้
+            const actNameMap = {};
+            Object.keys(ACT_CODE).forEach(k => { actNameMap[k] = ACT_CODE[k] + ' ' + k; });
             const corrHtml = `
                 <div class="flex flex-wrap justify-end gap-2 mb-3">
                     <button onclick="printCorrelation()" class="bg-white border border-teal-300 text-teal-700 hover:bg-teal-50 px-4 py-1.5 rounded-lg text-sm font-semibold flex items-center shadow-sm"><i data-feather="printer" class="w-4 h-4 mr-2"></i> พิมพ์ / PDF ข้อความ</button>
@@ -2372,8 +2375,8 @@
                 </div>
                 <p class="text-xs text-slate-500 mb-3">ตารางไขว้แสดง "จำนวนคนที่มีทั้งสองอย่างพร้อมกัน" — สีเข้ม = พบร่วมมาก ; <b>Cramér's V</b> บอกความแรงของความสัมพันธ์ (0 = ไม่สัมพันธ์, ยิ่งเข้าใกล้ 1 ยิ่งสัมพันธ์กันมาก)</p>
                 <div class="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-5 items-start">
-                    <div class="min-w-0">${crossTabHtml('กิจกรรม × อาการ', ctActSym, ACT_CODE, null)}</div>
-                    <div class="min-w-0">${crossTabHtml('กิจกรรม × ผล Chest X-ray', ctActCxr, ACT_CODE, null)}</div>
+                    <div class="min-w-0">${crossTabHtml('กิจกรรม × อาการ', ctActSym, actNameMap, null)}</div>
+                    <div class="min-w-0">${crossTabHtml('กิจกรรม × ผล Chest X-ray', ctActCxr, actNameMap, null)}</div>
                     <div class="min-w-0">${crossTabHtml('อาการ × ผล Chest X-ray', ctSymCxr, null, null)}</div>
                 </div>
                 ${perPersonHtml}

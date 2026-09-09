@@ -1888,6 +1888,44 @@
             const rounds = recordLabs(rec).cxr.filter(x => x && String(x.result || '').trim() !== '');
             return rounds.length ? [String(rounds[rounds.length - 1].result).trim()] : [];
         }
+        // ---- ฟังก์ชันสถิติ (ไม่พึ่งไลบรารี) ----
+        function gammaln(x) {
+            const c = [76.18009172947146, -86.50532032941677, 24.01409824083091,
+                -1.231739572450155, 0.1208650973866179e-2, -0.5395239384953e-5];
+            let y = x, tmp = x + 5.5; tmp -= (x + 0.5) * Math.log(tmp);
+            let ser = 1.000000000190015;
+            for (let j = 0; j < 6; j++) { y++; ser += c[j] / y; }
+            return -tmp + Math.log(2.5066282746310005 * ser / x);
+        }
+        // P(a,x) regularized lower incomplete gamma
+        function gammap(a, x) {
+            if (x <= 0 || a <= 0) return 0;
+            if (x < a + 1) { // series
+                let ap = a, sum = 1 / a, del = sum;
+                for (let n = 0; n < 200; n++) { ap++; del *= x / ap; sum += del; if (Math.abs(del) < Math.abs(sum) * 1e-12) break; }
+                return sum * Math.exp(-x + a * Math.log(x) - gammaln(a));
+            } else { // continued fraction (Q then 1-Q)
+                let b = x + 1 - a, c = 1e300, d = 1 / b, h = d;
+                for (let i = 1; i < 200; i++) {
+                    const an = -i * (i - a); b += 2;
+                    d = an * d + b; if (Math.abs(d) < 1e-300) d = 1e-300;
+                    c = b + an / c; if (Math.abs(c) < 1e-300) c = 1e-300;
+                    d = 1 / d; const del = d * c; h *= del; if (Math.abs(del - 1) < 1e-12) break;
+                }
+                const Q = Math.exp(-x + a * Math.log(x) - gammaln(a)) * h;
+                return 1 - Q;
+            }
+        }
+        // p-value ของ chi-square ที่ df องศาอิสระ
+        function chiSquareP(chi2, df) {
+            if (df <= 0 || chi2 <= 0) return 1;
+            return 1 - gammap(df / 2, chi2 / 2);
+        }
+        function fmtP(p) {
+            if (p < 0.0001) return 'p < 0.0001';
+            return 'p = ' + p.toFixed(4);
+        }
+
         // สร้างตารางไขว้ (contingency) + ค่า Cramér's V (0–1) จากการนับการเกิดร่วม
         function buildCrossTab(recs, rowFn, colFn, opt) {
             opt = opt || {};
@@ -1904,8 +1942,8 @@
             let cols = Object.keys(colTot).sort((a, b) => colTot[b] - colTot[a]);
             if (opt.maxRows) rows = rows.slice(0, opt.maxRows);
             if (opt.maxCols) cols = cols.slice(0, opt.maxCols);
-            // Cramér's V บนเซลล์ที่แสดง
-            let chi2 = 0, gt = 0;
+            // Cramér's V + Chi-square + p-value บนเซลล์ที่แสดง
+            let chi2 = 0, gt = 0, lowE = 0, nCell = 0;
             rows.forEach(a => cols.forEach(b => gt += (M[a] && M[a][b]) || 0));
             if (gt > 0) {
                 const rSum = {}, cSum = {};
@@ -1914,11 +1952,15 @@
                 rows.forEach(a => cols.forEach(b => {
                     const O = (M[a] && M[a][b]) || 0, E = rSum[a] * cSum[b] / gt;
                     if (E > 0) chi2 += (O - E) * (O - E) / E;
+                    nCell++; if (E < 5) lowE++;
                 }));
             }
             const k = Math.min(rows.length, cols.length);
             const V = (gt > 0 && k > 1) ? Math.sqrt(chi2 / (gt * (k - 1))) : 0;
-            return { rows, cols, M, rowTot, colTot, N: gt, V };
+            const df = Math.max(0, (rows.length - 1) * (cols.length - 1));
+            const p = (gt > 0 && df > 0) ? chiSquareP(chi2, df) : 1;
+            const lowEpct = nCell ? Math.round(lowE / nCell * 100) : 0;
+            return { rows, cols, M, rowTot, colTot, N: gt, V, chi2, df, p, lowEpct };
         }
         function cramerLabel(v) {
             if (v >= 0.5) return { t: 'สูงมาก', c: 'text-rose-700 bg-rose-100' };
@@ -1934,6 +1976,9 @@
             const rlab = v => rowMap ? (rowMap[v] || v) : v;
             const clab = v => colMap ? (colMap[v] || v) : v;
             const lv = cramerLabel(ct.V);
+            const sig = ct.p < 0.05;
+            const sigBadge = `<span class="text-xs px-2 py-0.5 rounded-full font-medium ${sig ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}">χ²=${ct.chi2.toFixed(2)}, df=${ct.df}, ${fmtP(ct.p)} ${sig ? '✓ มีนัยสำคัญ (p<0.05)' : '— ไม่มีนัยสำคัญ'}</span>`;
+            const warn = ct.lowEpct >= 20 ? `<span class="text-[11px] text-amber-600">⚠ ค่าคาดหวังหลายช่อง &lt;5 (${ct.lowEpct}%) — p อาจไม่แม่นยำ</span>` : '';
             const head = `<tr><th class="text-left px-2 py-1 bg-slate-50 sticky left-0">${''}</th>${ct.cols.map(b => `<th class="px-2 py-1 text-center bg-slate-50 whitespace-nowrap">${escHtml(clab(b))}</th>`).join('')}<th class="px-2 py-1 text-center bg-slate-100">รวม</th></tr>`;
             const body = ct.rows.map(a => {
                 const cells = ct.cols.map(b => {
@@ -1946,6 +1991,7 @@
             return `<div class="mb-2 flex items-center flex-wrap gap-2">
                     <span class="text-sm font-semibold text-slate-700">${escHtml(title)}</span>
                     <span class="text-xs px-2 py-0.5 rounded-full ${lv.c} font-medium">Cramér's V = ${ct.V.toFixed(2)} (${lv.t})</span>
+                    ${sigBadge} ${warn}
                 </div>
                 <div class="overflow-x-auto"><table class="text-xs border-collapse">${head}${body}</table></div>`;
         }
@@ -2294,7 +2340,7 @@
                     <div>${crossTabHtml('อาการ × ผล Chest X-ray', ctSymCxr, null, null)}</div>
                 </div>
                 ${Object.keys(ACT_CODE).length ? `<div class="text-[11px] text-slate-400 mt-3 leading-relaxed"><b>รหัสกิจกรรม:</b> ${Object.keys(ACT_CODE).map(k => `${escHtml(ACT_CODE[k])} = ${escHtml(k)}`).join(' · ')}</div>` : ''}
-                <div class="text-[11px] text-slate-400 mt-1">* เป็นการวิเคราะห์เชิงสำรวจ (คนหนึ่งมีได้หลายกิจกรรม/หลายอาการ) ค่าที่ได้ใช้ชี้ทิศทางความสัมพันธ์เบื้องต้น ไม่ใช่การทดสอบทางสถิติเชิงยืนยัน</div>`;
+                <div class="text-[11px] text-slate-400 mt-1 leading-relaxed">* <b>Chi-square test of independence</b>: χ² = ค่าสถิติ, df = องศาอิสระ (แถว−1)×(คอลัมน์−1), p &lt; 0.05 = ความสัมพันธ์มีนัยสำคัญทางสถิติ ; <b>Cramér's V</b> = ขนาดความสัมพันธ์ (effect size). หมายเหตุ: คนหนึ่งมีได้หลายกิจกรรม/หลายอาการ (ข้อมูลไม่เป็นอิสระต่อกันสมบูรณ์) และถ้าค่าคาดหวังหลายช่อง &lt;5 ควรตีความอย่างระมัดระวัง/ใช้ Fisher's exact แทน</div>`;
 
             box.innerHTML = `
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">

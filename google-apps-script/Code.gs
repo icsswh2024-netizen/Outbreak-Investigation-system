@@ -26,7 +26,7 @@ var SPREADSHEET_ID = '1-vvdG18uzzn9EQgSAnQ1G4aCLdUvNIQA6deWZrk92EI';
 function doGet(e) {
   var action = (e && e.parameter && e.parameter.action) || 'load';
   var out;
-  if (action === 'load') out = { schema: readSchema(), records: readRecords(), settings: readSettings(), roster: readRoster(), logo: readLogo(), labOptions: readLabOptions() };
+  if (action === 'load') out = { schema: readSchema(), records: readRecords(), settings: readSettings(), roster: readRoster(), logo: readLogo(), labOptions: readLabOptions(), accounts: readAccounts() };
   else out = { error: 'unknown action' };
 
   // รองรับ JSONP (เรียกจากเว็บสถิตข้ามโดเมนได้ ผ่าน callback)
@@ -443,6 +443,52 @@ function readLogo() {
       group: cGroup >= 0 ? String(row[cGroup] || '').trim() : '',
       link: cLink >= 0 ? String(row[cLink] || '').trim() : ''
     });
+  }
+  return out;
+}
+
+// อ่านบัญชีผู้ดูแลจากแท็บ "ผู้ใช้งาน" (จัดการชื่อผู้ใช้/รหัสผ่าน/สิทธิ์ในชีตได้เอง)
+// คอลัมน์: ชื่อผู้ใช้ | รหัสผ่าน | สิทธิ์ (admin/แก้ไข = จัดการได้ ; view/ดู = ดูอย่างเดียว) | ชื่อ (ไม่บังคับ)
+// คืน [{ user, pass, role, name }] ; role = 'admin' | 'view'
+function readAccounts() {
+  var name = 'ผู้ใช้งาน';
+  var sh = ss().getSheetByName(name);
+  if (!sh) {
+    // สร้างแท็บพร้อมตัวอย่าง 2 บัญชี (แก้ไขในชีตได้ทันที)
+    sh = ss().insertSheet(name);
+    sh.getRange(1, 1, 1, 4).setValues([['ชื่อผู้ใช้', 'รหัสผ่าน', 'สิทธิ์ (admin/view)', 'ชื่อ-สกุล (ไม่บังคับ)']]).setFontWeight('bold');
+    sh.getRange(2, 1, 2, 4).setValues([
+      ['icn', '10725', 'admin', 'ผู้ดูแลระบบ'],
+      ['view', '1234', 'view', 'ผู้ดูอย่างเดียว']
+    ]);
+    sh.setFrozenRows(1);
+  }
+  var last = sh.getLastRow();
+  if (last < 2) return [];
+  var vals = sh.getDataRange().getValues();
+  var h = vals[0];
+  var norm = function (s) { return String(s == null ? '' : s).replace(/\s+/g, '').toLowerCase().trim(); };
+  function find(names) {
+    for (var i = 0; i < h.length; i++) { var hh = norm(h[i]); for (var j = 0; j < names.length; j++) if (hh === names[j] || hh.indexOf(names[j]) >= 0) return i; }
+    return -1;
+  }
+  var cUser = find(['ชื่อผู้ใช้', 'user', 'username', 'ผู้ใช้']);
+  var cPass = find(['รหัสผ่าน', 'pass', 'password', 'รหัส']);
+  var cRole = find(['สิทธิ์', 'role', 'บทบาท']);
+  var cName = find(['ชื่อ-สกุล', 'ชื่อ', 'name']);
+  if (cUser < 0) cUser = 0;
+  if (cPass < 0) cPass = 1;
+  var out = [];
+  for (var r = 1; r < vals.length; r++) {
+    var row = vals[r];
+    var u = String(row[cUser] == null ? '' : row[cUser]).trim();
+    var p = String(row[cPass] == null ? '' : row[cPass]).trim();
+    if (!u) continue;
+    var roleRaw = cRole >= 0 ? norm(row[cRole]) : '';
+    var role = (roleRaw === 'admin' || roleRaw === 'แก้ไข' || roleRaw === 'เต็ม' || roleRaw === 'manage') ? 'admin'
+      : (roleRaw === 'view' || roleRaw === 'ดู' || roleRaw === 'ดูอย่างเดียว' || roleRaw === 'readonly' || roleRaw === 'read') ? 'view'
+      : (roleRaw ? 'view' : 'admin'); // ไม่ระบุสิทธิ์ = admin (เข้ากันได้กับของเดิม), ระบุอย่างอื่น = ดูอย่างเดียว
+    out.push({ user: u, pass: p, role: role, name: cName >= 0 ? String(row[cName] || '').trim() : '' });
   }
   return out;
 }

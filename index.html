@@ -669,6 +669,11 @@
                 labOptions = data.labOptions;
                 try { localStorage.setItem('oi-laboptions', JSON.stringify(labOptions)); } catch (e) {}
             }
+            // บัญชีผู้ดูแล จากแท็บ "ผู้ใช้งาน" (จัดการชื่อผู้ใช้/รหัสผ่าน/สิทธิ์ในชีตได้)
+            if (data && Array.isArray(data.accounts)) {
+                accounts = data.accounts;
+                try { localStorage.setItem('oi-accounts', JSON.stringify(accounts)); } catch (e) {}
+            }
             // แท็บ "การจัดการแบบสอบถาม": มีบนชีต -> ใช้; ยังว่าง -> เติม schema ปัจจุบันขึ้นไป
             if (data && data.schema) {
                 schema = data.schema;
@@ -2685,6 +2690,22 @@
         const ADMIN_PASS = '10725';
         const VIEW_USER = 'view';   // ผู้ดูแลแบบดูอย่างเดียว (ดูข้อมูล/รายงานได้ แต่แก้ไข/ลบไม่ได้)
         const VIEW_PASS = '1234';
+        // บัญชีจากแท็บ "ผู้ใช้งาน" ในชีต (ถ้ามี) — ถ้าตรงจะใช้แทนค่า 2 บัญชีด้านบน
+        let accounts = [];
+        try { const _ac = localStorage.getItem('oi-accounts'); if (_ac) accounts = JSON.parse(_ac); } catch (e) {}
+        // ตรวจบัญชีจากชีตก่อน แล้วค่อย fallback เป็นบัญชีตายตัว (icn / view)
+        function checkLogin(u, p) {
+            const uu = (u || '').trim().toLowerCase(), pp = (p || '').trim();
+            if (Array.isArray(accounts) && accounts.length) {
+                const hit = accounts.find(a => String(a.user || '').trim().toLowerCase() === uu && String(a.pass == null ? '' : a.pass).trim() === pp);
+                if (hit) return hit.role === 'admin' ? 'admin' : 'view';
+                // มีรายชื่อในชีตแล้วแต่ไม่ตรง -> ปฏิเสธ (ไม่ตกไป fallback เพื่อกันบัญชีตายตัวที่ผู้ใช้อาจลบทิ้ง)
+                return '';
+            }
+            if (uu === ADMIN_USER && pp === ADMIN_PASS) return 'admin';
+            if (uu === VIEW_USER && pp === VIEW_PASS) return 'view';
+            return '';
+        }
         const loginModal = document.getElementById('login-modal');
         const loginUser = document.getElementById('login-user');
         const loginPass = document.getElementById('login-pass');
@@ -2708,11 +2729,7 @@
         }
         function closeLogin() { loginModal.classList.add('hidden'); loginModal.classList.remove('flex'); }
         function doLogin() {
-            const u = (loginUser.value || '').trim().toLowerCase();
-            const p = (loginPass.value || '').trim();
-            let role = '';
-            if (u === ADMIN_USER && p === ADMIN_PASS) role = 'admin';
-            else if (u === VIEW_USER && p === VIEW_PASS) role = 'view';
+            const role = checkLogin(loginUser.value, loginPass.value);
             if (role) {
                 try { sessionStorage.setItem('oi-admin', '1'); sessionStorage.setItem('oi-role', role); } catch (e) {}
                 applyRoleUI();

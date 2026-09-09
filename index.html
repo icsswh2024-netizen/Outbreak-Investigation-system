@@ -121,7 +121,7 @@
 <body class="min-h-screen bg-slate-50 text-slate-800">
 
     <nav class="bg-white/95 text-slate-800 shadow-[0_-2px_15px_rgba(0,0,0,0.08)] lg:shadow-[0_2px_15px_rgba(0,0,0,0.05)] fixed bottom-0 left-0 right-0 lg:sticky lg:top-0 lg:bottom-auto z-30 border-t lg:border-t-0 lg:border-b border-slate-200 backdrop-blur-md">
-        <div class="w-full max-w-[1600px] mx-auto px-2 sm:px-6 lg:px-8">
+        <div class="w-full max-w-[1850px] mx-auto px-2 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16">
                 <div class="hidden lg:flex items-center space-x-3 cursor-pointer nav-btn" data-target="view-home">
                     <img id="site-logo" src="assets/logo-sswh.png" alt="โลโก้ รพ.ศรีสังวรสุโขทัย" class="h-11 w-auto" onerror="this.style.display='none'; var s=document.getElementById('site-logo-fallback'); if(s)s.style.display='inline-block';">
@@ -152,7 +152,7 @@
         </div>
     </nav>
 
-    <main class="w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 pb-28 lg:pb-10">
+    <main class="w-full max-w-[1850px] mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 pb-28 lg:pb-10">
 
         <!-- ================= HOME VIEW ================= -->
         <div id="view-home" class="view-section fade-in space-y-10">
@@ -2332,6 +2332,22 @@
             const ctActSym = buildCrossTab(corrRecs, actFn, symFn, { maxRows: 10, maxCols: 8 });
             const ctActCxr = buildCrossTab(corrRecs, actFn, cxrFn, { maxRows: 12, maxCols: 8 });
             const ctSymCxr = buildCrossTab(corrRecs, symFn, cxrFn, { maxRows: 12, maxCols: 8 });
+            // ตารางรายคน
+            const perPersonRows = corrRecs.map((r, i) => {
+                const acts = actFn(r).map(a => ACT_CODE[a] || a).join(', ') || '-';
+                const syms = symFn(r).join(', ') || '-';
+                const cxr = cxrFn(r)[0] || '-';
+                const unit = unitOfRec(r) || '-';
+                return `<tr class="border-b border-slate-100"><td class="px-2 py-1 text-center text-slate-400">${i + 1}</td><td class="px-2 py-1 whitespace-nowrap font-medium">${escHtml(r.name || '-')}</td><td class="px-2 py-1 whitespace-nowrap text-slate-600">${escHtml(unit)}</td><td class="px-2 py-1">${escHtml(acts)}</td><td class="px-2 py-1">${escHtml(syms)}</td><td class="px-2 py-1 whitespace-nowrap">${labResultBadge(cxr === '-' ? '' : cxr)}</td></tr>`;
+            }).join('');
+            const perPersonHtml = `<details class="mt-4 border border-slate-200 rounded-xl overflow-hidden">
+                <summary class="list-none cursor-pointer px-4 py-2 bg-slate-50 text-sm font-semibold text-slate-700 flex items-center gap-2 select-none"><i data-feather="users" class="w-4 h-4"></i> ตารางรายคน (กิจกรรม / อาการ / Chest X-ray) — ${corrRecs.length} คน</summary>
+                <div class="overflow-x-auto max-h-[420px] overflow-y-auto"><table class="w-full text-xs">
+                    <thead class="sticky top-0 bg-slate-100 text-slate-500"><tr>
+                        <th class="px-2 py-1.5">#</th><th class="px-2 py-1.5 text-left">ชื่อ-สกุล</th><th class="px-2 py-1.5 text-left">หน่วยงาน</th>
+                        <th class="px-2 py-1.5 text-left">กิจกรรม</th><th class="px-2 py-1.5 text-left">อาการ</th><th class="px-2 py-1.5 text-left">Chest X-ray</th>
+                    </tr></thead><tbody>${perPersonRows || '<tr><td colspan="6" class="px-2 py-3 text-center text-slate-400">ไม่มีข้อมูล</td></tr>'}</tbody>
+                </table></div></details>`;
             const corrHtml = `
                 <p class="text-xs text-slate-500 mb-3">ตารางไขว้แสดง "จำนวนคนที่มีทั้งสองอย่างพร้อมกัน" — สีเข้ม = พบร่วมมาก ; <b>Cramér's V</b> บอกความแรงของความสัมพันธ์ (0 = ไม่สัมพันธ์, ยิ่งเข้าใกล้ 1 ยิ่งสัมพันธ์กันมาก)</p>
                 <div class="space-y-5">
@@ -2339,6 +2355,7 @@
                     <div>${crossTabHtml('กิจกรรม × ผล Chest X-ray', ctActCxr, ACT_CODE, null)}</div>
                     <div>${crossTabHtml('อาการ × ผล Chest X-ray', ctSymCxr, null, null)}</div>
                 </div>
+                ${perPersonHtml}
                 ${Object.keys(ACT_CODE).length ? `<div class="text-[11px] text-slate-400 mt-3 leading-relaxed"><b>รหัสกิจกรรม:</b> ${Object.keys(ACT_CODE).map(k => `${escHtml(ACT_CODE[k])} = ${escHtml(k)}`).join(' · ')}</div>` : ''}
                 <div class="text-[11px] text-slate-400 mt-1 leading-relaxed">* <b>Chi-square test of independence</b>: χ² = ค่าสถิติ, df = องศาอิสระ (แถว−1)×(คอลัมน์−1), p &lt; 0.05 = ความสัมพันธ์มีนัยสำคัญทางสถิติ ; <b>Cramér's V</b> = ขนาดความสัมพันธ์ (effect size). หมายเหตุ: คนหนึ่งมีได้หลายกิจกรรม/หลายอาการ (ข้อมูลไม่เป็นอิสระต่อกันสมบูรณ์) และถ้าค่าคาดหวังหลายช่อง &lt;5 ควรตีความอย่างระมัดระวัง/ใช้ Fisher's exact แทน</div>`;
 

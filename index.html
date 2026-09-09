@@ -26,6 +26,14 @@
             max-width: 100%;
         }
         *, *::before, *::after { box-sizing: border-box; }
+        /* โหมดผู้ดูแลแบบดูอย่างเดียว (viewer) — ซ่อนปุ่ม/ส่วนที่ใช้จัดการข้อมูล */
+        body.role-view .manage-only { display: none !important; }
+        body.role-view #btn-manage-toggle,
+        body.role-view #manage-panel,
+        body.role-view .nav-btn[data-target="view-builder"],
+        body.role-view .btn-edit,
+        body.role-view .btn-del,
+        body.role-view .btn-lab { display: none !important; }
         /* ข้อความยาว/ตัวเลือกยาวไม่ดันจอ */
         label, span, p, h1, h2, h3 { overflow-wrap: break-word; word-break: break-word; }
         /* ช่องกรอกและดรอปดาวน์ไม่ล้นกรอบ */
@@ -213,7 +221,9 @@
         <div id="view-admin" class="view-section hidden fade-in space-y-8">
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-end space-y-4 sm:space-y-0">
                 <div>
-                    <h2 class="text-3xl font-bold text-slate-900 drop-shadow-sm">แผงควบคุม (Admin Dashboard)</h2>
+                    <h2 class="text-3xl font-bold text-slate-900 drop-shadow-sm">แผงควบคุม (Admin Dashboard)
+                        <span id="role-badge" hidden class="align-middle ml-2 inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-amber-100 text-amber-700 border border-amber-200"><i data-feather="eye" class="w-4 h-4 mr-1"></i> ดูอย่างเดียว</span>
+                    </h2>
                     <p class="text-slate-600 mt-1 text-lg">ภาพรวมการสอบสวนการระบาดและข้อมูลผู้สัมผัส</p>
                 </div>
                 <div class="flex flex-wrap items-center gap-3">
@@ -454,7 +464,7 @@
             <div class="text-center space-y-2">
                 <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-blue-100 text-blue-600 shadow-inner"><i data-feather="lock" class="h-8 w-8"></i></div>
                 <h3 class="text-2xl font-bold text-slate-900">เข้าสู่ระบบผู้ดูแล</h3>
-                <p class="text-slate-500 text-base">เฉพาะผู้ดูแลระบบ (Admin) เท่านั้น</p>
+                <p class="text-slate-500 text-base">ผู้ดูแลระบบ (แก้ไขได้) หรือ ผู้ดูอย่างเดียว</p>
             </div>
             <div class="space-y-3">
                 <input id="login-user" type="text" autocomplete="username" placeholder="ชื่อผู้ใช้" class="field-input">
@@ -1567,6 +1577,7 @@
         }
 
         function startEdit(id) {
+            if (!canManage()) return;
             const rec = records.find(r => String(r.id) === String(id));
             if (!rec) return;
             const formKey = rec.type;
@@ -1580,6 +1591,7 @@
         }
 
         function deleteRecord(id) {
+            if (!canManage()) return;
             const rec = records.find(r => String(r.id) === String(id));
             if (!rec) return;
             openConfirm({
@@ -1736,6 +1748,11 @@
                 // ป้องกันหน้า Admin / จัดการแบบสอบถาม ด้วยการล็อกอิน
                 if ((targetId === 'view-admin' || targetId === 'view-builder') && !isAdminAuthed()) {
                     openLogin(targetId);
+                    return;
+                }
+                // ผู้ดูแลแบบดูอย่างเดียว เข้าหน้าจัดการแบบสอบถามไม่ได้
+                if (targetId === 'view-builder' && isAdminAuthed() && !canManage()) {
+                    try { alertModal ? alertModal('สิทธิ์นี้เป็นแบบดูอย่างเดียว ไม่สามารถจัดการแบบสอบถามได้') : alert('สิทธิ์นี้เป็นแบบดูอย่างเดียว'); } catch (e) { alert('สิทธิ์นี้เป็นแบบดูอย่างเดียว'); }
                     return;
                 }
 
@@ -2054,6 +2071,7 @@
             });
         }
         function openLabModal(id) {
+            if (!canManage()) return;
             const rec = records.find(r => String(r.id) === String(id));
             if (!rec) return;
             labEditId = rec.id;
@@ -2663,8 +2681,10 @@
         confirmModal.addEventListener('click', e => { if (e.target === confirmModal) closeConfirm(); });
 
         /* ===== ระบบล็อกอินผู้ดูแล (Admin) ===== */
-        const ADMIN_USER = 'icn';   // ไม่สนตัวพิมพ์เล็ก/ใหญ่
+        const ADMIN_USER = 'icn';   // ไม่สนตัวพิมพ์เล็ก/ใหญ่ (สิทธิ์เต็ม จัดการข้อมูลได้)
         const ADMIN_PASS = '10725';
+        const VIEW_USER = 'view';   // ผู้ดูแลแบบดูอย่างเดียว (ดูข้อมูล/รายงานได้ แต่แก้ไข/ลบไม่ได้)
+        const VIEW_PASS = '1234';
         const loginModal = document.getElementById('login-modal');
         const loginUser = document.getElementById('login-user');
         const loginPass = document.getElementById('login-pass');
@@ -2672,6 +2692,14 @@
         let pendingAdminTarget = null;
 
         function isAdminAuthed() { try { return sessionStorage.getItem('oi-admin') === '1'; } catch (e) { return false; } }
+        function currentRole() { try { return sessionStorage.getItem('oi-role') || (isAdminAuthed() ? 'admin' : ''); } catch (e) { return ''; } }
+        function canManage() { return currentRole() === 'admin'; }   // แก้ไข/ลบ/บันทึกตั้งค่า ได้เฉพาะ admin เต็ม
+        function applyRoleUI() {
+            const viewer = isAdminAuthed() && !canManage();
+            document.body.classList.toggle('role-view', viewer);
+            const badge = document.getElementById('role-badge');
+            if (badge) badge.hidden = !viewer;
+        }
         function openLogin(target) {
             pendingAdminTarget = target;
             loginUser.value = ''; loginPass.value = ''; loginError.hidden = true;
@@ -2682,10 +2710,16 @@
         function doLogin() {
             const u = (loginUser.value || '').trim().toLowerCase();
             const p = (loginPass.value || '').trim();
-            if (u === ADMIN_USER && p === ADMIN_PASS) {
-                try { sessionStorage.setItem('oi-admin', '1'); } catch (e) {}
+            let role = '';
+            if (u === ADMIN_USER && p === ADMIN_PASS) role = 'admin';
+            else if (u === VIEW_USER && p === VIEW_PASS) role = 'view';
+            if (role) {
+                try { sessionStorage.setItem('oi-admin', '1'); sessionStorage.setItem('oi-role', role); } catch (e) {}
+                applyRoleUI();
                 closeLogin();
-                const t = pendingAdminTarget || 'view-admin';
+                // ผู้ดูอย่างเดียวเข้าหน้าจัดการแบบสอบถามไม่ได้ -> พาไปหน้า Admin แทน
+                let t = pendingAdminTarget || 'view-admin';
+                if (role === 'view' && t === 'view-builder') t = 'view-admin';
                 const btn = document.querySelector('.nav-btn[data-target="' + t + '"]');
                 if (btn) btn.click();
             } else {
@@ -2811,7 +2845,8 @@
         })();
 
         document.getElementById('btn-logout').addEventListener('click', () => {
-            try { sessionStorage.removeItem('oi-admin'); } catch (e) {}
+            try { sessionStorage.removeItem('oi-admin'); sessionStorage.removeItem('oi-role'); } catch (e) {}
+            applyRoleUI();
             document.querySelector('nav .nav-btn[data-target="view-home"]').click();
         });
 
@@ -3927,6 +3962,7 @@
         renderForm('patient');
         renderAdminTable();
         applyNavVisibility();
+        try { applyRoleUI(); } catch (e) {}
         try { applySiteLogo(); } catch (e) {}
 
         // โหลดจากฐานข้อมูลกลาง + รีเฟรชอัตโนมัติ (รองรับหลายเครื่องพร้อมกัน)

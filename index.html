@@ -1876,6 +1876,79 @@
         function recordLabPositive(rec, key) { return recordLabs(rec)[key].some(x => x.result === '+'); }
         function recordLabTested(rec, key) { return recordLabs(rec)[key].some(x => x && String(x.result || '').trim() !== ''); }
         function recordLabHasValue(rec, key, val) { return recordLabs(rec)[key].some(x => x && String(x.result || '').trim() === val); }
+
+        /* ===== วิเคราะห์ความสัมพันธ์ กิจกรรม × อาการ × Chest X-ray ===== */
+        function symptomsArr(rec) {
+            const a = rec.answers || {};
+            let arr = Array.isArray(a.symptoms) ? a.symptoms.slice() : (a.symptoms ? [String(a.symptoms)] : []);
+            if (a.symptomOther) arr.push(String(a.symptomOther));
+            return arr.map(x => String(x).trim()).filter(Boolean);
+        }
+        function cxrLatest(rec) {
+            const rounds = recordLabs(rec).cxr.filter(x => x && String(x.result || '').trim() !== '');
+            return rounds.length ? [String(rounds[rounds.length - 1].result).trim()] : [];
+        }
+        // สร้างตารางไขว้ (contingency) + ค่า Cramér's V (0–1) จากการนับการเกิดร่วม
+        function buildCrossTab(recs, rowFn, colFn, opt) {
+            opt = opt || {};
+            const rowTot = {}, colTot = {}, M = {};
+            let N = 0;
+            recs.forEach(r => {
+                const A = Array.from(new Set(rowFn(r))), B = Array.from(new Set(colFn(r)));
+                A.forEach(a => B.forEach(b => {
+                    M[a] = M[a] || {}; M[a][b] = (M[a][b] || 0) + 1;
+                    rowTot[a] = (rowTot[a] || 0) + 1; colTot[b] = (colTot[b] || 0) + 1; N++;
+                }));
+            });
+            let rows = Object.keys(rowTot).sort((a, b) => rowTot[b] - rowTot[a]);
+            let cols = Object.keys(colTot).sort((a, b) => colTot[b] - colTot[a]);
+            if (opt.maxRows) rows = rows.slice(0, opt.maxRows);
+            if (opt.maxCols) cols = cols.slice(0, opt.maxCols);
+            // Cramér's V บนเซลล์ที่แสดง
+            let chi2 = 0, gt = 0;
+            rows.forEach(a => cols.forEach(b => gt += (M[a] && M[a][b]) || 0));
+            if (gt > 0) {
+                const rSum = {}, cSum = {};
+                rows.forEach(a => { rSum[a] = 0; cols.forEach(b => rSum[a] += (M[a] && M[a][b]) || 0); });
+                cols.forEach(b => { cSum[b] = 0; rows.forEach(a => cSum[b] += (M[a] && M[a][b]) || 0); });
+                rows.forEach(a => cols.forEach(b => {
+                    const O = (M[a] && M[a][b]) || 0, E = rSum[a] * cSum[b] / gt;
+                    if (E > 0) chi2 += (O - E) * (O - E) / E;
+                }));
+            }
+            const k = Math.min(rows.length, cols.length);
+            const V = (gt > 0 && k > 1) ? Math.sqrt(chi2 / (gt * (k - 1))) : 0;
+            return { rows, cols, M, rowTot, colTot, N: gt, V };
+        }
+        function cramerLabel(v) {
+            if (v >= 0.5) return { t: 'สูงมาก', c: 'text-rose-700 bg-rose-100' };
+            if (v >= 0.3) return { t: 'ปานกลาง', c: 'text-amber-700 bg-amber-100' };
+            if (v >= 0.1) return { t: 'น้อย', c: 'text-sky-700 bg-sky-100' };
+            return { t: 'น้อยมาก/ไม่ชัด', c: 'text-slate-600 bg-slate-100' };
+        }
+        // เรนเดอร์ตารางไขว้เป็น HTML (ความเข้มสีตามจำนวน) + แถบสรุป Cramér's V
+        function crossTabHtml(title, ct, rowMap, colMap) {
+            if (!ct.rows.length || !ct.cols.length) return `<div class="text-sm text-slate-400">${escHtml(title)} — ยังไม่มีข้อมูลพอ</div>`;
+            let max = 1;
+            ct.rows.forEach(a => ct.cols.forEach(b => { const v = (ct.M[a] && ct.M[a][b]) || 0; if (v > max) max = v; }));
+            const rlab = v => rowMap ? (rowMap[v] || v) : v;
+            const clab = v => colMap ? (colMap[v] || v) : v;
+            const lv = cramerLabel(ct.V);
+            const head = `<tr><th class="text-left px-2 py-1 bg-slate-50 sticky left-0">${''}</th>${ct.cols.map(b => `<th class="px-2 py-1 text-center bg-slate-50 whitespace-nowrap">${escHtml(clab(b))}</th>`).join('')}<th class="px-2 py-1 text-center bg-slate-100">รวม</th></tr>`;
+            const body = ct.rows.map(a => {
+                const cells = ct.cols.map(b => {
+                    const v = (ct.M[a] && ct.M[a][b]) || 0;
+                    const alpha = v ? (0.12 + 0.6 * v / max).toFixed(2) : 0;
+                    return `<td class="px-2 py-1 text-center" style="background:rgba(13,148,136,${alpha})">${v || ''}</td>`;
+                }).join('');
+                return `<tr><td class="px-2 py-1 whitespace-nowrap bg-slate-50 sticky left-0 font-medium">${escHtml(rlab(a))}</td>${cells}<td class="px-2 py-1 text-center font-semibold bg-slate-100">${ct.rowTot[a] || 0}</td></tr>`;
+            }).join('');
+            return `<div class="mb-2 flex items-center flex-wrap gap-2">
+                    <span class="text-sm font-semibold text-slate-700">${escHtml(title)}</span>
+                    <span class="text-xs px-2 py-0.5 rounded-full ${lv.c} font-medium">Cramér's V = ${ct.V.toFixed(2)} (${lv.t})</span>
+                </div>
+                <div class="overflow-x-auto"><table class="text-xs border-collapse">${head}${body}</table></div>`;
+        }
         function labLabel(key) { const t = LAB_TESTS.find(x => x.key === key); return t ? t.label : key; }
         // สรุปผลตรวจเป็นข้อความล้วน (สำหรับ Excel/พิมพ์) — แสดงเฉพาะครั้งที่มีผล
         function labCellText(rec, key) {
@@ -2205,6 +2278,24 @@
 
             const card = (title, icon, body) => `<div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden"><h3 class="text-lg font-semibold text-white flex items-center px-5 py-3 bg-gradient-to-r from-teal-600 to-emerald-700"><i data-feather="${icon}" class="w-5 h-5 mr-2"></i> ${title}</h3><div class="p-5">${body}</div></div>`;
 
+            // ---- วิเคราะห์ความสัมพันธ์ กิจกรรม × อาการ × Chest X-ray ----
+            const corrRecs = records.filter(r => r.type !== 'patient');
+            const actFn = r => contactSets(r).activities;
+            const symFn = r => symptomsArr(r);
+            const cxrFn = r => cxrLatest(r);
+            const ctActSym = buildCrossTab(corrRecs, actFn, symFn, { maxRows: 10, maxCols: 8 });
+            const ctActCxr = buildCrossTab(corrRecs, actFn, cxrFn, { maxRows: 12, maxCols: 8 });
+            const ctSymCxr = buildCrossTab(corrRecs, symFn, cxrFn, { maxRows: 12, maxCols: 8 });
+            const corrHtml = `
+                <p class="text-xs text-slate-500 mb-3">ตารางไขว้แสดง "จำนวนคนที่มีทั้งสองอย่างพร้อมกัน" — สีเข้ม = พบร่วมมาก ; <b>Cramér's V</b> บอกความแรงของความสัมพันธ์ (0 = ไม่สัมพันธ์, ยิ่งเข้าใกล้ 1 ยิ่งสัมพันธ์กันมาก)</p>
+                <div class="space-y-5">
+                    <div>${crossTabHtml('กิจกรรม × อาการ', ctActSym, ACT_CODE, null)}</div>
+                    <div>${crossTabHtml('กิจกรรม × ผล Chest X-ray', ctActCxr, ACT_CODE, null)}</div>
+                    <div>${crossTabHtml('อาการ × ผล Chest X-ray', ctSymCxr, null, null)}</div>
+                </div>
+                ${Object.keys(ACT_CODE).length ? `<div class="text-[11px] text-slate-400 mt-3 leading-relaxed"><b>รหัสกิจกรรม:</b> ${Object.keys(ACT_CODE).map(k => `${escHtml(ACT_CODE[k])} = ${escHtml(k)}`).join(' · ')}</div>` : ''}
+                <div class="text-[11px] text-slate-400 mt-1">* เป็นการวิเคราะห์เชิงสำรวจ (คนหนึ่งมีได้หลายกิจกรรม/หลายอาการ) ค่าที่ได้ใช้ชี้ทิศทางความสัมพันธ์เบื้องต้น ไม่ใช่การทดสอบทางสถิติเชิงยืนยัน</div>`;
+
             box.innerHTML = `
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
                     <div class="rounded-2xl p-5 flex flex-col bg-gradient-to-br from-emerald-500 to-emerald-700 shadow-[0_6px_18px_rgba(16,185,129,0.35)]"><span class="text-base text-white/80">ตอบแบบสอบถามแล้ว</span><div class="text-4xl font-extrabold text-white drop-shadow">${responded}<span class="text-xl text-white/70"> / ${total} คน</span></div><div class="mt-2 h-3 bg-white/25 rounded-full overflow-hidden"><div class="h-3 rounded-full bg-white" style="width:${pct}%"></div></div><div class="text-sm text-white/85 mt-1">คิดเป็น <b class="text-white">${pct}%</b> ของเจ้าหน้าที่ทั้งหมด</div></div>
@@ -2227,7 +2318,14 @@
                 ${card('ผลตรวจทางห้องปฏิบัติการ — สรุปผล จำนวน / ร้อยละ', 'clipboard',
                     anyLab
                         ? `<div class="grid grid-cols-2 lg:grid-cols-4 gap-3">${labTiles}</div><div class="text-xs text-slate-400 mt-3">* จำนวนใหญ่ = ผู้ที่มีผลตรวจในรายการนั้น ; ด้านล่างแยกตามผลจริง (นับผลล่าสุดต่อคน) พร้อมร้อยละ — คลิกการ์ดเพื่อดูรายชื่อ</div>`
-                        : '<div class="text-slate-400 text-sm">ยังไม่มีการบันทึกผลตรวจ — เพิ่มได้ที่ปุ่ม "ผลตรวจ" ในรายชื่อผู้สัมผัส</div>')}`;
+                        : '<div class="text-slate-400 text-sm">ยังไม่มีการบันทึกผลตรวจ — เพิ่มได้ที่ปุ่ม "ผลตรวจ" ในรายชื่อผู้สัมผัส</div>')}
+                <details class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden group">
+                    <summary class="list-none cursor-pointer text-lg font-semibold text-white flex items-center justify-between px-5 py-3 bg-gradient-to-r from-violet-600 to-indigo-700 select-none">
+                        <span class="flex items-center"><i data-feather="git-merge" class="w-5 h-5 mr-2"></i> วิเคราะห์ความสัมพันธ์ — กิจกรรม × อาการ × Chest X-ray</span>
+                        <i data-feather="chevron-down" class="w-5 h-5 transition-transform group-open:rotate-180"></i>
+                    </summary>
+                    <div class="p-5">${corrHtml}</div>
+                </details>`;
             feather.replace();
             // คลิกกราฟ → กรองรายชื่อผู้สัมผัส
             box.querySelectorAll('.chart-clk').forEach(el => el.addEventListener('click', () => {

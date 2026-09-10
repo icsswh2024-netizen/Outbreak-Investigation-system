@@ -1956,6 +1956,107 @@
             if (p < 0.0001) return 'p < 0.0001';
             return 'p = ' + p.toFixed(4);
         }
+        // ---- สถิติเชิงระบาดวิทยา (เฟส 1): 2×2, RR/OR/RD + 95% CI, Fisher, Attack Rate, สถิติอายุ, t-test ----
+        function logFact(n) { return gammaln(n + 1); }
+        // Fisher's exact test (two-sided) จากตาราง 2×2 [[a,b],[c,d]]
+        function fisherExact2x2(a, b, c, d) {
+            a = Math.round(a); b = Math.round(b); c = Math.round(c); d = Math.round(d);
+            const r1 = a + b, r2 = c + d, c1 = a + c, c2 = b + d, N = a + b + c + d;
+            if (N <= 0 || r1 < 0 || r2 < 0 || c1 < 0 || c2 < 0) return 1;
+            const constLog = logFact(r1) + logFact(r2) + logFact(c1) + logFact(c2) - logFact(N);
+            const pOf = k => Math.exp(constLog - logFact(k) - logFact(r1 - k) - logFact(c1 - k) - logFact(r2 - c1 + k));
+            const pObs = pOf(a);
+            const lo = Math.max(0, c1 - r2), hi = Math.min(c1, r1);
+            let p = 0;
+            for (let k = lo; k <= hi; k++) { const pk = pOf(k); if (pk <= pObs * (1 + 1e-7)) p += pk; }
+            return Math.min(1, p);
+        }
+        // incomplete beta (สำหรับ p-value ของ Student's t)
+        function betacf(a, b, x) {
+            const FPMIN = 1e-300; let qab = a + b, qap = a + 1, qam = a - 1;
+            let c = 1, d = 1 - qab * x / qap; if (Math.abs(d) < FPMIN) d = FPMIN; d = 1 / d; let h = d;
+            for (let m = 1; m <= 200; m++) {
+                const m2 = 2 * m;
+                let aa = m * (b - m) * x / ((qam + m2) * (a + m2));
+                d = 1 + aa * d; if (Math.abs(d) < FPMIN) d = FPMIN; c = 1 + aa / c; if (Math.abs(c) < FPMIN) c = FPMIN; d = 1 / d; h *= d * c;
+                aa = -(a + m) * (qab + m) * x / ((a + m2) * (qap + m2));
+                d = 1 + aa * d; if (Math.abs(d) < FPMIN) d = FPMIN; c = 1 + aa / c; if (Math.abs(c) < FPMIN) c = FPMIN; d = 1 / d;
+                const del = d * c; h *= del; if (Math.abs(del - 1) < 1e-12) break;
+            }
+            return h;
+        }
+        function betai(a, b, x) {
+            if (x <= 0) return 0; if (x >= 1) return 1;
+            const bt = Math.exp(gammaln(a + b) - gammaln(a) - gammaln(b) + a * Math.log(x) + b * Math.log(1 - x));
+            if (x < (a + 1) / (a + b + 2)) return bt * betacf(a, b, x) / a;
+            return 1 - bt * betacf(b, a, 1 - x) / b;
+        }
+        // p-value สองด้านของ Student's t
+        function studentTP(t, df) { if (!isFinite(t) || df <= 0) return 1; return betai(df / 2, 0.5, df / (df + t * t)); }
+        // สถิติพื้นฐานของอาเรย์ตัวเลข
+        function statMean(a) { return a.length ? a.reduce((s, x) => s + x, 0) / a.length : NaN; }
+        function statSD(a) { if (a.length < 2) return NaN; const m = statMean(a); return Math.sqrt(a.reduce((s, x) => s + (x - m) * (x - m), 0) / (a.length - 1)); }
+        function statQuantile(sorted, q) {
+            if (!sorted.length) return NaN; if (sorted.length === 1) return sorted[0];
+            const pos = (sorted.length - 1) * q, base = Math.floor(pos), rest = pos - base;
+            return sorted[base + 1] !== undefined ? sorted[base] + rest * (sorted[base + 1] - sorted[base]) : sorted[base];
+        }
+        function statMedian(a) { const s = a.slice().sort((x, y) => x - y); return statQuantile(s, 0.5); }
+        // นิยาม "ผู้ป่วย (case)" — เปลี่ยนได้ที่หน้าจอ
+        let epiCaseDef = 'lab';
+        const EPI_POS_TOKENS = ['+', 'บวก', 'positive', 'pos', 'reactive', 'พบเชื้อ', 'พบ', 'abnormal', 'ผิดปกติ', 'detected'];
+        function labIsPositive(rec) {
+            return LAB_TESTS.some(t => recordLabs(rec)[t.key].some(x => {
+                const v = String((x && x.result) || '').trim().toLowerCase();
+                if (!v) return false;
+                return EPI_POS_TOKENS.some(tok => v === tok.toLowerCase() || v.indexOf(tok.toLowerCase()) >= 0);
+            }));
+        }
+        function isEpiCase(rec) {
+            if (epiCaseDef === 'tb') return String((rec.answers || {}).currentTb || '').trim() === 'เป็น';
+            if (epiCaseDef === 'sym') return symptomsArr(rec).length > 0;
+            return labIsPositive(rec); // default 'lab'
+        }
+        function epiCaseDefLabel(mode) {
+            return { lab: 'ผลตรวจเป็นบวกอย่างน้อย 1 รายการ', tb: 'ระบุว่ากำลังป่วยเป็นวัณโรค (currentTb = เป็น)', sym: 'มีอาการอย่างน้อย 1 อาการ' }[mode || epiCaseDef];
+        }
+        // สร้างตารางมาตรวัดความเสี่ยง 2×2 ต่อปัจจัยสัมผัส
+        function buildEpiMeasures(recs) {
+            const cases = recs.filter(isEpiCase).length, N = recs.length;
+            // รวบรวมปัจจัยสัมผัส (กิจกรรม/ห้อง/ระยะเวลา)
+            const factors = [];
+            const seen = {};
+            const addFactor = (type, key, label) => { const id = type + '::' + key; if (seen[id]) return; seen[id] = 1; factors.push({ type, key, label }); };
+            recs.forEach(r => {
+                const cs = contactSets(r);
+                cs.activities.forEach(a => addFactor('กิจกรรม', a, (ACT_CODE[a] ? ACT_CODE[a] + ' ' : '') + a));
+                cs.rooms.forEach(rm => addFactor('ขนาดห้อง', rm, (ROOM_CODE[rm] ? ROOM_CODE[rm] + ' ' : '') + rm));
+                cs.durations.forEach(d => addFactor('ระยะเวลา', d, d));
+            });
+            const has = (r, f) => { const cs = contactSets(r); return f.type === 'กิจกรรม' ? cs.activities.indexOf(f.key) >= 0 : f.type === 'ขนาดห้อง' ? cs.rooms.indexOf(f.key) >= 0 : cs.durations.indexOf(f.key) >= 0; };
+            const rows = factors.map(f => {
+                let a = 0, b = 0, c = 0, d = 0;
+                recs.forEach(r => { const e = has(r, f), k = isEpiCase(r); if (e && k) a++; else if (e && !k) b++; else if (!e && k) c++; else d++; });
+                const nExp = a + b, nUn = c + d;
+                const arExp = nExp ? a / nExp : NaN, arUn = nUn ? c / nUn : NaN;
+                const zero = (a === 0 || b === 0 || c === 0 || d === 0);
+                // Haldane–Anscombe correction (บวก 0.5 ทุกช่อง) เมื่อมีช่องเป็นศูนย์ สำหรับ RR/OR + CI
+                const a2 = a + 0.5, b2 = b + 0.5, c2 = c + 0.5, d2 = d + 0.5;
+                const rr = (nExp && nUn && arUn > 0) ? arExp / arUn : (zero ? ((a2 / (a2 + b2)) / (c2 / (c2 + d2))) : NaN);
+                const or = zero ? (a2 * d2) / (b2 * c2) : (a * d) / (b * c);
+                const rd = (nExp && nUn) ? arExp - arUn : NaN;
+                // 95% CI
+                const seLnRR = Math.sqrt(1 / a2 - 1 / (a2 + b2) + 1 / c2 - 1 / (c2 + d2));
+                const rrLo = Math.exp(Math.log(rr) - 1.96 * seLnRR), rrHi = Math.exp(Math.log(rr) + 1.96 * seLnRR);
+                const seLnOR = Math.sqrt(1 / a2 + 1 / b2 + 1 / c2 + 1 / d2);
+                const orLo = Math.exp(Math.log(or) - 1.96 * seLnOR), orHi = Math.exp(Math.log(or) + 1.96 * seLnOR);
+                const seRD = (nExp && nUn) ? Math.sqrt(arExp * (1 - arExp) / nExp + arUn * (1 - arUn) / nUn) : NaN;
+                const rdLo = rd - 1.96 * seRD, rdHi = rd + 1.96 * seRD;
+                const p = fisherExact2x2(a, b, c, d);
+                return { f, a, b, c, d, nExp, nUn, arExp, arUn, rr, rrLo, rrHi, or, orLo, orHi, rd, rdLo, rdHi, p, zero };
+            }).sort((x, y) => (x.p - y.p) || (y.rr - x.rr));
+            return { rows, cases, N };
+        }
 
         // สร้างตารางไขว้ (contingency) + ค่า Cramér's V (0–1) จากการนับการเกิดร่วม
         function buildCrossTab(recs, rowFn, colFn, opt) {
@@ -2415,6 +2516,83 @@
                 ${Object.keys(ACT_CODE).length ? `<div class="text-[11px] text-slate-400 mt-3 leading-relaxed"><b>รหัสกิจกรรม:</b> ${Object.keys(ACT_CODE).map(k => `${escHtml(ACT_CODE[k])} = ${escHtml(k)}`).join(' · ')}</div>` : ''}
                 <div class="text-[11px] text-slate-400 mt-1 leading-relaxed">* <b>Chi-square test of independence</b>: χ² = ค่าสถิติ, df = องศาอิสระ (แถว−1)×(คอลัมน์−1), p &lt; 0.05 = ความสัมพันธ์มีนัยสำคัญทางสถิติ ; <b>Cramér's V</b> = ขนาดความสัมพันธ์ (effect size). หมายเหตุ: คนหนึ่งมีได้หลายกิจกรรม/หลายอาการ (ข้อมูลไม่เป็นอิสระต่อกันสมบูรณ์) และถ้าค่าคาดหวังหลายช่อง &lt;5 ควรตีความอย่างระมัดระวัง/ใช้ Fisher's exact แทน</div>`;
 
+            // ---- มาตรวัดทางระบาดวิทยา (เฟส 1) ----
+            const epi = buildEpiMeasures(corrRecs);
+            const epiAR = epi.N ? (epi.cases / epi.N * 100) : 0;
+            // สถิติอายุ (รวม / case / non-case) + Welch t-test
+            const ageAll = [], ageCase = [], ageNon = [];
+            corrRecs.forEach(r => { const v = parseFloat((r.answers || {}).age); if (isFinite(v)) { ageAll.push(v); (isEpiCase(r) ? ageCase : ageNon).push(v); } });
+            const ageStatRow = (label, arr) => {
+                if (!arr.length) return `<tr><td class="px-3 py-1.5">${label}</td><td colspan="6" class="px-3 py-1.5 text-slate-400 text-center">— ไม่มีข้อมูลอายุ —</td></tr>`;
+                const s = arr.slice().sort((x, y) => x - y);
+                return `<tr class="border-b border-slate-100"><td class="px-3 py-1.5 font-medium">${label}</td><td class="text-center">${arr.length}</td><td class="text-center">${statMean(arr).toFixed(1)}</td><td class="text-center">${statMedian(arr).toFixed(1)}</td><td class="text-center">${isNaN(statSD(arr)) ? '-' : statSD(arr).toFixed(1)}</td><td class="text-center">${statQuantile(s, 0.25).toFixed(1)}</td><td class="text-center">${statQuantile(s, 0.75).toFixed(1)}</td></tr>`;
+            };
+            let tTestHtml = '';
+            if (ageCase.length >= 2 && ageNon.length >= 2) {
+                const m1 = statMean(ageCase), m2 = statMean(ageNon), v1 = Math.pow(statSD(ageCase), 2), v2 = Math.pow(statSD(ageNon), 2), n1 = ageCase.length, n2 = ageNon.length;
+                const se = Math.sqrt(v1 / n1 + v2 / n2);
+                const t = se > 0 ? (m1 - m2) / se : 0;
+                const df = Math.pow(v1 / n1 + v2 / n2, 2) / (Math.pow(v1 / n1, 2) / (n1 - 1) + Math.pow(v2 / n2, 2) / (n2 - 1));
+                const p = studentTP(t, df);
+                const sig = p < 0.05;
+                tTestHtml = `<div class="text-sm mt-2 px-3 py-2 rounded-lg ${sig ? 'bg-emerald-50 text-emerald-800' : 'bg-slate-50 text-slate-600'}"><b>t-test (Welch)</b> อายุเฉลี่ย case (${m1.toFixed(1)}) vs non-case (${m2.toFixed(1)}): t = ${t.toFixed(2)}, df = ${df.toFixed(1)}, ${fmtP(p)} ${sig ? '✓ ต่างกันอย่างมีนัยสำคัญ' : '— ไม่ต่างกันอย่างมีนัยสำคัญ'}</div>`;
+            } else {
+                tTestHtml = `<div class="text-xs text-slate-400 mt-2 px-3">* ต้องมีอายุทั้งกลุ่ม case และ non-case อย่างน้อยกลุ่มละ 2 คน จึงจะทดสอบ t-test ได้</div>`;
+            }
+            const ageTable = `<table class="w-full text-sm"><thead><tr class="text-slate-500 border-b"><th class="text-left px-3 py-1.5">กลุ่ม</th><th>n</th><th>Mean</th><th>Median</th><th>SD</th><th>Q1</th><th>Q3</th></tr></thead><tbody>
+                ${ageStatRow('ทั้งหมด', ageAll)}${ageStatRow('ผู้ป่วย (case)', ageCase)}${ageStatRow('ไม่ป่วย (non-case)', ageNon)}</tbody></table>${tTestHtml}`;
+            const fmtCI = (v, lo, hi, dp) => { dp = dp == null ? 2 : dp; return isFinite(v) ? `${v.toFixed(dp)} <span class="text-slate-400">(${lo.toFixed(dp)}–${hi.toFixed(dp)})</span>` : '-'; };
+            const epiRowsHtml = epi.rows.map(r => {
+                const sig = r.p < 0.05;
+                const rrCls = r.rr > 1 ? 'text-rose-600 font-semibold' : (r.rr < 1 ? 'text-emerald-600' : 'text-slate-700');
+                return `<tr class="border-b border-slate-100 ${sig ? 'bg-amber-50/60' : ''}">
+                    <td class="px-2 py-1.5 text-slate-500 whitespace-nowrap">${escHtml(r.f.type)}</td>
+                    <td class="px-2 py-1.5 font-medium" style="max-width:230px"><div class="whitespace-normal break-words">${escHtml(r.f.label)}</div></td>
+                    <td class="px-2 py-1.5 text-center whitespace-nowrap">${r.a}/${r.nExp}${r.nExp ? ` <span class="text-slate-400">(${(r.arExp * 100).toFixed(0)}%)</span>` : ''}</td>
+                    <td class="px-2 py-1.5 text-center whitespace-nowrap">${r.c}/${r.nUn}${r.nUn ? ` <span class="text-slate-400">(${(r.arUn * 100).toFixed(0)}%)</span>` : ''}</td>
+                    <td class="px-2 py-1.5 text-center whitespace-nowrap ${rrCls}">${fmtCI(r.rr, r.rrLo, r.rrHi)}</td>
+                    <td class="px-2 py-1.5 text-center whitespace-nowrap">${fmtCI(r.or, r.orLo, r.orHi)}</td>
+                    <td class="px-2 py-1.5 text-center whitespace-nowrap">${isFinite(r.rd) ? (r.rd * 100).toFixed(0) + '% <span class="text-slate-400">(' + (r.rdLo * 100).toFixed(0) + '–' + (r.rdHi * 100).toFixed(0) + ')</span>' : '-'}</td>
+                    <td class="px-2 py-1.5 text-center whitespace-nowrap ${sig ? 'text-emerald-700 font-semibold' : 'text-slate-500'}">${r.p < 0.0001 ? '<0.0001' : r.p.toFixed(4)}${r.zero ? ' <span class="text-amber-500" title="มีช่องเป็นศูนย์ ใช้การแก้ค่า +0.5">*</span>' : ''}</td>
+                </tr>`;
+            }).join('');
+            const epiTable = epi.rows.length
+                ? `<div class="overflow-x-auto"><table class="w-full text-xs"><thead class="bg-slate-100 text-slate-600"><tr>
+                    <th class="px-2 py-2 text-left">ชนิด</th><th class="px-2 py-2 text-left">ปัจจัยสัมผัส</th>
+                    <th class="px-2 py-2">ป่วย/สัมผัส<br>(AR%)</th><th class="px-2 py-2">ป่วย/ไม่สัมผัส<br>(AR%)</th>
+                    <th class="px-2 py-2">RR (95% CI)</th><th class="px-2 py-2">OR (95% CI)</th><th class="px-2 py-2">RD (95% CI)</th><th class="px-2 py-2">p (Fisher)</th>
+                </tr></thead><tbody>${epiRowsHtml}</tbody></table></div>`
+                : '<div class="text-slate-400 text-sm">ยังไม่มีข้อมูลปัจจัยสัมผัสเพียงพอ</div>';
+            epiExport = { caseDef: epiCaseDefLabel(), N: epi.N, cases: epi.cases, ar: epiAR, rows: epi.rows, age: { all: ageAll, cs: ageCase, non: ageNon }, tTest: tTestHtml };
+            const caseOpt = (v, t) => `<option value="${v}" ${epiCaseDef === v ? 'selected' : ''}>${t}</option>`;
+            const epiHtml = `
+                <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+                    <div class="flex items-center gap-2 text-sm">
+                        <span class="font-medium text-slate-700">นิยามผู้ป่วย (case):</span>
+                        <select id="epi-casedef" class="text-sm rounded-lg border border-slate-300 bg-white px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-rose-400 cursor-pointer">
+                            ${caseOpt('lab', 'ผลตรวจเป็นบวก ≥ 1 รายการ')}${caseOpt('tb', 'ระบุว่ากำลังป่วยวัณโรค')}${caseOpt('sym', 'มีอาการ ≥ 1 อาการ')}
+                        </select>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <button onclick="printEpi()" class="bg-white border border-teal-300 text-teal-700 hover:bg-teal-50 px-4 py-1.5 rounded-lg text-sm font-semibold flex items-center shadow-sm"><i data-feather="printer" class="w-4 h-4 mr-2"></i> พิมพ์ / PDF ข้อความ</button>
+                        <button onclick="exportEpiExcel()" class="bg-white border border-green-400 text-green-700 hover:bg-green-50 px-4 py-1.5 rounded-lg text-sm font-semibold flex items-center shadow-sm"><i data-feather="file-text" class="w-4 h-4 mr-2"></i> ส่งออก Excel</button>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+                    <div class="rounded-xl p-4 bg-gradient-to-br from-rose-500 to-red-600 text-white shadow-sm"><div class="text-xs text-white/80">ผู้ป่วย (case)</div><div class="text-3xl font-extrabold">${epi.cases}<span class="text-lg text-white/70"> / ${epi.N}</span></div></div>
+                    <div class="rounded-xl p-4 bg-gradient-to-br from-amber-500 to-orange-600 text-white shadow-sm"><div class="text-xs text-white/80">Attack Rate รวม</div><div class="text-3xl font-extrabold">${epiAR.toFixed(1)}<span class="text-lg text-white/70">%</span></div></div>
+                    <div class="rounded-xl p-4 bg-gradient-to-br from-slate-600 to-slate-800 text-white shadow-sm"><div class="text-xs text-white/80">อายุเฉลี่ย (ทั้งหมด)</div><div class="text-3xl font-extrabold">${ageAll.length ? statMean(ageAll).toFixed(1) : '-'}<span class="text-lg text-white/70"> ปี</span></div></div>
+                </div>
+                <div class="mb-2 text-sm text-slate-600">นิยาม case ที่ใช้: <b>${escHtml(epiCaseDefLabel())}</b></div>
+                <h4 class="text-sm font-semibold text-slate-700 mt-4 mb-2 flex items-center"><i data-feather="users" class="w-4 h-4 mr-1.5"></i> สถิติอายุ (Person) และการเปรียบเทียบ case vs non-case</h4>
+                <div class="overflow-x-auto border border-slate-200 rounded-xl p-2">${ageTable}</div>
+                <h4 class="text-sm font-semibold text-slate-700 mt-5 mb-2 flex items-center"><i data-feather="alert-triangle" class="w-4 h-4 mr-1.5"></i> ตารางความเสี่ยงตามปัจจัยสัมผัส (2×2): Attack Rate · RR · OR · Risk Difference · Fisher's exact</h4>
+                ${epiTable}
+                <div class="text-[11px] text-slate-400 mt-3 leading-relaxed">
+                    <b>RR</b> (Relative Risk) = อัตราป่วยกลุ่มสัมผัส ÷ กลุ่มไม่สัมผัส (>1 = เสี่ยงเพิ่ม) · <b>OR</b> (Odds Ratio) · <b>RD</b> (Risk Difference) = ผลต่างอัตราป่วย · <b>p (Fisher's exact test)</b> เหมาะกับกลุ่มตัวอย่างน้อย · <b>95% CI</b> = ช่วงความเชื่อมั่น (ถ้าคร่อม 1 สำหรับ RR/OR หรือคร่อม 0 สำหรับ RD = ยังไม่มีนัยสำคัญ).
+                    <span class="text-amber-600">* = มีช่องในตาราง 2×2 เป็นศูนย์ ใช้การแก้ค่า Haldane–Anscombe (+0.5) ในการคำนวณ RR/OR/CI</span> · หมายเหตุ: หนึ่งคนมีได้หลายปัจจัยสัมผัส และควรตีความร่วมกับบริบททางคลินิก
+                </div>`;
+
             box.innerHTML = `
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
                     <div class="rounded-2xl p-5 flex flex-col bg-gradient-to-br from-emerald-500 to-emerald-700 shadow-[0_6px_18px_rgba(16,185,129,0.35)]"><span class="text-base text-white/80">ตอบแบบสอบถามแล้ว</span><div class="text-4xl font-extrabold text-white drop-shadow">${responded}<span class="text-xl text-white/70"> / ${total} คน</span></div><div class="mt-2 h-3 bg-white/25 rounded-full overflow-hidden"><div class="h-3 rounded-full bg-white" style="width:${pct}%"></div></div><div class="text-sm text-white/85 mt-1">คิดเป็น <b class="text-white">${pct}%</b> ของเจ้าหน้าที่ทั้งหมด</div></div>
@@ -2439,6 +2617,13 @@
                         ? `<div class="grid grid-cols-2 lg:grid-cols-4 gap-3">${labTiles}</div><div class="text-xs text-slate-400 mt-3">* จำนวนใหญ่ = ผู้ที่มีผลตรวจในรายการนั้น ; ด้านล่างแยกตามผลจริง (นับผลล่าสุดต่อคน) พร้อมร้อยละ — คลิกการ์ดเพื่อดูรายชื่อ</div>`
                         : '<div class="text-slate-400 text-sm">ยังไม่มีการบันทึกผลตรวจ — เพิ่มได้ที่ปุ่ม "ผลตรวจ" ในรายชื่อผู้สัมผัส</div>')}
                 <details class="bg-white border-y border-slate-200 shadow-sm group" style="margin-left:calc(50% - 50vw);margin-right:calc(50% - 50vw);overflow-x:hidden">
+                    <summary class="list-none cursor-pointer text-lg font-semibold text-white flex items-center justify-between px-6 py-3 bg-gradient-to-r from-rose-600 to-orange-600 select-none">
+                        <span class="flex items-center"><i data-feather="bar-chart" class="w-5 h-5 mr-2"></i> มาตรวัดทางระบาดวิทยา — Attack Rate · RR · OR · Risk Difference · Fisher · t-test</span>
+                        <i data-feather="chevron-down" class="w-5 h-5 transition-transform group-open:rotate-180"></i>
+                    </summary>
+                    <div class="px-6 py-5" style="max-width:100%;overflow-x:auto">${epiHtml}</div>
+                </details>
+                <details class="bg-white border-y border-slate-200 shadow-sm group" style="margin-left:calc(50% - 50vw);margin-right:calc(50% - 50vw);overflow-x:hidden">
                     <summary class="list-none cursor-pointer text-lg font-semibold text-white flex items-center justify-between px-6 py-3 bg-gradient-to-r from-violet-600 to-indigo-700 select-none">
                         <span class="flex items-center"><i data-feather="git-merge" class="w-5 h-5 mr-2"></i> วิเคราะห์ความสัมพันธ์ — กิจกรรม × อาการ × Chest X-ray</span>
                         <i data-feather="chevron-down" class="w-5 h-5 transition-transform group-open:rotate-180"></i>
@@ -2450,6 +2635,14 @@
             box.querySelectorAll('.chart-clk').forEach(el => el.addEventListener('click', () => {
                 setChartFilter(el.getAttribute('data-kind'), el.getAttribute('data-value'));
             }));
+            // เปลี่ยนนิยาม case -> คำนวณมาตรวัดระบาดวิทยาใหม่ (คงสถานะเปิด details ไว้)
+            const cd = document.getElementById('epi-casedef');
+            if (cd) cd.addEventListener('change', () => {
+                epiCaseDef = cd.value;
+                const openDetails = Array.from(box.querySelectorAll('details')).map(d => d.open);
+                renderAnalytics(true);
+                requestAnimationFrame(() => { Array.from(box.querySelectorAll('details')).forEach((d, i) => { if (openDetails[i] != null) d.open = openDetails[i]; }); });
+            });
         }
 
         function renderAdminTable() {
@@ -3398,6 +3591,7 @@
 
         // ===== พิมพ์ / ส่งออก การวิเคราะห์ความสัมพันธ์ =====
         let corrExport = null;
+        let epiExport = null;
         function corrEsc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
         // สร้าง HTML ตารางไขว้ (ข้อความล้วน) สำหรับพิมพ์/Excel
         function corrTabTableHtml(o) {
@@ -3449,6 +3643,50 @@
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url; a.download = `วิเคราะห์ความสัมพันธ์-${isoToday()}.xls`;
+            document.body.appendChild(a); a.click();
+            setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 1000);
+        }
+
+        // ---- พิมพ์ / ส่งออก มาตรวัดทางระบาดวิทยา ----
+        function epiFullHtml() {
+            if (!epiExport) return '';
+            const e = epiExport;
+            const ci = (v, lo, hi, dp) => { dp = dp == null ? 2 : dp; return isFinite(v) ? `${v.toFixed(dp)} (${lo.toFixed(dp)}–${hi.toFixed(dp)})` : '-'; };
+            const summary = `<div style="font-size:12px;color:#475569;margin-bottom:8px">นิยามผู้ป่วย (case): <b>${corrEsc(e.caseDef)}</b> · ผู้ป่วย ${e.cases}/${e.N} · Attack Rate รวม ${e.ar.toFixed(1)}%</div>`;
+            const st = (label, arr) => {
+                if (!arr.length) return `<tr><th style="text-align:left">${label}</th><td colspan="6" style="text-align:center;color:#94a3b8">-</td></tr>`;
+                const s = arr.slice().sort((x, y) => x - y);
+                return `<tr><th style="text-align:left">${label}</th><td style="text-align:center">${arr.length}</td><td style="text-align:center">${statMean(arr).toFixed(1)}</td><td style="text-align:center">${statMedian(arr).toFixed(1)}</td><td style="text-align:center">${isNaN(statSD(arr)) ? '-' : statSD(arr).toFixed(1)}</td><td style="text-align:center">${statQuantile(s, 0.25).toFixed(1)}</td><td style="text-align:center">${statQuantile(s, 0.75).toFixed(1)}</td></tr>`;
+            };
+            const ageTbl = `<h3 style="margin:12px 0 4px;color:#b91c1c">สถิติอายุ (Person)</h3><table border="1" cellspacing="0" cellpadding="4" style="border-collapse:collapse;font-size:12px"><tr><th>กลุ่ม</th><th>n</th><th>Mean</th><th>Median</th><th>SD</th><th>Q1</th><th>Q3</th></tr>${st('ทั้งหมด', e.age.all)}${st('ผู้ป่วย (case)', e.age.cs)}${st('ไม่ป่วย (non-case)', e.age.non)}</table><div style="font-size:11px;color:#475569;margin:4px 0">${(e.tTest || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()}</div>`;
+            const head = `<tr><th>ชนิด</th><th style="text-align:left">ปัจจัยสัมผัส</th><th>ป่วย/สัมผัส (AR%)</th><th>ป่วย/ไม่สัมผัส (AR%)</th><th>RR (95% CI)</th><th>OR (95% CI)</th><th>RD% (95% CI)</th><th>p (Fisher)</th></tr>`;
+            const body = e.rows.map(r => `<tr><td>${corrEsc(r.f.type)}</td><td>${corrEsc(r.f.label)}</td><td style="text-align:center">${r.a}/${r.nExp}${r.nExp ? ' (' + (r.arExp * 100).toFixed(0) + '%)' : ''}</td><td style="text-align:center">${r.c}/${r.nUn}${r.nUn ? ' (' + (r.arUn * 100).toFixed(0) + '%)' : ''}</td><td style="text-align:center">${ci(r.rr, r.rrLo, r.rrHi)}</td><td style="text-align:center">${ci(r.or, r.orLo, r.orHi)}</td><td style="text-align:center">${isFinite(r.rd) ? (r.rd * 100).toFixed(0) + '% (' + (r.rdLo * 100).toFixed(0) + '–' + (r.rdHi * 100).toFixed(0) + ')' : '-'}</td><td style="text-align:center">${r.p < 0.0001 ? '<0.0001' : r.p.toFixed(4)}${r.zero ? ' *' : ''}</td></tr>`).join('');
+            const riskTbl = `<h3 style="margin:14px 0 4px;color:#b91c1c">ตารางความเสี่ยงตามปัจจัยสัมผัส (2×2)</h3><table border="1" cellspacing="0" cellpadding="4" style="border-collapse:collapse;font-size:11px">${head}${body}</table><div style="font-size:11px;color:#64748b;margin-top:6px">RR = Relative Risk · OR = Odds Ratio · RD = Risk Difference · p = Fisher's exact test · * = มีช่องเป็นศูนย์ (แก้ค่า +0.5)</div>`;
+            return summary + ageTbl + riskTbl;
+        }
+        function printEpi() {
+            if (!epiExport) { showAlert('ยังไม่มีข้อมูล', 'เปิดหน้าแอดมินให้โหลดข้อมูลก่อน'); return; }
+            const html = `<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8"><title>มาตรวัดทางระบาดวิทยา</title>
+                <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+                <style>@page{size:A4 landscape;margin:10mm} body{font-family:'Sarabun',sans-serif;color:#0f172a;margin:0} table{width:auto} th{background:#fee2e2}</style></head><body>
+                <h2 style="color:#b91c1c;margin:0 0 4px">มาตรวัดทางระบาดวิทยา — Attack Rate · RR · OR · Risk Difference · Fisher · t-test</h2>
+                <div style="font-size:12px;color:#64748b;margin-bottom:8px">รพ.ศรีสังวรสุโขทัย • IPC/ICN — พิมพ์เมื่อ ${fmtThaiDate(isoToday())}</div>
+                ${epiFullHtml()}</body></html>`;
+            const ifr = document.createElement('iframe');
+            ifr.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0';
+            document.body.appendChild(ifr);
+            const d = ifr.contentDocument || ifr.contentWindow.document;
+            d.open(); d.write(html); d.close();
+            setTimeout(() => { try { ifr.contentWindow.focus(); ifr.contentWindow.print(); } catch (e) {} setTimeout(() => ifr.remove(), 60000); }, 500);
+        }
+        function exportEpiExcel() {
+            if (!epiExport) { showAlert('ยังไม่มีข้อมูล', 'เปิดหน้าแอดมินให้โหลดข้อมูลก่อน'); return; }
+            const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="UTF-8"></head><body>`
+                + `<h2>มาตรวัดทางระบาดวิทยา</h2>` + epiFullHtml() + `</body></html>`;
+            const blob = new Blob(['﻿' + html], { type: 'application/vnd.ms-excel;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = `มาตรวัดระบาดวิทยา-${isoToday()}.xls`;
             document.body.appendChild(a); a.click();
             setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 1000);
         }

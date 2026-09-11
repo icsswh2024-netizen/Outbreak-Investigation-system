@@ -454,9 +454,14 @@
             </div>
 
             <!-- Form selector tabs -->
-            <div class="flex space-x-2 bg-slate-100 p-1.5 rounded-xl w-fit">
-                <button class="builder-tab px-5 py-2 rounded-lg text-base font-medium transition-all bg-white shadow-sm text-purple-700" data-formtab="staff">แบบเจ้าหน้าที่</button>
-                <button class="builder-tab px-5 py-2 rounded-lg text-base font-medium transition-all text-slate-600 hover:text-purple-700" data-formtab="patient">แบบผู้ป่วย</button>
+            <div class="flex flex-wrap items-center gap-3">
+                <div class="flex space-x-2 bg-slate-100 p-1.5 rounded-xl w-fit">
+                    <button class="builder-tab px-5 py-2 rounded-lg text-base font-medium transition-all bg-white shadow-sm text-purple-700" data-formtab="staff">แบบเจ้าหน้าที่</button>
+                    <button class="builder-tab px-5 py-2 rounded-lg text-base font-medium transition-all text-slate-600 hover:text-purple-700" data-formtab="patient">แบบผู้ป่วย</button>
+                </div>
+                <button id="btn-copy-staff" class="bg-white border border-indigo-300 text-indigo-700 px-4 py-2 rounded-lg text-base font-medium hover:bg-indigo-50 flex items-center transition-all shadow-sm" title="คัดลอกทุกส่วน/คำถามจากแบบเจ้าหน้าที่มาไว้ในแบบผู้ป่วย (ของเดิมในแบบผู้ป่วยจะถูกแทนที่)">
+                    <i data-feather="copy" class="w-4 h-4 mr-2"></i> ทำแบบผู้ป่วยให้เหมือนเจ้าหน้าที่
+                </button>
             </div>
 
             <div id="builder-body" class="space-y-6"></div>
@@ -4068,6 +4073,21 @@
             builderForm = t.getAttribute('data-formtab');
             renderBuilder();
         }));
+
+        // คัดลอกโครงสร้างจากแบบเจ้าหน้าที่ -> แบบผู้ป่วย
+        document.getElementById('btn-copy-staff').addEventListener('click', () => {
+            openConfirm({
+                title: 'ทำแบบผู้ป่วยให้เหมือนเจ้าหน้าที่',
+                message: 'จะคัดลอกทุกส่วนและคำถามจาก "แบบเจ้าหน้าที่" มาแทนที่ "แบบผู้ป่วย" ทั้งหมด (ของเดิมในแบบผู้ป่วยจะถูกแทนที่) — จากนั้นกด "บันทึกแบบสอบถาม" เพื่อใช้งานจริง ดำเนินการต่อหรือไม่?',
+                confirmText: 'คัดลอก',
+                onConfirm: () => {
+                    draft.patient = JSON.parse(JSON.stringify(draft.staff));
+                    builderForm = 'patient';
+                    renderBuilder();
+                    showModal('คัดลอกแล้ว!', 'แบบผู้ป่วยถูกทำให้เหมือนแบบเจ้าหน้าที่แล้ว — ตรวจสอบและกด "บันทึกแบบสอบถาม" เพื่อใช้งาน');
+                }
+            });
+        });
 
         // Add section
         document.getElementById('btn-add-section').addEventListener('click', () => {

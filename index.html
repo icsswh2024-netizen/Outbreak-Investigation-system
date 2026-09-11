@@ -462,6 +462,9 @@
                 <button id="btn-copy-staff" class="bg-white border border-indigo-300 text-indigo-700 px-4 py-2 rounded-lg text-base font-medium hover:bg-indigo-50 flex items-center transition-all shadow-sm" title="คัดลอกทุกส่วน/คำถามจากแบบเจ้าหน้าที่มาไว้ในแบบผู้ป่วย (ของเดิมในแบบผู้ป่วยจะถูกแทนที่)">
                     <i data-feather="copy" class="w-4 h-4 mr-2"></i> ทำแบบผู้ป่วยให้เหมือนเจ้าหน้าที่
                 </button>
+                <button id="btn-load-indexcase" class="bg-white border border-rose-300 text-rose-700 px-4 py-2 rounded-lg text-base font-medium hover:bg-rose-50 flex items-center transition-all shadow-sm" title="โหลดแบบสอบถามผู้ป่วยวัณโรค (Index case) มาตรฐานตามเอกสารแบบสอบสวนโรค">
+                    <i data-feather="file-plus" class="w-4 h-4 mr-2"></i> โหลดแบบผู้ป่วย (Index case) ตามเอกสาร
+                </button>
             </div>
 
             <div id="builder-body" class="space-y-6"></div>
@@ -802,19 +805,139 @@
                         ]}
                     ]
                 },
-                patient: {
-                    sections: [
-                        { id: 'p1', title: 'ส่วนที่ 1: ข้อมูลผู้ป่วย', icon: 'user', fields: [
-                            { id: 'name', label: '1.1 ชื่อ-นามสกุล ผู้ป่วย', type: 'text', required: true },
-                            { id: 'hn', label: '1.2 HN', type: 'text', required: true },
-                            { id: 'bed', label: '1.3 หมายเลขเตียง / หอผู้ป่วย', type: 'text', required: true }
-                        ]},
-                        { id: 'p2', title: 'ส่วนที่ 2: การประเมินอาการเบื้องต้น', icon: 'activity', fields: [
-                            { id: 'symptoms', label: '2.1 ผู้ป่วยมีอาการเหล่านี้หรือไม่?', type: 'select', risk: true, options: ['ไม่มี', 'ไอ / มีเสมหะ', 'มีไข้'] }
-                        ]}
-                    ]
-                }
+                patient: { sections: indexCasePatientSections() }
             };
+        }
+
+        // แบบสอบถามผู้ป่วย (บุคลากรที่ติดเชื้อวัณโรค / Index case) — ตามเอกสารแบบสอบสวนโรค
+        function indexCasePatientSections() {
+            return [
+                { id: 'p1', title: 'ส่วนที่ 1: ข้อมูลทั่วไป', icon: 'user', fields: [
+                    { id: 'name', label: '1.1 ชื่อ-สกุล', type: 'text', required: true },
+                    { id: 'idcard', label: '1.1 เลขบัตรประชาชน', type: 'text' },
+                    { id: 'hn', label: '1.2 HN', type: 'text', required: true },
+                    { id: 'birthdate', label: '1.2 วัน/เดือน/ปีเกิด', type: 'date' },
+                    { id: 'age', label: '1.2 อายุ (ปี)', type: 'number' },
+                    { id: 'gender', label: '1.3 เพศ', type: 'select', options: ['ชาย', 'หญิง'] },
+                    { id: 'nationality', label: '1.3 สัญชาติ', type: 'text' },
+                    { id: 'marital', label: '1.3 สถานภาพสมรส', type: 'select', options: ['โสด', 'สมรส', 'หย่าร้าง/แยกทาง', 'อื่นๆ'] },
+                    { id: 'phone', label: '1.4 โทรศัพท์', type: 'tel' },
+                    { id: 'insurance', label: '1.4 สิทธิการรักษา', type: 'select', options: ['ข้าราชการ/รัฐวิสาหกิจ', 'ประกันสังคม', 'UC', 'อื่นๆ', 'ไม่มีสิทธิ'] },
+                    { id: 'addrReg', label: '1.5 ที่อยู่ตามทะเบียนบ้าน', type: 'textarea' },
+                    { id: 'addrCurrent', label: '1.6 ที่อยู่ปัจจุบัน', type: 'textarea' },
+                    { id: 'household', label: '1.7 สมาชิกที่อาศัยร่วมบ้าน (คน)', type: 'number' },
+                    { id: 'famTb', label: '1.7 สมาชิกในครอบครัวเคยป่วยวัณโรค', type: 'radio', options: ['ไม่เคย', 'เคย'] },
+                    { id: 'famTbDetail', label: '1.7 ระบุชื่อสมาชิกที่เคยป่วยวัณโรค', type: 'text' }
+                ]},
+                { id: 'p2', title: 'ส่วนที่ 2: ประวัติอาชีพและลักษณะงาน', icon: 'briefcase', fields: [
+                    { id: 'unit', label: '2.1 หน่วยงาน/หอผู้ป่วยปัจจุบัน', type: 'text' },
+                    { id: 'department', label: '2.1 แผนก', type: 'text' },
+                    { id: 'role', label: '2.2 ตำแหน่ง', type: 'select', options: ['แพทย์', 'ทันตแพทย์', 'เภสัชกร', 'พยาบาล', 'นักเทคนิคการแพทย์/นักวิทยาศาสตร์การแพทย์', 'อื่นๆ'] },
+                    { id: 'jobDesc', label: '2.3 หน้าที่ความรับผิดชอบ/ลักษณะงาน', type: 'textarea' },
+                    { id: 'yearsInRole', label: '2.4 ปฏิบัติงานในหน้าที่นี้ (ปี)', type: 'number' },
+                    { id: 'sinceYear', label: '2.4 ตั้งแต่ พ.ศ.', type: 'text' },
+                    { id: 'hrPerDay', label: '2.4 ทำงาน (ชม./วัน)', type: 'number' },
+                    { id: 'dayPerWeek', label: '2.4 ทำงาน (วัน/สัปดาห์)', type: 'number' },
+                    { id: 'jobChange', label: '2.5 ประวัติเปลี่ยนงาน/หน้าที่ในอดีต', type: 'radio', options: ['ไม่มี', 'มี'] },
+                    { id: 'jobChangeDetail', label: '2.5 รายละเอียดการเปลี่ยนงาน (หน่วยงาน/แผนก/หน้าที่)', type: 'text' },
+                    { id: 'tbClinicWork', label: '2.6 เคยปฏิบัติงานในคลินิกวัณโรค/พื้นที่ดูแลผู้ป่วยวัณโรค', type: 'radio', options: ['ไม่เคย', 'เคย'] },
+                    { id: 'tbClinicDetail', label: '2.6 ระบุลักษณะงาน', type: 'text' },
+                    { id: 'otherJob', label: '2.7 อาชีพอื่นก่อนป่วย/นอกเวลาราชการ (ถ้ามี)', type: 'text' }
+                ]},
+                { id: 'p3', title: 'ส่วนที่ 3: ประวัติการเจ็บป่วย ปัจจัยเสี่ยง และพฤติกรรมสุขภาพ', icon: 'heart', fields: [
+                    { id: 'disease', label: '3.1 โรคประจำตัว', type: 'checkbox', options: ['ไม่มี', 'เบาหวาน', 'HIV/ภูมิคุ้มกันบกพร่อง', 'ไตวาย/ฟอกไต', 'มะเร็ง', 'ปลูกถ่ายอวัยวะ', 'โรคปอด/โรคปอดฝุ่น', 'อื่นๆ'] },
+                    { id: 'diseaseOther', label: '3.1 โรคประจำตัวอื่นๆ (ระบุ)', type: 'text' },
+                    { id: 'medicine', label: '3.2 ยาประจำตัว', type: 'checkbox', options: ['ไม่มี', 'ยากดภูมิคุ้มกัน', 'อื่นๆ'] },
+                    { id: 'medicineDetail', label: '3.2 รายละเอียดยาประจำตัว', type: 'text' },
+                    { id: 'smoking', label: '3.3 สูบบุหรี่', type: 'select', options: ['ไม่สูบ', 'เคยสูบ เลิกแล้ว', 'สูบนานๆครั้ง', 'สูบทุกวัน'] },
+                    { id: 'alcohol', label: '3.4 ดื่มสุรา/เบียร์', type: 'select', options: ['ไม่ดื่ม', 'เคยดื่ม เลิกแล้ว', 'ดื่มนานๆครั้ง', 'ดื่มทุกวัน'] },
+                    { id: 'oldTb', label: '3.5 ประวัติวัณโรคเดิม', type: 'radio', options: ['ไม่เคย', 'เคย'] },
+                    { id: 'oldTbDetail', label: '3.5 รายละเอียดวัณโรคเดิม (เมื่อ / สิ้นสุดการรักษา / ผลการรักษา)', type: 'text' },
+                    { id: 'bcg', label: '3.6 BCG', type: 'radio', options: ['ไม่เคยรับ', 'เคยรับ'] },
+                    { id: 'bcgScar', label: '3.6 BCG scar', type: 'select', options: ['ไม่มี', 'มี'] },
+                    { id: 'bcgScarPos', label: '3.6 ตำแหน่งแผลเป็น BCG', type: 'text' },
+                    { id: 'annualCheck', label: '3.7 ตรวจสุขภาพประจำปี', type: 'select', options: ['ไม่เคย', 'ไม่ทุกปี', 'ทุกปี'] },
+                    { id: 'annualCheckLast', label: '3.7 ครั้งล่าสุด (เดือน / พ.ศ.)', type: 'text' },
+                    { id: 'cxrBefore', label: '3.8 เคย X-ray ปอด', type: 'radio', options: ['ไม่เคย', 'เคย'] },
+                    { id: 'cxrBeforeResult', label: '3.8 ผล X-ray ปอด', type: 'select', options: ['ปกติ', 'ผิดปกติ'] },
+                    { id: 'cxrBeforeDetail', label: '3.8 รายละเอียด X-ray ปอด (ปี พ.ศ. / รายละเอียด)', type: 'text' }
+                ]},
+                { id: 'p4', title: 'ส่วนที่ 4: ข้อมูลการป่วยของผู้ป่วยวัณโรค (Index case)', icon: 'activity', fields: [
+                    { id: 'onsetDate', label: '4.1 วันที่เริ่มมีอาการ', type: 'date' },
+                    { id: 'coughDate', label: '4.1 วันที่เริ่มไอ', type: 'date' },
+                    { id: 'dxDate', label: '4.1 วันที่วินิจฉัย', type: 'date' },
+                    { id: 'txStartDate', label: '4.1 วันที่เริ่มรักษา', type: 'date' },
+                    { id: 'dxFacility', label: '4.2 สถานพยาบาลที่วินิจฉัย/รักษา', type: 'text' },
+                    { id: 'organ', label: '4.3 อวัยวะที่ป่วย', type: 'radio', options: ['ปอด', 'ไม่ใช่ปอด'] },
+                    { id: 'organDetail', label: '4.3 ระบุตำแหน่ง (กรณีไม่ใช่ปอด)', type: 'text' },
+                    { id: 'regType', label: '4.5 ประเภทการขึ้นทะเบียน', type: 'select', options: ['New', 'Relapse', 'Treatment after failure', 'Treatment after loss to follow-up', 'Transfer-in', 'Other'] },
+                    { id: 'symptoms', label: '4.6 อาการ (เลือกได้มากกว่า 1 ข้อ)', type: 'checkbox', risk: true, options: ['ไข้', 'ไอ', 'เจ็บหน้าอก', 'น้ำหนักลด', 'ไอมีเสมหะปนเลือด', 'ต่อมน้ำเหลืองโต', 'อ่อนเพลีย', 'เหงื่อออกกลางคืน', 'อื่นๆ'] },
+                    { id: 'symptomOther', label: '4.6 อาการอื่นๆ (ระบุ)', type: 'text' },
+                    { id: 'workStop', label: '4.7 การหยุดงาน', type: 'radio', options: ['ไม่หยุด', 'หยุด'] },
+                    { id: 'workStopDays', label: '4.7 หยุดงาน (วัน)', type: 'number' },
+                    { id: 'returnDate', label: '4.7 วันที่กลับเข้าทำงาน', type: 'date' },
+                    { id: 'returnRole', label: '4.7 ตำแหน่งเมื่อกลับเข้าทำงาน', type: 'select', options: ['แผนกเดิม/หน้าที่เดิม', 'หน้าที่ใหม่', 'แผนกใหม่'] },
+                    { id: 'dst', label: '4.8 DST (วันที่ส่งตรวจ / ได้ผล / สรุปความไว-ดื้อยา)', type: 'textarea' },
+                    { id: 'regimen', label: '4.9 สูตรการรักษา', type: 'select', options: ['2HRZE/4HR', 'MDR/RR regimen', 'อื่นๆ'] },
+                    { id: 'txResult', label: '4.9 ผลการรักษาปัจจุบัน', type: 'select', options: ['On Rx', 'Cure', 'Completed', 'Failure', 'Death', 'LTFU/Transfer'] }
+                ]},
+                { id: 'p5', title: 'ส่วนที่ 5: ข้อมูลผู้ป่วยวัณโรคต้นทาง (Source)', icon: 'user-check', fields: [
+                    { id: 'srcName', label: '5.1 ชื่อผู้ป่วย', type: 'text' },
+                    { id: 'srcHn', label: '5.1 HN', type: 'text' },
+                    { id: 'srcWard', label: '5.1 หอผู้ป่วย/หน่วยงาน', type: 'text' },
+                    { id: 'srcAfb', label: '5.2 เก็บเสมหะส่งตรวจ AFB (ผล)', type: 'text' },
+                    { id: 'srcTb', label: '5.3 เจาะเลือดตรวจ TB (ผล)', type: 'text' },
+                    { id: 'srcCxr', label: '5.4 Chest X-ray (ผล)', type: 'text' }
+                ]},
+                { id: 'p6', title: 'ส่วนที่ 6: ประวัติและลักษณะการสัมผัส', icon: 'users', fields: [
+                    { id: 'contactEvents', label: '6. ประวัติการสัมผัส — กำหนดช่วงวัน เลือกความถี่ แล้วกรอกรายละเอียดกิจกรรม/PPE', type: 'contactpattern',
+                        contactOptions: {
+                            activities: ['ดูดเสมหะ (suction)', 'Bronchoscopy', 'ใส่ท่อช่วยหายใจ / airway support', 'Induced sputum / เคาะปอด', 'CPR / ปั๊มหัวใจ', 'อื่นๆ'],
+                            n95: ['ไม่ใส่', 'ใส่ Surgical mask', 'ใส่ N95'],
+                            duration: ['< 15 นาที', '15–30 นาที', '30–60 นาที', '> 1 ชั่วโมง'],
+                            room: ['ห้องแยกโรค (AIIR)', 'ห้องปิด/ปรับอากาศ', 'พื้นที่เปิดโล่ง']
+                        },
+                        contactLabels: { activities: 'กิจกรรมสัมผัส (เลือกได้มากกว่า 1 ข้อ)', n95: 'PPE/หน้ากากขณะสัมผัส', duration: 'ระยะเวลาในการสัมผัสต่อวัน', room: 'ขนาด/ประเภทพื้นที่ที่สัมผัส' }
+                    }
+                ]},
+                { id: 'p7', title: 'ส่วนที่ 7: สภาพแวดล้อมบริเวณที่สัมผัส/แผนกที่ปฏิบัติงาน', icon: 'home', fields: [
+                    { id: 'roomName', label: '7.1 ชื่อห้อง/พื้นที่', type: 'text' },
+                    { id: 'roomType', label: '7.1 ประเภทพื้นที่', type: 'select', options: ['พื้นที่เปิดโล่ง', 'พื้นที่ปิด', 'ห้องแยกโรค', 'อื่นๆ'] },
+                    { id: 'roomSize', label: '7.2 ขนาดพื้นที่ (กว้าง × ยาว × สูง เมตร)', type: 'text' },
+                    { id: 'roomUsers', label: '7.2 จำนวนผู้ใช้งาน/ผู้รับบริการโดยประมาณ (คน)', type: 'number' },
+                    { id: 'ventilation', label: '7.3 การระบายอากาศ', type: 'select', options: ['ดี', 'ไม่ดี'] },
+                    { id: 'ventPoints', label: '7.3 จำนวนจุดระบายอากาศออกจากห้อง (จุด)', type: 'number' }
+                ]},
+                { id: 'p8', title: 'ส่วนที่ 8: ที่อยู่อาศัย/กิจกรรม/การเดินทาง (3 เดือนก่อนป่วย)', icon: 'map-pin', fields: [
+                    { id: 'homeSunAir', label: '8.1 บ้าน/ที่พัก: แสงแดดส่องถึงและอากาศถ่ายเท', type: 'radio', options: ['ไม่ใช่', 'ใช่'] },
+                    { id: 'bedroomPer', label: '8.1 ห้องนอน (คน/ห้อง)', type: 'number' },
+                    { id: 'bedroomAc', label: '8.1 ห้องนอนใช้เครื่องปรับอากาศ', type: 'radio', options: ['ไม่ใช้', 'ใช้'] },
+                    { id: 'otherPlaces', label: '8.2 สถานที่ทำกิจกรรมประจำอื่นๆ (ใช้เครื่องปรับอากาศ)', type: 'checkbox', options: ['ที่ทำงาน', 'ห้องประชุม', 'ห้องพัก', 'สถานที่ออกกำลังกาย'] },
+                    { id: 'travel', label: '8.4 การเดินทาง', type: 'checkbox', options: ['รถส่วนตัว', 'รถรับจ้าง', 'รถโดยสารสาธารณะ', 'อื่นๆ'] }
+                ]},
+                { id: 'p9', title: 'ส่วนที่ 9: สำหรับพยาบาลควบคุมการติดเชื้อ (ICN) — สภาพแวดล้อมเชิงเทคนิค', icon: 'wind', fields: [
+                    { id: 'airflowClean', label: '7.4 ทิศทางการไหลของอากาศจากจุดสะอาดไปจุดสะอาดน้อยกว่า', type: 'select', options: ['ใช่', 'ไม่ใช่', 'ไม่ทราบ'] },
+                    { id: 'acSystem', label: '7.5 ระบบปรับอากาศ', type: 'select', options: ['Central Air', 'Split Air', 'ไม่ใช้เครื่องปรับอากาศ', 'อื่นๆ'] },
+                    { id: 'ventSystem', label: '7.6 ระบบระบายอากาศ', type: 'select', options: ['Local exhaust ventilation', 'General exhaust/dilution ventilation', 'ธรรมชาติ', 'อื่นๆ'] },
+                    { id: 'airControl', label: '7.7 อุปกรณ์ควบคุมอากาศ', type: 'checkbox', options: ['ไม่มี', 'HEPA filter', 'UVGI', 'อื่นๆ'] },
+                    { id: 'airControlDetail', label: '7.7 รายละเอียด/ตำแหน่งอุปกรณ์ควบคุมอากาศ', type: 'text' },
+                    { id: 'airQualityTest', label: '7.8 มีการตรวจคุณภาพอากาศในอาคาร', type: 'radio', options: ['ไม่มี', 'มี'] },
+                    { id: 'ssop', label: '7.9 มีแนวปฏิบัติ/SSOP ป้องกันควบคุมวัณโรค', type: 'select', options: ['ไม่ทราบ', 'ไม่มี', 'มี'] }
+                ]},
+                { id: 'p10', title: 'ส่วนที่ 10: ผลการตรวจและการติดตาม', icon: 'clipboard', fields: [
+                    { id: 'followSymptom', label: '9.1 อาการระหว่างติดตาม', type: 'radio', options: ['ไม่มีอาการ', 'มีอาการ'] },
+                    { id: 'followSymptomDetail', label: '9.1 ระบุอาการ + วันที่เริ่มอาการ', type: 'text' },
+                    { id: 'followResult', label: '9.2 สรุปผลการติดตาม', type: 'select', options: ['ไม่พบความผิดปกติ', 'ต้องตรวจ/ติดตามเพิ่มเติม', 'วินิจฉัยวัณโรค', 'อื่นๆ'] }
+                ]},
+                { id: 'p11', title: 'ส่วนที่ 11: ประวัติแหล่งสัมผัสอื่น (1–3 เดือนก่อนป่วย)', icon: 'share-2', fields: [
+                    { id: 'srcFamily', label: '10.1 ในครอบครัว/ที่พัก', type: 'radio', options: ['ไม่มี', 'มี'] },
+                    { id: 'srcFamilyDetail', label: '10.1 รายละเอียด (ชื่อ / อายุ / วันที่เริ่มป่วย / รักษาที่)', type: 'text' },
+                    { id: 'srcWork', label: '10.2 ที่ทำงาน/เพื่อนร่วมงาน', type: 'select', options: ['ไม่มี', 'ไม่ทราบ', 'มี'] },
+                    { id: 'srcWorkDetail', label: '10.2 รายละเอียด', type: 'text' },
+                    { id: 'srcCommunity', label: '10.3 ชุมชน/กิจกรรมอื่น', type: 'radio', options: ['ไม่มี', 'มี'] },
+                    { id: 'srcCommunityDetail', label: '10.3 รายละเอียด', type: 'text' }
+                ]}
+            ];
         }
 
         /* ============================================================
@@ -4136,6 +4259,21 @@
                     builderForm = 'patient';
                     renderBuilder();
                     showModal('คัดลอกแล้ว!', 'แบบผู้ป่วยถูกทำให้เหมือนแบบเจ้าหน้าที่แล้ว — ตรวจสอบและกด "บันทึกแบบสอบถาม" เพื่อใช้งาน');
+                }
+            });
+        });
+
+        // โหลดแบบผู้ป่วยวัณโรค (Index case) ตามเอกสารแบบสอบสวนโรค
+        document.getElementById('btn-load-indexcase').addEventListener('click', () => {
+            openConfirm({
+                title: 'โหลดแบบผู้ป่วย (Index case)',
+                message: 'จะแทนที่ "แบบผู้ป่วย" ทั้งหมดด้วยแบบสอบถามผู้ป่วยวัณโรค (Index case) มาตรฐานตามเอกสารแบบสอบสวนโรค (11 ส่วน) — ของเดิมในแบบผู้ป่วยจะถูกแทนที่ จากนั้นกด "บันทึกแบบสอบถาม" เพื่อใช้งานจริง ดำเนินการต่อหรือไม่?',
+                confirmText: 'โหลด',
+                onConfirm: () => {
+                    draft.patient = { sections: JSON.parse(JSON.stringify(indexCasePatientSections())) };
+                    builderForm = 'patient';
+                    renderBuilder();
+                    showModal('โหลดแล้ว!', 'โหลดแบบผู้ป่วย (Index case) ตามเอกสารแล้ว — ตรวจสอบ/ปรับแก้ได้ แล้วกด "บันทึกแบบสอบถาม" เพื่อใช้งาน');
                 }
             });
         });

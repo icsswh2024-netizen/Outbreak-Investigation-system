@@ -3936,11 +3936,17 @@
             const body = document.getElementById('builder-body');
             const secs = draft[builderForm].sections;
             body.innerHTML = secs.map((sec, si) => `
-                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
-                    <div class="flex items-center gap-3">
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4" data-sec-card data-si="${si}">
+                    <div class="flex items-center gap-2">
+                        <span data-act="sec-drag" data-si="${si}" draggable="true" class="cursor-grab active:cursor-grabbing text-slate-400 hover:text-purple-600 p-1 select-none flex-shrink-0" title="ลากเพื่อจัดเรียงส่วน"><i data-feather="move" class="w-5 h-5"></i></span>
+                        <div class="flex flex-col flex-shrink-0">
+                            <button data-act="sec-up" data-si="${si}" class="text-slate-400 hover:text-purple-700 leading-none ${si === 0 ? 'opacity-30 pointer-events-none' : ''}" title="เลื่อนขึ้น"><i data-feather="chevron-up" class="w-4 h-4"></i></button>
+                            <button data-act="sec-down" data-si="${si}" class="text-slate-400 hover:text-purple-700 leading-none ${si === secs.length - 1 ? 'opacity-30 pointer-events-none' : ''}" title="เลื่อนลง"><i data-feather="chevron-down" class="w-4 h-4"></i></button>
+                        </div>
+                        <span class="text-slate-300 flex-shrink-0">|</span>
                         <i data-feather="${sec.icon || 'chevron-right'}" class="w-5 h-5 text-purple-500 flex-shrink-0"></i>
                         <input class="flex-1 text-lg font-semibold text-slate-800 border-b border-slate-200 focus:border-purple-500 focus:outline-none py-1 bg-transparent" value="${escAttr(sec.title)}" data-act="sec-title" data-si="${si}" placeholder="ชื่อส่วน">
-                        <button data-act="sec-del" data-si="${si}" class="text-rose-500 hover:text-rose-700 p-1" title="ลบส่วนนี้"><i data-feather="trash-2" class="w-5 h-5"></i></button>
+                        <button data-act="sec-del" data-si="${si}" class="text-rose-500 hover:text-rose-700 p-1 flex-shrink-0" title="ลบส่วนนี้"><i data-feather="trash-2" class="w-5 h-5"></i></button>
                     </div>
                     <div class="space-y-3 pl-2">
                         ${sec.fields.map((f, fi) => fieldEditorHTML(f, si, fi)).join('')}
@@ -3949,6 +3955,14 @@
                 </div>
             `).join('');
             feather.replace();
+        }
+        // ย้ายลำดับส่วน (section) แล้ว re-render
+        function moveSection(from, to) {
+            const secs = draft[builderForm].sections;
+            if (from < 0 || to < 0 || from >= secs.length || to >= secs.length || from === to) return;
+            const [moved] = secs.splice(from, 1);
+            secs.splice(to, 0, moved);
+            renderBuilder();
         }
 
         function fieldEditorHTML(f, si, fi) {
@@ -4050,7 +4064,9 @@
             const act = btn.getAttribute('data-act');
             const si = +btn.getAttribute('data-si'), fi = +btn.getAttribute('data-fi');
             const secs = draft[builderForm].sections;
-            if (act === 'sec-del') {
+            if (act === 'sec-up') { moveSection(si, si - 1); return; }
+            else if (act === 'sec-down') { moveSection(si, si + 1); return; }
+            else if (act === 'sec-del') {
                 openConfirm({
                     title: 'ยืนยันการลบส่วน', danger: true, confirmText: 'ลบ',
                     message: 'ต้องการลบส่วนนี้และคำถามทั้งหมดในส่วนนี้ใช่หรือไม่?',
@@ -4067,6 +4083,41 @@
                 });
             }
         });
+
+        // Builder: ลากจัดเรียงส่วน (drag & drop)
+        let dragSecFrom = null;
+        (function () {
+            const bb = document.getElementById('builder-body');
+            const cardOf = el => el && el.closest ? el.closest('[data-sec-card]') : null;
+            bb.addEventListener('dragstart', e => {
+                const handle = e.target.closest ? e.target.closest('[data-act="sec-drag"]') : null;
+                const card = cardOf(e.target);
+                if (!handle || !card) { e.preventDefault(); return; }
+                dragSecFrom = +card.getAttribute('data-si');
+                card.classList.add('opacity-50');
+                try { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', String(dragSecFrom)); } catch (er) {}
+            });
+            bb.addEventListener('dragover', e => {
+                if (dragSecFrom == null) return;
+                e.preventDefault();
+                try { e.dataTransfer.dropEffect = 'move'; } catch (er) {}
+                const card = cardOf(e.target);
+                bb.querySelectorAll('[data-sec-card]').forEach(c => c.classList.remove('ring-2', 'ring-purple-400'));
+                if (card) card.classList.add('ring-2', 'ring-purple-400');
+            });
+            bb.addEventListener('drop', e => {
+                if (dragSecFrom == null) return;
+                e.preventDefault();
+                const card = cardOf(e.target);
+                bb.querySelectorAll('[data-sec-card]').forEach(c => c.classList.remove('ring-2', 'ring-purple-400', 'opacity-50'));
+                if (card) { const to = +card.getAttribute('data-si'); moveSection(dragSecFrom, to); }
+                dragSecFrom = null;
+            });
+            bb.addEventListener('dragend', () => {
+                bb.querySelectorAll('[data-sec-card]').forEach(c => c.classList.remove('ring-2', 'ring-purple-400', 'opacity-50'));
+                dragSecFrom = null;
+            });
+        })();
 
         // Tabs
         document.querySelectorAll('.builder-tab').forEach(t => t.addEventListener('click', () => {

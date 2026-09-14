@@ -407,6 +407,8 @@
                                 <th class="col-date px-6 py-4 whitespace-nowrap font-semibold tracking-wider">วันที่บันทึก</th>
                                 <th class="col-name px-6 py-4 whitespace-nowrap font-semibold tracking-wider">ชื่อ-นามสกุล</th>
                                 <th class="col-hn px-6 py-4 whitespace-nowrap font-semibold tracking-wider">HN</th>
+                                <th class="col-gender px-6 py-4 whitespace-nowrap font-semibold tracking-wider">เพศ</th>
+                                <th class="col-age px-6 py-4 whitespace-nowrap font-semibold tracking-wider">อายุ</th>
                                 <th class="col-group px-6 py-4 whitespace-nowrap font-semibold tracking-wider">กลุ่ม/ตำแหน่ง</th>
                                 <th class="col-unit px-6 py-4 whitespace-nowrap font-semibold tracking-wider">หน่วยงาน</th>
                                 <th class="col-activity px-6 py-4 whitespace-nowrap font-semibold tracking-wider">กิจกรรม</th>
@@ -414,6 +416,7 @@
                                 <th class="col-duration px-6 py-4 whitespace-nowrap font-semibold tracking-wider">ระยะเวลา</th>
                                 <th class="col-room px-6 py-4 whitespace-nowrap font-semibold tracking-wider">ขนาดห้อง</th>
                                 <th class="col-symptom px-6 py-4 whitespace-nowrap font-semibold tracking-wider">อาการ</th>
+                                <th class="col-disease px-6 py-4 whitespace-nowrap font-semibold tracking-wider">โรคประจำตัว</th>
                                 <th class="col-hours px-6 py-4 whitespace-nowrap font-semibold tracking-wider">ชม./เดือน</th>
                                 <th class="col-risk px-6 py-4 whitespace-nowrap font-semibold tracking-wider">ระดับความเสี่ยง</th>
                                 <th class="col-cxr px-6 py-4 whitespace-nowrap font-semibold tracking-wider">Chest X-ray</th>
@@ -2845,7 +2848,7 @@
             if (cnt) cnt.textContent = `แสดง ${filtered.length} / ${records.length} รายการ`;
 
             if (filtered.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="18" class="px-6 py-8 text-center text-slate-500 text-lg">${records.length ? 'ไม่พบข้อมูลตามตัวกรอง' : 'ไม่มีข้อมูลการบันทึก'}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="21" class="px-6 py-8 text-center text-slate-500 text-lg">${records.length ? 'ไม่พบข้อมูลตามตัวกรอง' : 'ไม่มีข้อมูลการบันทึก'}</td></tr>`;
                 return;
             }
 
@@ -2867,7 +2870,13 @@
                     riskDisplay = badge + (riskInfo.risk ? `<div class="text-xs text-slate-500 mt-0.5">${riskInfo.risk.g}: ~${riskInfo.risk.r}</div>` : '');
                 }
 
-                const unitVal = (record.answers && (record.answers.unit || record.answers.ward)) || '-';
+                const ansR = record.answers || {};
+                const unitVal = (ansR.unit || ansR.ward) || '-';
+                const genderVal = ansR.gender || '-';
+                const ageVal = (ansR.age !== undefined && ansR.age !== null && String(ansR.age).trim() !== '') ? ansR.age : '-';
+                let diseaseVal = Array.isArray(ansR.disease) ? ansR.disease.filter(Boolean).join(', ') : (ansR.disease || '');
+                if (ansR.diseaseOther && String(ansR.diseaseOther).trim()) diseaseVal = (diseaseVal ? diseaseVal + ', ' : '') + String(ansR.diseaseOther).trim();
+                diseaseVal = diseaseVal || '-';
                 const cset = contactSets(record);
                 const actCode = cset.activities.map(a => ACT_CODE[a] || a).join(', ') || '-';
                 const roomCode = cset.rooms.map(r => ROOM_CODE[r] || r).join(', ') || '-';
@@ -2877,9 +2886,11 @@
                     <td class="col-date px-6 py-5 whitespace-nowrap text-slate-600">${record.date}</td>
                     <td class="col-name px-6 py-5 font-medium text-slate-900 whitespace-nowrap">${record.name || '-'}</td>
                     <td class="col-hn px-6 py-5 whitespace-nowrap text-slate-500">${record.hn || '-'}</td>
+                    <td class="col-gender px-6 py-5 whitespace-nowrap text-slate-600">${escHtml(String(genderVal))}</td>
+                    <td class="col-age px-6 py-5 whitespace-nowrap text-slate-600 text-center">${escHtml(String(ageVal))}</td>
                     <td class="col-group px-6 py-5 whitespace-nowrap">${record.group || '-'}</td>
                     <td class="col-unit px-6 py-5 whitespace-nowrap text-slate-700">${unitVal}</td>
-                    <td class="col-activity px-6 py-5 whitespace-nowrap text-slate-700 font-medium">${actCode}</td>${cell(cset.masks.join(', ') || '-', 'col-mask')}${cell(cset.durations.join(', ') || '-', 'col-duration')}<td class="col-room px-6 py-5 whitespace-nowrap text-slate-700 font-medium">${roomCode}</td>${cell(symptomsOf(record), 'col-symptom')}
+                    <td class="col-activity px-6 py-5 whitespace-nowrap text-slate-700 font-medium">${actCode}</td>${cell(cset.masks.join(', ') || '-', 'col-mask')}${cell(cset.durations.join(', ') || '-', 'col-duration')}<td class="col-room px-6 py-5 whitespace-nowrap text-slate-700 font-medium">${roomCode}</td>${cell(symptomsOf(record), 'col-symptom')}${cell(escHtml(diseaseVal), 'col-disease')}
                     <td class="col-hours px-6 py-5 whitespace-nowrap text-slate-700">${riskInfo.hasData ? riskInfo.hours + ' ชม.' : '-'}</td>
                     <td class="col-risk px-6 py-5 whitespace-nowrap">${riskDisplay}</td>
                     <td class="col-cxr px-6 py-4 text-sm text-slate-600">${labCellHtml(record, 'cxr')}</td>
@@ -3823,15 +3834,20 @@
         function exportContactListExcel() {
             buildContactCodes();
             const rows = records.filter(passAdminFilters);
-            const headers = ['ลำดับ', 'วันที่บันทึก', 'ชื่อ-นามสกุล', 'HN', 'กลุ่ม/ตำแหน่ง', 'หน่วยงาน', 'กิจกรรม', 'หน้ากาก', 'ระยะเวลา', 'ขนาดห้อง', 'อาการ', 'ชั่วโมงรวม', 'ระดับความเสี่ยง', 'Chest X-ray', 'Sputum AFB', 'TST', 'LAB'];
+            const headers = ['ลำดับ', 'วันที่บันทึก', 'ชื่อ-นามสกุล', 'HN', 'เพศ', 'อายุ', 'กลุ่ม/ตำแหน่ง', 'หน่วยงาน', 'กิจกรรม', 'หน้ากาก', 'ระยะเวลา', 'ขนาดห้อง', 'อาการ', 'โรคประจำตัว', 'ชั่วโมงรวม', 'ระดับความเสี่ยง', 'Chest X-ray', 'Sputum AFB', 'TST', 'LAB'];
             const data = rows.map((r, i) => {
-                const unitVal = (r.answers && (r.answers.unit || r.answers.ward)) || '';
+                const a = r.answers || {};
+                const unitVal = (a.unit || a.ward) || '';
+                const gender = a.gender || '';
+                const age = (a.age !== undefined && a.age !== null && String(a.age).trim() !== '') ? a.age : '';
+                let disease = Array.isArray(a.disease) ? a.disease.filter(Boolean).join(', ') : (a.disease || '');
+                if (a.diseaseOther && String(a.diseaseOther).trim()) disease = (disease ? disease + ', ' : '') + String(a.diseaseOther).trim();
                 const cset = contactSets(r);
                 const ri = computeRecordRisk(r);
                 const risk = !ri.hasData ? '-' : (ri.isClose ? 'เสี่ยงสูง (Close Contact)' : 'เสี่ยงทั่วไป');
-                return [i + 1, r.date || '', r.name || '', r.hn || '', r.group || '', unitVal,
+                return [i + 1, r.date || '', r.name || '', r.hn || '', gender, age, r.group || '', unitVal,
                     cset.activities.join(', '), cset.masks.join(', '), cset.durations.join(', '),
-                    cset.rooms.join(', '), symptomsOf(r), ri.hasData ? ri.hours : '-', risk,
+                    cset.rooms.join(', '), symptomsOf(r), disease, ri.hasData ? ri.hours : '-', risk,
                     labCellText(r, 'cxr'), labCellText(r, 'afb'), labCellText(r, 'tst'), labCellText(r, 'lab')];
             });
             exportToExcel(`ContactList-${isoToday()}.xls`, headers, data, `รายชื่อผู้สัมผัส (Contact List) — จำนวน ${rows.length} ราย`);
@@ -3974,10 +3990,12 @@
         const COL_DEFS = [
             { key: 'seq', label: 'ลำดับ', lock: true }, { key: 'date', label: 'วันที่บันทึก' },
             { key: 'name', label: 'ชื่อ-นามสกุล', lock: true }, { key: 'hn', label: 'HN' },
+            { key: 'gender', label: 'เพศ' }, { key: 'age', label: 'อายุ' },
             { key: 'group', label: 'กลุ่ม/ตำแหน่ง' }, { key: 'unit', label: 'หน่วยงาน' },
             { key: 'activity', label: 'กิจกรรม' }, { key: 'mask', label: 'หน้ากาก' },
             { key: 'duration', label: 'ระยะเวลา' }, { key: 'room', label: 'ขนาดห้อง' },
-            { key: 'symptom', label: 'อาการ' }, { key: 'hours', label: 'ชม./เดือน' },
+            { key: 'symptom', label: 'อาการ' }, { key: 'disease', label: 'โรคประจำตัว' },
+            { key: 'hours', label: 'ชม./เดือน' },
             { key: 'risk', label: 'ระดับความเสี่ยง' }, { key: 'cxr', label: 'Chest X-ray' },
             { key: 'afb', label: 'Sputum AFB' }, { key: 'tst', label: 'TST' },
             { key: 'lab', label: 'LAB' }, { key: 'actions', label: 'รายละเอียด', lock: true }

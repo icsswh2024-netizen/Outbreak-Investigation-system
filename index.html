@@ -834,7 +834,7 @@
                     { id: 'reg_tambon', label: 'ตำบล', type: 'text', level: 2 },
                     { id: 'reg_amphoe', label: 'อำเภอ', type: 'text', level: 2 },
                     { id: 'reg_province', label: 'จังหวัด', type: 'text', level: 2 },
-                    { id: 'addrCurrent', label: '1.6 ที่อยู่ปัจจุบัน', type: 'text', level: 1 },
+                    { id: 'addrCurrentSame', label: '1.6 ที่อยู่ปัจจุบัน', type: 'radio', level: 1, options: ['เหมือนที่อยู่ตามทะเบียนบ้าน', 'ระบุใหม่'] },
                     { id: 'cur_no', label: 'บ้านเลขที่', type: 'text', level: 2 },
                     { id: 'cur_moo', label: 'หมู่', type: 'text', level: 2 },
                     { id: 'cur_soi', label: 'ซอย', type: 'text', level: 2 },
@@ -1522,6 +1522,43 @@
             if (typeof refreshPatternPreviews === 'function') refreshPatternPreviews(form);
             const cancelBtn = document.getElementById('btn-cancel-edit');
             if (cancelBtn) cancelBtn.addEventListener('click', cancelEdit);
+            setupAddressSync(form);
+        }
+        // ที่อยู่ปัจจุบัน "เหมือนที่อยู่ตามทะเบียนบ้าน" -> ดึงค่าทะเบียนบ้านมาเติมและล็อกช่อง
+        const ADDR_SUFFIX = ['no', 'moo', 'soi', 'road', 'tambon', 'amphoe', 'province'];
+        function setupAddressSync(form) {
+            const radios = form.querySelectorAll('input[name="addrCurrentSame"]');
+            if (!radios.length) return;
+            const applyState = () => {
+                const sel = form.querySelector('input[name="addrCurrentSame"]:checked');
+                const isSame = !!sel && sel.value.indexOf('เหมือน') === 0;
+                ADDR_SUFFIX.forEach(s => {
+                    const reg = form.querySelector(`[name="reg_${s}"]`);
+                    const cur = form.querySelector(`[name="cur_${s}"]`);
+                    if (!cur) return;
+                    if (isSame) {
+                        if (reg) cur.value = reg.value;
+                        cur.readOnly = true;
+                        cur.classList.add('bg-slate-100', 'text-slate-500', 'cursor-not-allowed');
+                    } else {
+                        cur.readOnly = false;
+                        cur.classList.remove('bg-slate-100', 'text-slate-500', 'cursor-not-allowed');
+                    }
+                });
+            };
+            radios.forEach(r => r.addEventListener('change', applyState));
+            // ถ้าเลือก "เหมือน" อยู่ แล้วแก้ทะเบียนบ้าน ให้อัปเดตที่อยู่ปัจจุบันตาม
+            ADDR_SUFFIX.forEach(s => {
+                const reg = form.querySelector(`[name="reg_${s}"]`);
+                if (reg) reg.addEventListener('input', () => {
+                    const sel = form.querySelector('input[name="addrCurrentSame"]:checked');
+                    if (sel && sel.value.indexOf('เหมือน') === 0) {
+                        const cur = form.querySelector(`[name="cur_${s}"]`);
+                        if (cur) cur.value = reg.value;
+                    }
+                });
+            });
+            applyState();
         }
         // ยกเลิกการแก้ไข: ล้างโหมดแก้ไขและรีเซ็ตฟอร์มกลับเป็นการบันทึกใหม่
         function cancelEdit() {
@@ -1740,6 +1777,9 @@
                 }
             }));
             feather.replace();
+            // อัปเดตสถานะ "ที่อยู่ปัจจุบันเหมือนทะเบียนบ้าน" หลังเติมค่า
+            const asr = form.querySelector('input[name="addrCurrentSame"]:checked');
+            if (asr) asr.dispatchEvent(new Event('change'));
         }
 
         function startEdit(id) {

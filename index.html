@@ -34,8 +34,6 @@
         body.role-view .btn-edit,
         body.role-view .btn-del,
         body.role-view .btn-lab { display: none !important; }
-        /* ซ่อนกล่อง "ค่าที่แอดมินกำหนดไว้ล่วงหน้า" ในหน้าจัดการแบบสอบถาม (สลับได้) */
-        body.hide-builder-preset .builder-preset { display: none !important; }
         /* ข้อความยาว/ตัวเลือกยาวไม่ดันจอ */
         label, span, p, h1, h2, h3 { overflow-wrap: break-word; word-break: break-word; }
         /* ช่องกรอกและดรอปดาวน์ไม่ล้นกรอบ */
@@ -446,9 +444,6 @@
                     <p class="text-slate-600 mt-1 text-lg">เพิ่ม / ลบ / แก้ไข ส่วนและคำถาม พร้อมกำหนดตัวเลือก (dropdown, checkbox, radio) ได้เอง</p>
                 </div>
                 <div class="flex items-center space-x-3">
-                    <button id="btn-toggle-preset" class="bg-white border border-amber-300 text-amber-700 px-4 py-2.5 rounded-lg text-base font-medium hover:bg-amber-50 flex items-center transition-all shadow-sm" title="ซ่อน/แสดง กล่องค่าที่แอดมินกำหนดไว้ล่วงหน้า">
-                        <i data-feather="eye-off" class="w-4 h-4 mr-2"></i> <span id="toggle-preset-label">ซ่อนค่าที่แอดมินกำหนด</span>
-                    </button>
                     <button id="btn-builder-setdefault" class="bg-white border border-teal-300 text-teal-700 px-4 py-2.5 rounded-lg text-base font-medium hover:bg-teal-50 flex items-center transition-all shadow-sm">
                         <i data-feather="bookmark" class="w-4 h-4 mr-2"></i> ตั้งเป็นค่าเริ่มต้น
                     </button>
@@ -1513,7 +1508,7 @@
                 html += `<div class="space-y-5 ${idx > 0 ? 'pt-6 border-t border-slate-200' : ''}">
                     <h3 class="text-lg font-semibold text-slate-800 flex items-center"><i data-feather="${sec.icon || 'chevron-right'}" class="w-5 h-5 mr-2 text-${accent}-500"></i> ${sec.title}</h3>
                     <div class="space-y-5">
-                        ${sec.fields.map(f => `<div>${fieldHTML(f, accent)}</div>`).join('')}
+                        ${sec.fields.filter(f => !f.hidden).map(f => `<div>${fieldHTML(f, accent)}</div>`).join('')}
                     </div>
                 </div>`;
             });
@@ -1582,6 +1577,8 @@
             let risk = false;
             schema[formKey].sections.forEach(sec => {
                 sec.fields.forEach(f => {
+                    // ข้ามคำถามที่ถูกซ่อน (ยกเว้นมีค่าที่แอดมินกำหนดไว้ล่วงหน้า)
+                    if (f.hidden && (f.fixed === undefined || f.fixed === '')) return;
                     let value;
                     if (f.fixed !== undefined && f.fixed !== '') {
                         value = f.fixed;
@@ -4221,7 +4218,8 @@
             const lvIndent = (lv - 1) * 28;
             const lvColor = { 1: 'border-slate-200', 2: 'border-l-4 border-l-sky-300', 3: 'border-l-4 border-l-teal-300' }[lv] || 'border-slate-200';
             const lvOpts = [[1, 'หัวข้อย่อย (1.1)'], [2, 'หัวข้อรอง (1.1.1)'], [3, 'รายละเอียด (ก)']].map(o => `<option value="${o[0]}" ${lv === o[0] ? 'selected' : ''}>${o[1]}</option>`).join('');
-            return `<div class="rounded-xl border ${lvColor} bg-slate-50/60 p-4" data-field-card data-si="${si}" data-fi="${fi}" style="margin-left:${lvIndent}px">
+            const isHidden = !!f.hidden;
+            return `<div class="rounded-xl border ${lvColor} ${isHidden ? 'bg-slate-100 opacity-60' : 'bg-slate-50/60'} p-4" data-field-card data-si="${si}" data-fi="${fi}" style="margin-left:${lvIndent}px">
                 <div class="flex flex-col sm:flex-row gap-3 sm:items-center">
                     <span data-act="field-drag" data-si="${si}" data-fi="${fi}" draggable="true" class="cursor-grab active:cursor-grabbing text-slate-400 hover:text-purple-600 p-1 select-none flex-shrink-0 self-start sm:self-auto" title="ลากเพื่อจัดเรียงคำถาม"><i data-feather="move" class="w-4 h-4"></i></span>
                     <div class="flex sm:flex-col flex-shrink-0">
@@ -4234,8 +4232,10 @@
                     <label class="flex items-center space-x-2 text-sm text-slate-600 cursor-pointer whitespace-nowrap">
                         <input type="checkbox" data-act="field-required" data-si="${si}" data-fi="${fi}" ${f.required ? 'checked' : ''} class="w-4 h-4 text-purple-600"> <span>บังคับตอบ</span>
                     </label>
+                    <button data-act="field-hide" data-si="${si}" data-fi="${fi}" class="${isHidden ? 'text-slate-400 hover:text-slate-600' : 'text-emerald-600 hover:text-emerald-800'} p-1" title="${isHidden ? 'คำถามนี้ถูกซ่อนจากผู้ตอบ — คลิกเพื่อยกเลิกซ่อน' : 'ซ่อนคำถามนี้จากผู้ตอบ'}"><i data-feather="${isHidden ? 'eye-off' : 'eye'}" class="w-5 h-5"></i></button>
                     <button data-act="field-del" data-si="${si}" data-fi="${fi}" class="text-rose-500 hover:text-rose-700 p-1" title="ลบคำถาม"><i data-feather="trash-2" class="w-5 h-5"></i></button>
                 </div>
+                ${isHidden ? '<div class="mt-2 text-xs font-medium text-slate-500 flex items-center"><i data-feather="eye-off" class="w-3.5 h-3.5 mr-1"></i> ซ่อนอยู่ — ผู้ตอบจะไม่เห็นคำถามนี้</div>' : ''}
                 ${optionsBlock}
                 ${contactBlock}
                 <div class="mt-2 builder-preset">
@@ -4299,6 +4299,7 @@
             else if (act === 'sec-down') { moveSection(si, si + 1); return; }
             else if (act === 'field-up') { moveField(si, fi, fi - 1); return; }
             else if (act === 'field-down') { moveField(si, fi, fi + 1); return; }
+            else if (act === 'field-hide') { const fld = secs[si].fields[fi]; fld.hidden = !fld.hidden; renderBuilder(); return; }
             else if (act === 'sec-del') {
                 openConfirm({
                     title: 'ยืนยันการลบส่วน', danger: true, confirmText: 'ลบ',
@@ -4429,23 +4430,6 @@
                 }
             });
         });
-
-        // สลับซ่อน/แสดง กล่อง "ค่าที่แอดมินกำหนดไว้ล่วงหน้า"
-        const PRESET_HIDE_KEY = 'oi-hide-builder-preset';
-        function applyPresetVisibility() {
-            const hidden = (() => { try { return localStorage.getItem(PRESET_HIDE_KEY) === '1'; } catch (e) { return false; } })();
-            document.body.classList.toggle('hide-builder-preset', hidden);
-            const lbl = document.getElementById('toggle-preset-label');
-            const btn = document.getElementById('btn-toggle-preset');
-            if (lbl) lbl.textContent = hidden ? 'แสดงค่าที่แอดมินกำหนด' : 'ซ่อนค่าที่แอดมินกำหนด';
-            if (btn) { const ic = btn.querySelector('i'); if (ic) { ic.setAttribute('data-feather', hidden ? 'eye' : 'eye-off'); feather.replace(); } }
-        }
-        document.getElementById('btn-toggle-preset').addEventListener('click', () => {
-            const hidden = document.body.classList.contains('hide-builder-preset');
-            try { localStorage.setItem(PRESET_HIDE_KEY, hidden ? '0' : '1'); } catch (e) {}
-            applyPresetVisibility();
-        });
-        applyPresetVisibility();
 
         // Add section
         document.getElementById('btn-add-section').addEventListener('click', () => {

@@ -4090,7 +4090,7 @@
                         <button data-act="sec-del" data-si="${si}" class="text-rose-500 hover:text-rose-700 p-1 flex-shrink-0" title="ลบส่วนนี้"><i data-feather="trash-2" class="w-5 h-5"></i></button>
                     </div>
                     <div class="space-y-3 pl-2">
-                        ${sec.fields.map((f, fi) => fieldEditorHTML(f, si, fi)).join('')}
+                        ${sec.fields.map((f, fi) => fieldEditorHTML(f, si, fi, sec.fields.length)).join('')}
                     </div>
                     <button data-act="field-add" data-si="${si}" class="text-purple-600 hover:text-purple-800 text-base font-medium inline-flex items-center mt-2"><i data-feather="plus" class="w-4 h-4 mr-1"></i> เพิ่มคำถาม</button>
                 </div>
@@ -4105,8 +4105,18 @@
             secs.splice(to, 0, moved);
             renderBuilder();
         }
+        // ย้ายลำดับคำถามภายในส่วนเดียวกัน
+        function moveField(si, from, to) {
+            const secs = draft[builderForm].sections;
+            if (!secs[si]) return;
+            const fields = secs[si].fields;
+            if (from < 0 || to < 0 || from >= fields.length || to >= fields.length || from === to) return;
+            const [moved] = fields.splice(from, 1);
+            fields.splice(to, 0, moved);
+            renderBuilder();
+        }
 
-        function fieldEditorHTML(f, si, fi) {
+        function fieldEditorHTML(f, si, fi, fcount) {
             const typeOpts = Object.keys(TYPE_LABELS).map(t => `<option value="${t}" ${f.type === t ? 'selected' : ''}>${TYPE_LABELS[t]}</option>`).join('');
             const optionsBlock = HAS_OPTIONS.includes(f.type)
                 ? `<div class="mt-2">
@@ -4140,8 +4150,14 @@
                         </div>
                    </div>`
                 : '';
-            return `<div class="rounded-xl border border-slate-200 bg-slate-50/60 p-4">
+            const cnt = (typeof fcount === 'number') ? fcount : 0;
+            return `<div class="rounded-xl border border-slate-200 bg-slate-50/60 p-4" data-field-card data-si="${si}" data-fi="${fi}">
                 <div class="flex flex-col sm:flex-row gap-3 sm:items-center">
+                    <span data-act="field-drag" data-si="${si}" data-fi="${fi}" draggable="true" class="cursor-grab active:cursor-grabbing text-slate-400 hover:text-purple-600 p-1 select-none flex-shrink-0 self-start sm:self-auto" title="ลากเพื่อจัดเรียงคำถาม"><i data-feather="move" class="w-4 h-4"></i></span>
+                    <div class="flex sm:flex-col flex-shrink-0">
+                        <button data-act="field-up" data-si="${si}" data-fi="${fi}" class="text-slate-400 hover:text-purple-700 leading-none ${fi === 0 ? 'opacity-30 pointer-events-none' : ''}" title="เลื่อนขึ้น"><i data-feather="chevron-up" class="w-4 h-4"></i></button>
+                        <button data-act="field-down" data-si="${si}" data-fi="${fi}" class="text-slate-400 hover:text-purple-700 leading-none ${fi === cnt - 1 ? 'opacity-30 pointer-events-none' : ''}" title="เลื่อนลง"><i data-feather="chevron-down" class="w-4 h-4"></i></button>
+                    </div>
                     <input class="flex-1 text-base rounded-lg border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-400" value="${escAttr(f.label)}" data-act="field-label" data-si="${si}" data-fi="${fi}" placeholder="ข้อความคำถาม">
                     <select data-act="field-type" data-si="${si}" data-fi="${fi}" class="text-base rounded-lg border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-400 cursor-pointer">${typeOpts}</select>
                     <label class="flex items-center space-x-2 text-sm text-slate-600 cursor-pointer whitespace-nowrap">
@@ -4207,6 +4223,8 @@
             const secs = draft[builderForm].sections;
             if (act === 'sec-up') { moveSection(si, si - 1); return; }
             else if (act === 'sec-down') { moveSection(si, si + 1); return; }
+            else if (act === 'field-up') { moveField(si, fi, fi - 1); return; }
+            else if (act === 'field-down') { moveField(si, fi, fi + 1); return; }
             else if (act === 'sec-del') {
                 openConfirm({
                     title: 'ยืนยันการลบส่วน', danger: true, confirmText: 'ลบ',
@@ -4227,36 +4245,68 @@
 
         // Builder: ลากจัดเรียงส่วน (drag & drop)
         let dragSecFrom = null;
+        let dragFieldFrom = null; // {si, fi}
         (function () {
             const bb = document.getElementById('builder-body');
-            const cardOf = el => el && el.closest ? el.closest('[data-sec-card]') : null;
+            const secOf = el => el && el.closest ? el.closest('[data-sec-card]') : null;
+            const fieldOf = el => el && el.closest ? el.closest('[data-field-card]') : null;
+            const clearHi = () => bb.querySelectorAll('.ring-2').forEach(c => c.classList.remove('ring-2', 'ring-purple-400', 'ring-teal-400'));
             bb.addEventListener('dragstart', e => {
-                const handle = e.target.closest ? e.target.closest('[data-act="sec-drag"]') : null;
-                const card = cardOf(e.target);
-                if (!handle || !card) { e.preventDefault(); return; }
-                dragSecFrom = +card.getAttribute('data-si');
-                card.classList.add('opacity-50');
-                try { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', String(dragSecFrom)); } catch (er) {}
+                const fHandle = e.target.closest ? e.target.closest('[data-act="field-drag"]') : null;
+                const sHandle = e.target.closest ? e.target.closest('[data-act="sec-drag"]') : null;
+                if (fHandle) {
+                    const fc = fieldOf(e.target);
+                    if (!fc) { e.preventDefault(); return; }
+                    dragFieldFrom = { si: +fc.getAttribute('data-si'), fi: +fc.getAttribute('data-fi') };
+                    fc.classList.add('opacity-50');
+                    try { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', 'field'); } catch (er) {}
+                    return;
+                }
+                if (sHandle) {
+                    const card = secOf(e.target);
+                    if (!card) { e.preventDefault(); return; }
+                    dragSecFrom = +card.getAttribute('data-si');
+                    card.classList.add('opacity-50');
+                    try { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', 'section'); } catch (er) {}
+                    return;
+                }
+                e.preventDefault();
             });
             bb.addEventListener('dragover', e => {
+                if (dragFieldFrom != null) {
+                    e.preventDefault();
+                    try { e.dataTransfer.dropEffect = 'move'; } catch (er) {}
+                    clearHi();
+                    const fc = fieldOf(e.target);
+                    if (fc && +fc.getAttribute('data-si') === dragFieldFrom.si) fc.classList.add('ring-2', 'ring-teal-400');
+                    return;
+                }
                 if (dragSecFrom == null) return;
                 e.preventDefault();
                 try { e.dataTransfer.dropEffect = 'move'; } catch (er) {}
-                const card = cardOf(e.target);
-                bb.querySelectorAll('[data-sec-card]').forEach(c => c.classList.remove('ring-2', 'ring-purple-400'));
+                clearHi();
+                const card = secOf(e.target);
                 if (card) card.classList.add('ring-2', 'ring-purple-400');
             });
             bb.addEventListener('drop', e => {
+                if (dragFieldFrom != null) {
+                    e.preventDefault();
+                    const fc = fieldOf(e.target);
+                    const from = dragFieldFrom; dragFieldFrom = null;
+                    clearHi(); bb.querySelectorAll('.opacity-50').forEach(c => c.classList.remove('opacity-50'));
+                    if (fc && +fc.getAttribute('data-si') === from.si) moveField(from.si, from.fi, +fc.getAttribute('data-fi'));
+                    return;
+                }
                 if (dragSecFrom == null) return;
                 e.preventDefault();
-                const card = cardOf(e.target);
-                bb.querySelectorAll('[data-sec-card]').forEach(c => c.classList.remove('ring-2', 'ring-purple-400', 'opacity-50'));
-                if (card) { const to = +card.getAttribute('data-si'); moveSection(dragSecFrom, to); }
+                const card = secOf(e.target);
+                clearHi(); bb.querySelectorAll('.opacity-50').forEach(c => c.classList.remove('opacity-50'));
+                if (card) moveSection(dragSecFrom, +card.getAttribute('data-si'));
                 dragSecFrom = null;
             });
             bb.addEventListener('dragend', () => {
-                bb.querySelectorAll('[data-sec-card]').forEach(c => c.classList.remove('ring-2', 'ring-purple-400', 'opacity-50'));
-                dragSecFrom = null;
+                clearHi(); bb.querySelectorAll('.opacity-50').forEach(c => c.classList.remove('opacity-50'));
+                dragSecFrom = null; dragFieldFrom = null;
             });
         })();
 

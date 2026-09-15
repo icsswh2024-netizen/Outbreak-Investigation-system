@@ -860,7 +860,7 @@
                     { id: 'bcgScar', label: '3.6 BCG scar', type: 'select', options: ['ไม่มี', 'มี'] },
                     { id: 'bcgScarPos', label: '3.6 ตำแหน่งแผลเป็น BCG', type: 'text' },
                     { id: 'annualCheck', label: '3.7 ตรวจสุขภาพประจำปี', type: 'select', options: ['ไม่เคย', 'ไม่ทุกปี', 'ทุกปี'] },
-                    { id: 'annualCheckLast', label: '3.7 ครั้งล่าสุด (เดือน / พ.ศ.)', type: 'text' },
+                    { id: 'annualCheckLast', label: '3.7 วันที่ตรวจสุขภาพครั้งล่าสุด', type: 'date' },
                     { id: 'cxrBefore', label: '3.8 เคย X-ray ปอด', type: 'radio', options: ['ไม่เคย', 'เคย'] },
                     { id: 'cxrBeforeResult', label: '3.8 ผล X-ray ปอด', type: 'select', options: ['ปกติ', 'ผิดปกติ'] },
                     { id: 'cxrBeforeDetail', label: '3.8 รายละเอียด X-ray ปอด (ปี พ.ศ. / รายละเอียด)', type: 'text' }
@@ -880,7 +880,9 @@
                     { id: 'workStopDays', label: '4.7 หยุดงาน (วัน)', type: 'number' },
                     { id: 'returnDate', label: '4.7 วันที่กลับเข้าทำงาน', type: 'date' },
                     { id: 'returnRole', label: '4.7 ตำแหน่งเมื่อกลับเข้าทำงาน', type: 'select', options: ['แผนกเดิม/หน้าที่เดิม', 'หน้าที่ใหม่', 'แผนกใหม่'] },
-                    { id: 'dst', label: '4.8 DST (วันที่ส่งตรวจ / ได้ผล / สรุปความไว-ดื้อยา)', type: 'textarea' },
+                    { id: 'dstSentDate', label: '4.8 DST — วันที่ส่งตรวจ', type: 'date' },
+                    { id: 'dstResultDate', label: '4.8 DST — วันที่ได้ผล', type: 'date' },
+                    { id: 'dstResult', label: '4.8 DST — สรุปความไว/ดื้อยา', type: 'text' },
                     { id: 'regimen', label: '4.9 สูตรการรักษา', type: 'select', options: ['2HRZE/4HR', 'MDR/RR regimen', 'อื่นๆ'] },
                     { id: 'txResult', label: '4.9 ผลการรักษาปัจจุบัน', type: 'select', options: ['On Rx', 'Cure', 'Completed', 'Failure', 'Death', 'LTFU/Transfer'] }
                 ]},
@@ -929,7 +931,8 @@
                 ]},
                 { id: 'p10', title: 'ส่วนที่ 10: ผลการตรวจและการติดตาม', icon: 'clipboard', fields: [
                     { id: 'followSymptom', label: '9.1 อาการระหว่างติดตาม', type: 'radio', options: ['ไม่มีอาการ', 'มีอาการ'] },
-                    { id: 'followSymptomDetail', label: '9.1 ระบุอาการ + วันที่เริ่มอาการ', type: 'text' },
+                    { id: 'followSymptomDetail', label: '9.1 ระบุอาการ (กรณีมีอาการ)', type: 'text' },
+                    { id: 'followOnsetDate', label: '9.1 วันที่เริ่มมีอาการ (ระหว่างติดตาม)', type: 'date' },
                     { id: 'followResult', label: '9.2 สรุปผลการติดตาม', type: 'select', options: ['ไม่พบความผิดปกติ', 'ต้องตรวจ/ติดตามเพิ่มเติม', 'วินิจฉัยวัณโรค', 'อื่นๆ'] }
                 ]},
                 { id: 'p11', title: 'ส่วนที่ 11: ประวัติแหล่งสัมผัสอื่น (1–3 เดือนก่อนป่วย)', icon: 'share-2', fields: [

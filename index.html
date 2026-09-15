@@ -4402,15 +4402,25 @@
 
         // โหลดแบบผู้ป่วยวัณโรค (Index case) ตามเอกสารแบบสอบสวนโรค
         document.getElementById('btn-load-indexcase').addEventListener('click', () => {
+            // ถ้าแอดมินเคย "ตั้งเป็นค่าเริ่มต้น" ไว้ ให้โหลดชุดผู้ป่วยจากค่าเริ่มต้นนั้น มิฉะนั้นใช้ชุดมาตรฐานตามเอกสาร
+            let src = null, fromCustom = false;
+            try {
+                const def = getCustomDefaultSchema();
+                if (def && def.patient && Array.isArray(def.patient.sections) && def.patient.sections.length) { src = def.patient.sections; fromCustom = true; }
+            } catch (e) {}
+            if (!src) src = indexCasePatientSections();
             openConfirm({
                 title: 'โหลดแบบผู้ป่วย (Index case)',
-                message: 'จะแทนที่ "แบบผู้ป่วย" ทั้งหมดด้วยแบบสอบถามผู้ป่วยวัณโรค (Index case) มาตรฐานตามเอกสารแบบสอบสวนโรค (11 ส่วน) — ของเดิมในแบบผู้ป่วยจะถูกแทนที่ จากนั้นกด "บันทึกแบบสอบถาม" เพื่อใช้งานจริง ดำเนินการต่อหรือไม่?',
+                message: (fromCustom
+                    ? 'จะแทนที่ "แบบผู้ป่วย" ทั้งหมดด้วย "ค่าเริ่มต้นแบบผู้ป่วยที่คุณตั้งไว้ล่าสุด"'
+                    : 'จะแทนที่ "แบบผู้ป่วย" ทั้งหมดด้วยแบบสอบถามผู้ป่วยวัณโรค (Index case) มาตรฐานตามเอกสารแบบสอบสวนโรค')
+                    + ' — ของเดิมในแบบผู้ป่วยจะถูกแทนที่ จากนั้นกด "บันทึกแบบสอบถาม" เพื่อใช้งานจริง ดำเนินการต่อหรือไม่?',
                 confirmText: 'โหลด',
                 onConfirm: () => {
-                    draft.patient = { sections: JSON.parse(JSON.stringify(indexCasePatientSections())) };
+                    draft.patient = { sections: JSON.parse(JSON.stringify(src)) };
                     builderForm = 'patient';
                     renderBuilder();
-                    showModal('โหลดแล้ว!', 'โหลดแบบผู้ป่วย (Index case) ตามเอกสารแล้ว — ตรวจสอบ/ปรับแก้ได้ แล้วกด "บันทึกแบบสอบถาม" เพื่อใช้งาน');
+                    showModal('โหลดแล้ว!', (fromCustom ? 'โหลดแบบผู้ป่วยจากค่าเริ่มต้นที่คุณตั้งไว้แล้ว' : 'โหลดแบบผู้ป่วย (Index case) ตามเอกสารแล้ว') + ' — ตรวจสอบ/ปรับแก้ได้ แล้วกด "บันทึกแบบสอบถาม" เพื่อใช้งาน');
                 }
             });
         });

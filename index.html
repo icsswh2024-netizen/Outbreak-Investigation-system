@@ -34,6 +34,8 @@
         body.role-view .btn-edit,
         body.role-view .btn-del,
         body.role-view .btn-lab { display: none !important; }
+        /* ซ่อนกล่อง "ค่าที่แอดมินกำหนดไว้ล่วงหน้า" ในหน้าจัดการแบบสอบถาม (สลับได้) */
+        body.hide-builder-preset .builder-preset { display: none !important; }
         /* ข้อความยาว/ตัวเลือกยาวไม่ดันจอ */
         label, span, p, h1, h2, h3 { overflow-wrap: break-word; word-break: break-word; }
         /* ช่องกรอกและดรอปดาวน์ไม่ล้นกรอบ */
@@ -444,6 +446,9 @@
                     <p class="text-slate-600 mt-1 text-lg">เพิ่ม / ลบ / แก้ไข ส่วนและคำถาม พร้อมกำหนดตัวเลือก (dropdown, checkbox, radio) ได้เอง</p>
                 </div>
                 <div class="flex items-center space-x-3">
+                    <button id="btn-toggle-preset" class="bg-white border border-amber-300 text-amber-700 px-4 py-2.5 rounded-lg text-base font-medium hover:bg-amber-50 flex items-center transition-all shadow-sm" title="ซ่อน/แสดง กล่องค่าที่แอดมินกำหนดไว้ล่วงหน้า">
+                        <i data-feather="eye-off" class="w-4 h-4 mr-2"></i> <span id="toggle-preset-label">ซ่อนค่าที่แอดมินกำหนด</span>
+                    </button>
                     <button id="btn-builder-setdefault" class="bg-white border border-teal-300 text-teal-700 px-4 py-2.5 rounded-lg text-base font-medium hover:bg-teal-50 flex items-center transition-all shadow-sm">
                         <i data-feather="bookmark" class="w-4 h-4 mr-2"></i> ตั้งเป็นค่าเริ่มต้น
                     </button>
@@ -4233,7 +4238,7 @@
                 </div>
                 ${optionsBlock}
                 ${contactBlock}
-                <div class="mt-2">
+                <div class="mt-2 builder-preset">
                     <label class="text-sm text-slate-500 flex items-center"><i data-feather="lock" class="w-3.5 h-3.5 mr-1"></i> ค่าที่แอดมินกำหนดไว้ล่วงหน้า (ถ้ากรอก ผู้ตอบจะไม่ต้องตอบข้อนี้)</label>
                     <input data-act="field-fixed" data-si="${si}" data-fi="${fi}" value="${escAttr(f.fixed || '')}" class="w-full text-base rounded-lg border border-amber-300 bg-amber-50/60 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400 mt-1" placeholder="เว้นว่าง = ให้ผู้ตอบกรอกเอง">
                 </div>
@@ -4424,6 +4429,23 @@
                 }
             });
         });
+
+        // สลับซ่อน/แสดง กล่อง "ค่าที่แอดมินกำหนดไว้ล่วงหน้า"
+        const PRESET_HIDE_KEY = 'oi-hide-builder-preset';
+        function applyPresetVisibility() {
+            const hidden = (() => { try { return localStorage.getItem(PRESET_HIDE_KEY) === '1'; } catch (e) { return false; } })();
+            document.body.classList.toggle('hide-builder-preset', hidden);
+            const lbl = document.getElementById('toggle-preset-label');
+            const btn = document.getElementById('btn-toggle-preset');
+            if (lbl) lbl.textContent = hidden ? 'แสดงค่าที่แอดมินกำหนด' : 'ซ่อนค่าที่แอดมินกำหนด';
+            if (btn) { const ic = btn.querySelector('i'); if (ic) { ic.setAttribute('data-feather', hidden ? 'eye' : 'eye-off'); feather.replace(); } }
+        }
+        document.getElementById('btn-toggle-preset').addEventListener('click', () => {
+            const hidden = document.body.classList.contains('hide-builder-preset');
+            try { localStorage.setItem(PRESET_HIDE_KEY, hidden ? '0' : '1'); } catch (e) {}
+            applyPresetVisibility();
+        });
+        applyPresetVisibility();
 
         // Add section
         document.getElementById('btn-add-section').addEventListener('click', () => {

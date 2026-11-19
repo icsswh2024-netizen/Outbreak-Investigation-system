@@ -13,12 +13,34 @@
  * ผลลัพธ์: เขียนลง rec.labs.igra = [{date, result}] ใน _JSON + คอลัมน์ "IGRA" ในแท็บข้อมูลแบบสอบถาม
  */
 
-var IGRA_SOURCE = '';            // ★ วางลิงก์หรือ ID ชีต IGRA ที่นี่
-var IGRA_SHEET_NAME = '';        // ชื่อแท็บในไฟล์ IGRA (เว้นว่าง = ใช้แท็บแรก)
+var IGRA_SOURCE = 'https://docs.google.com/spreadsheets/d/17Txw-ViGta5i-l_rRIaRcULeAJMNoUkgL6P480Ie5bQ/edit';  // ★ ลิงก์/ID ชีต IGRA
+var IGRA_SHEET_NAME = 'กลุ่มเสี่ยงสัมผัสทั้งหมด';   // ชื่อแท็บ (เว้นว่าง = ใช้แท็บแรก)
+var IGRA_DATA_START_ROW = 5;      // แถวแรกที่เป็นข้อมูล (หัวตารางอยู่แถว 1–4)
+// ระบุคอลัมน์ตรงๆ (A,B,C,...) เพราะหัวตารางมีหลายแถวและชื่อ "ผล" ซ้ำกัน — เว้นว่างเพื่อให้เดาจากหัวตารางแทน
+var IGRA_COL_HN = 'B';            // HN
+var IGRA_COL_NAME = 'C';          // ชื่อ-สกุล
+var IGRA_COL_RESULT = 'P';        // ผล IGRA
+var IGRA_COL_DATE = 'O';          // วันที่ส่ง IGRA
 
 function _igraNorm(s) { return String(s == null ? '' : s).replace(/\s+/g, '').toLowerCase().trim(); }
 function _igraNameKey(s) { return String(s == null ? '' : s).replace(/[\s​]+/g, '').replace(/^(นาย|นาง|นางสาว|น\.ส\.|ด\.ช\.|ด\.ญ\.)/, '').trim(); }
 function _igraHnKey(s) { return String(s == null ? '' : s).replace(/\D/g, '').replace(/^0+/, ''); } // ตัดอักขระไม่ใช่ตัวเลข + เลขศูนย์นำหน้า
+function _igraColIdx(letter) { // 'A'->0, 'B'->1, ... ; รับตัวเลขก็ได้
+  var s = String(letter || '').trim().toUpperCase();
+  if (/^\d+$/.test(s)) return parseInt(s, 10) - 1; // ถ้าใส่เป็นเลขคอลัมน์ 1-based
+  var n = 0; for (var i = 0; i < s.length; i++) { var c = s.charCodeAt(i) - 64; if (c < 1 || c > 26) return -1; n = n * 26 + c; } return n - 1;
+}
+// แปลงวันที่ IGRA เป็น ISO (รองรับ Date, "M/D/YYYY", "YYYY-MM-DD", "(2026-09-08):")
+function _igraDate(v) {
+  if (v instanceof Date) return Utilities.formatDate(v, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+  var s = String(v == null ? '' : v).trim();
+  if (!s) return '';
+  var m = s.match(/(\d{4})-(\d{1,2})-(\d{1,2})/);           // YYYY-MM-DD (อาจมี (): ครอบ)
+  if (m) return m[1] + '-' + ('0' + m[2]).slice(-2) + '-' + ('0' + m[3]).slice(-2);
+  m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);            // M/D/YYYY
+  if (m) return m[3] + '-' + ('0' + m[1]).slice(-2) + '-' + ('0' + m[2]).slice(-2);
+  return s;
+}
 
 // ดึง ID จากลิงก์หรือรับ ID ตรงๆ
 function _igraSheetId(src) {
@@ -49,28 +71,32 @@ function syncIGRA() {
     var sh = IGRA_SHEET_NAME ? ext.getSheetByName(IGRA_SHEET_NAME) : ext.getSheets()[0];
     if (!sh) { ui.alert('ไม่พบแท็บ "' + IGRA_SHEET_NAME + '" ในไฟล์ IGRA'); return; }
     var last = sh.getLastRow(), lastCol = sh.getLastColumn();
-    if (last < 2) { ui.alert('ไฟล์ IGRA ไม่มีข้อมูล'); return; }
+    if (last < IGRA_DATA_START_ROW) { ui.alert('ไฟล์ IGRA ไม่มีข้อมูล'); return; }
 
     var vals = sh.getRange(1, 1, last, lastCol).getValues();
-    var header = vals[0];
-    var cHn = _igraFindCol(header, ['HN', 'เลข HN', 'หมายเลข HN', 'รหัสผู้ป่วย']);
-    var cName = _igraFindCol(header, ['ชื่อ-สกุล', 'ชื่อ-นามสกุล', 'ชื่อสกุล', 'ชื่อ นามสกุล', 'ชื่อ', 'name']);
-    var cResult = _igraFindCol(header, ['ผล IGRA', 'ผลIGRA', 'IGRA', 'ผลตรวจ IGRA', 'ผลตรวจ', 'ผล', 'result', 'interpretation']);
-    var cDate = _igraFindCol(header, ['วันที่ตรวจ', 'วันที่', 'วันที่เจาะเลือด', 'date', 'collected']);
-    if (cResult < 0) { ui.alert('ไม่พบคอลัมน์ผล IGRA ในไฟล์ (หัวคอลัมน์ควรมีคำว่า IGRA หรือ "ผล")'); return; }
+
+    // หาตำแหน่งคอลัมน์: ใช้ที่ระบุตรงๆ ก่อน ไม่งั้นเดาจากหัวตาราง (แถวที่ 4)
+    var cHn = IGRA_COL_HN ? _igraColIdx(IGRA_COL_HN) : -1;
+    var cName = IGRA_COL_NAME ? _igraColIdx(IGRA_COL_NAME) : -1;
+    var cResult = IGRA_COL_RESULT ? _igraColIdx(IGRA_COL_RESULT) : -1;
+    var cDate = IGRA_COL_DATE ? _igraColIdx(IGRA_COL_DATE) : -1;
+    if (cResult < 0 || cHn < 0 && cName < 0) {
+      var header = vals[Math.max(0, IGRA_DATA_START_ROW - 2)] || vals[0];
+      if (cHn < 0) cHn = _igraFindCol(header, ['HN', 'เลข HN', 'หมายเลข HN']);
+      if (cName < 0) cName = _igraFindCol(header, ['ชื่อ-สกุล', 'ชื่อ-นามสกุล', 'ชื่อสกุล', 'ชื่อ', 'name']);
+      if (cResult < 0) cResult = _igraFindCol(header, ['ผล IGRA', 'IGRA', 'ผลตรวจ', 'ผล', 'result']);
+      if (cDate < 0) cDate = _igraFindCol(header, ['วันที่ส่ง', 'วันที่ตรวจ', 'วันที่', 'date']);
+    }
+    if (cResult < 0) { ui.alert('ไม่พบคอลัมน์ผล IGRA'); return; }
     if (cHn < 0 && cName < 0) { ui.alert('ไม่พบคอลัมน์ HN หรือ ชื่อ-สกุล ในไฟล์ IGRA'); return; }
 
     // สร้างดัชนีจากไฟล์ IGRA: hn -> {result,date} และ name -> {result,date}
     var byHn = {}, byName = {};
-    for (var r = 1; r < vals.length; r++) {
+    for (var r = IGRA_DATA_START_ROW - 1; r < vals.length; r++) {
       var row = vals[r];
       var result = String(cResult >= 0 ? row[cResult] : '').trim();
       if (!result) continue;
-      var dateVal = cDate >= 0 ? row[cDate] : '';
-      var dateStr = '';
-      if (dateVal instanceof Date) dateStr = Utilities.formatDate(dateVal, Session.getScriptTimeZone(), 'yyyy-MM-dd');
-      else dateStr = String(dateVal || '').trim();
-      var rec = { result: result, date: dateStr };
+      var rec = { result: result, date: cDate >= 0 ? _igraDate(row[cDate]) : '' };
       if (cHn >= 0) { var hk = _igraHnKey(row[cHn]); if (hk) byHn[hk] = rec; }
       if (cName >= 0) { var nk = _igraNameKey(row[cName]); if (nk) byName[nk] = rec; }
     }
@@ -84,7 +110,7 @@ function syncIGRA() {
     var dhead = block[0];
     var jsonIdx = -1, igraIdx = -1;
     for (var i = 0; i < dhead.length; i++) { var hh = _igraNorm(dhead[i]); if (hh === '_json') jsonIdx = i; if (hh === 'igra') igraIdx = i; }
-    if (jsonIdx < 0) { ui.alert('ไม่พบคอลัมน์ _JSON (ให้รัน ensureHeader/บันทึกข้อมูลสักครั้งก่อน)'); return; }
+    if (jsonIdx < 0) { ui.alert('ไม่พบคอลัมน์ _JSON (ให้บันทึกข้อมูลสักครั้งก่อน)'); return; }
 
     var matched = 0, matchedHn = 0, matchedName = 0;
     for (var d = 1; d < block.length; d++) {
@@ -110,3 +136,4 @@ function syncIGRA() {
     ui.alert('syncIGRA error: ' + (err && err.message ? err.message : err));
   }
 }
+

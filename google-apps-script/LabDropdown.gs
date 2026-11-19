@@ -9,7 +9,7 @@
  * หมายเหตุ: การลงผลในชีตเป็น "ผลเดียวต่อรายการ" (1 ครั้ง) ส่วนการลงหลายครั้งใช้ปุ่ม "ผลตรวจ" ในเว็บ
  */
 var LAB_SHEET = 'ข้อมูลแบบสอบถาม';
-var LAB_DEFS  = [['cxr', 'Chest X-ray'], ['afb', 'Sputum AFB'], ['tst', 'TST'], ['lab', 'LAB']];
+var LAB_DEFS  = [['cxr', 'Chest X-ray'], ['afb', 'Sputum AFB'], ['tst', 'TST'], ['lab', 'LAB'], ['igra', 'IGRA']];
 var LAB_OPT_SHEET = 'ตัวเลือกผลตรวจ';        // แท็บกำหนดตัวเลือกดรอปดาวน์เอง (คอลัมน์ A บรรทัดละ 1 ตัวเลือก)
 var LAB_CHOICES_DEFAULT = ['+', '-', 'na'];   // ค่าเริ่มต้นถ้ายังไม่มีแท็บ
 

@@ -55,7 +55,12 @@ function onOpen() {
       .addItem('ใส่ดรอปดาวน์ผลตรวจ', 'setupLabDropdowns');
     if (typeof editLabChoices === 'function') labMenu.addItem('แก้ไขตัวเลือกดรอปดาวน์เอง', 'editLabChoices');
     labMenu.addSeparator().addItem('ซิงก์ผลตรวจเข้าระบบ (→ เว็บ/รายงาน)', 'syncLabResults');
+    if (typeof syncIGRA === 'function') labMenu.addSeparator().addItem('ซิงก์ IGRA จากชีตภายนอก', 'syncIGRA');
     labMenu.addToUi();
+  }
+  // เผื่อกรณีไม่มี LabDropdown.gs แต่มี MergeIGRA.gs
+  if ((typeof setupLabDropdowns !== 'function') && typeof syncIGRA === 'function') {
+    ui.createMenu('🧪 ผลตรวจ').addItem('ซิงก์ IGRA จากชีตภายนอก', 'syncIGRA').addToUi();
   }
 }
 

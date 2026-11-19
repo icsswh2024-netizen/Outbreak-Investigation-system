@@ -14,7 +14,7 @@ var SHEET_SCHEMA = 'การจัดการแบบสอบถาม';    
 var SHEET_STRUCT = 'โครงสร้างแบบสอบถาม';      // ตารางแก้ไขคำถามแบบมือ (source of truth)
 var META_COLS = ['เวลาบันทึก', 'id', 'ประเภท', 'ชื่อ-สกุล', 'HN', 'กลุ่ม/ตำแหน่ง', 'สถานะ'];
 // คอลัมน์ผลตรวจทางห้องปฏิบัติการ (แอดมินบันทึกรายคน) — วางก่อน _JSON
-var LAB_COLS = [['cxr', 'Chest X-ray'], ['afb', 'Sputum AFB'], ['tst', 'TST'], ['lab', 'LAB']];
+var LAB_COLS = [['cxr', 'Chest X-ray'], ['afb', 'Sputum AFB'], ['tst', 'TST'], ['lab', 'LAB'], ['igra', 'IGRA']];
 
 // ★ ถ้าสคริปต์ไม่ได้ผูกกับชีต (สร้างแบบ standalone) ให้วาง ID ของ Google Sheet ที่นี่
 //   ID คือส่วนระหว่าง /d/ กับ /edit ใน URL ของชีต เช่น
@@ -496,9 +496,9 @@ function readAccounts() {
 // อ่านตัวเลือกผลตรวจแยกตามรายการ จากแท็บ "ตัวเลือกผลตรวจ" (A=รายการ, B=ตัวเลือก)
 // คืน { cxr:[...], afb:[...], tst:[...], lab:[...] } ให้เว็บใช้ทำดรอปดาวน์
 function readLabOptions() {
-  var defs = [['cxr', 'Chest X-ray'], ['afb', 'Sputum AFB'], ['tst', 'TST'], ['lab', 'LAB']];
+  var defs = [['cxr', 'Chest X-ray'], ['afb', 'Sputum AFB'], ['tst', 'TST'], ['lab', 'LAB'], ['igra', 'IGRA']];
   var DEFAULT = ['+', '-', 'na'];
-  var res = { cxr: [], afb: [], tst: [], lab: [] };
+  var res = { cxr: [], afb: [], tst: [], lab: [], igra: [] };
   var sh = ss().getSheetByName('ตัวเลือกผลตรวจ');
   var norm = function (s) { return String(s == null ? '' : s).replace(/\s+/g, '').toLowerCase().trim(); };
   var keyOf = function (name) {

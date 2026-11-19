@@ -56,11 +56,14 @@ function onOpen() {
     if (typeof editLabChoices === 'function') labMenu.addItem('แก้ไขตัวเลือกดรอปดาวน์เอง', 'editLabChoices');
     labMenu.addSeparator().addItem('ซิงก์ผลตรวจเข้าระบบ (→ เว็บ/รายงาน)', 'syncLabResults');
     if (typeof syncIGRA === 'function') labMenu.addSeparator().addItem('ซิงก์ IGRA จากชีตภายนอก', 'syncIGRA');
+    if (typeof installIGRAAutoSync === 'function') labMenu.addItem('เปิดซิงก์ IGRA อัตโนมัติ (ทุกวัน)', 'installIGRAAutoSync').addItem('ปิดซิงก์ IGRA อัตโนมัติ', 'removeIGRAAutoSync');
     labMenu.addToUi();
   }
   // เผื่อกรณีไม่มี LabDropdown.gs แต่มี MergeIGRA.gs
   if ((typeof setupLabDropdowns !== 'function') && typeof syncIGRA === 'function') {
-    ui.createMenu('🧪 ผลตรวจ').addItem('ซิงก์ IGRA จากชีตภายนอก', 'syncIGRA').addToUi();
+    var im = ui.createMenu('🧪 ผลตรวจ').addItem('ซิงก์ IGRA จากชีตภายนอก', 'syncIGRA');
+    if (typeof installIGRAAutoSync === 'function') im.addItem('เปิดซิงก์ IGRA อัตโนมัติ (ทุกวัน)', 'installIGRAAutoSync').addItem('ปิดซิงก์ IGRA อัตโนมัติ', 'removeIGRAAutoSync');
+    im.addToUi();
   }
 }
 

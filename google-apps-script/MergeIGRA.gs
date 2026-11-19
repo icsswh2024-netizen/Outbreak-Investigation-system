@@ -59,19 +59,20 @@ function _igraFindCol(header, names) {
 }
 
 function syncIGRA() {
-  var ui = SpreadsheetApp.getUi();
+  var _ui = null; try { _ui = SpreadsheetApp.getUi(); } catch (e0) { _ui = null; }
+  var alertFn = function (m) { if (_ui) { try { _alertFn(m); } catch (e1) {} } else { Logger.log(m); } };
   try {
     var id = _igraSheetId(IGRA_SOURCE);
-    if (!id) { ui.alert('ยังไม่ได้ตั้งค่าลิงก์ชีต IGRA\n\nเปิดไฟล์ MergeIGRA.gs แล้ววางลิงก์/ID ที่ตัวแปร IGRA_SOURCE'); return; }
+    if (!id) { alertFn('ยังไม่ได้ตั้งค่าลิงก์ชีต IGRA\n\nเปิดไฟล์ MergeIGRA.gs แล้ววางลิงก์/ID ที่ตัวแปร IGRA_SOURCE'); return; }
 
     var ext;
     try { ext = SpreadsheetApp.openById(id); }
-    catch (e) { ui.alert('เปิดไฟล์ IGRA ไม่ได้ (ID: ' + id + ')\nตรวจสอบว่าบัญชีนี้มีสิทธิ์เข้าถึงไฟล์\n\n' + (e && e.message ? e.message : e)); return; }
+    catch (e) { alertFn('เปิดไฟล์ IGRA ไม่ได้ (ID: ' + id + ')\nตรวจสอบว่าบัญชีนี้มีสิทธิ์เข้าถึงไฟล์\n\n' + (e && e.message ? e.message : e)); return; }
 
     var sh = IGRA_SHEET_NAME ? ext.getSheetByName(IGRA_SHEET_NAME) : ext.getSheets()[0];
-    if (!sh) { ui.alert('ไม่พบแท็บ "' + IGRA_SHEET_NAME + '" ในไฟล์ IGRA'); return; }
+    if (!sh) { alertFn('ไม่พบแท็บ "' + IGRA_SHEET_NAME + '" ในไฟล์ IGRA'); return; }
     var last = sh.getLastRow(), lastCol = sh.getLastColumn();
-    if (last < IGRA_DATA_START_ROW) { ui.alert('ไฟล์ IGRA ไม่มีข้อมูล'); return; }
+    if (last < IGRA_DATA_START_ROW) { alertFn('ไฟล์ IGRA ไม่มีข้อมูล'); return; }
 
     var vals = sh.getRange(1, 1, last, lastCol).getValues();
 
@@ -87,8 +88,8 @@ function syncIGRA() {
       if (cResult < 0) cResult = _igraFindCol(header, ['ผล IGRA', 'IGRA', 'ผลตรวจ', 'ผล', 'result']);
       if (cDate < 0) cDate = _igraFindCol(header, ['วันที่ส่ง', 'วันที่ตรวจ', 'วันที่', 'date']);
     }
-    if (cResult < 0) { ui.alert('ไม่พบคอลัมน์ผล IGRA'); return; }
-    if (cHn < 0 && cName < 0) { ui.alert('ไม่พบคอลัมน์ HN หรือ ชื่อ-สกุล ในไฟล์ IGRA'); return; }
+    if (cResult < 0) { alertFn('ไม่พบคอลัมน์ผล IGRA'); return; }
+    if (cHn < 0 && cName < 0) { alertFn('ไม่พบคอลัมน์ HN หรือ ชื่อ-สกุล ในไฟล์ IGRA'); return; }
 
     // สร้างดัชนีจากไฟล์ IGRA: hn -> {result,date} และ name -> {result,date}
     var byHn = {}, byName = {};
@@ -103,14 +104,14 @@ function syncIGRA() {
 
     // อ่านแท็บข้อมูลแบบสอบถามของระบบ แล้วเมิจ
     var dsh = ss().getSheetByName(SHEET_DATA);
-    if (!dsh) { ui.alert('ไม่พบแท็บ "' + SHEET_DATA + '"'); return; }
+    if (!dsh) { alertFn('ไม่พบแท็บ "' + SHEET_DATA + '"'); return; }
     var dlast = dsh.getLastRow(), dcol = dsh.getLastColumn();
-    if (dlast < 2) { ui.alert('ยังไม่มีข้อมูลผู้สัมผัสในระบบ'); return; }
+    if (dlast < 2) { alertFn('ยังไม่มีข้อมูลผู้สัมผัสในระบบ'); return; }
     var block = dsh.getRange(1, 1, dlast, dcol).getValues();
     var dhead = block[0];
     var jsonIdx = -1, igraIdx = -1;
     for (var i = 0; i < dhead.length; i++) { var hh = _igraNorm(dhead[i]); if (hh === '_json') jsonIdx = i; if (hh === 'igra') igraIdx = i; }
-    if (jsonIdx < 0) { ui.alert('ไม่พบคอลัมน์ _JSON (ให้บันทึกข้อมูลสักครั้งก่อน)'); return; }
+    if (jsonIdx < 0) { alertFn('ไม่พบคอลัมน์ _JSON (ให้บันทึกข้อมูลสักครั้งก่อน)'); return; }
 
     var matched = 0, matchedHn = 0, matchedName = 0;
     for (var d = 1; d < block.length; d++) {
@@ -130,10 +131,38 @@ function syncIGRA() {
     }
 
     dsh.getRange(1, 1, block.length, dcol).setValues(block);
-    ui.alert('ซิงก์ IGRA เข้าระบบแล้ว ' + matched + ' ราย\n(จับคู่ด้วย HN ' + matchedHn + ' · ด้วยชื่อ ' + matchedName + ')\n\nรีเฟรชหน้าเว็บเพื่อดูผลในคอลัมน์ IGRA' +
+    alertFn('ซิงก์ IGRA เข้าระบบแล้ว ' + matched + ' ราย\n(จับคู่ด้วย HN ' + matchedHn + ' · ด้วยชื่อ ' + matchedName + ')\n\nรีเฟรชหน้าเว็บเพื่อดูผลในคอลัมน์ IGRA' +
       (igraIdx < 0 ? '\n\n* ยังไม่พบคอลัมน์ "IGRA" ในแท็บข้อมูล — สั่ง "ใส่ดรอปดาวน์ผลตรวจ" หรือบันทึกข้อมูลสักครั้งเพื่อสร้างคอลัมน์' : '')) ;
   } catch (err) {
-    ui.alert('syncIGRA error: ' + (err && err.message ? err.message : err));
+    alertFn('syncIGRA error: ' + (err && err.message ? err.message : err));
   }
 }
+
+/* ---------- ซิงก์ IGRA อัตโนมัติ (time-driven trigger) ---------- */
+// ฟังก์ชันที่ทริกเกอร์เรียก (ไม่มี UI) — ใช้ตัว syncIGRA เดิมซึ่งจะ Logger.log แทน alert เมื่อไม่มี UI
+function syncIGRAauto() { syncIGRA(); }
+
+// ติดตั้งให้ซิงก์ IGRA อัตโนมัติทุกวัน (เวลา ~01:00)
+function installIGRAAutoSync() {
+  var ui = null; try { ui = SpreadsheetApp.getUi(); } catch (e) {}
+  removeIGRAAutoSyncTriggers_();
+  ScriptApp.newTrigger('syncIGRAauto').timeBased().everyDays(1).atHour(1).create();
+  if (ui) ui.alert('ตั้งซิงก์ IGRA อัตโนมัติแล้ว — ระบบจะดึงผล IGRA จากชีตภายนอกให้ทุกวัน (ประมาณ 01:00 น.)\n\nยกเลิกได้ที่เมนู "🧪 ผลตรวจ → ปิดซิงก์ IGRA อัตโนมัติ"');
+}
+
+// ปิดซิงก์อัตโนมัติ
+function removeIGRAAutoSync() {
+  var ui = null; try { ui = SpreadsheetApp.getUi(); } catch (e) {}
+  var n = removeIGRAAutoSyncTriggers_();
+  if (ui) ui.alert(n > 0 ? 'ปิดซิงก์ IGRA อัตโนมัติแล้ว' : 'ไม่มีการตั้งซิงก์อัตโนมัติอยู่');
+}
+
+function removeIGRAAutoSyncTriggers_() {
+  var trigs = ScriptApp.getProjectTriggers(), n = 0;
+  for (var i = 0; i < trigs.length; i++) {
+    if (trigs[i].getHandlerFunction() === 'syncIGRAauto') { ScriptApp.deleteTrigger(trigs[i]); n++; }
+  }
+  return n;
+}
+
 

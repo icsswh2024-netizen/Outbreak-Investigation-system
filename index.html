@@ -2208,13 +2208,21 @@
                 return EPI_POS_TOKENS.some(tok => v === tok.toLowerCase() || v.indexOf(tok.toLowerCase()) >= 0);
             }));
         }
+        function labKeyPositive(rec, key) {
+            return (recordLabs(rec)[key] || []).some(x => {
+                const v = String((x && x.result) || '').trim().toLowerCase();
+                if (!v) return false;
+                return EPI_POS_TOKENS.some(tok => v === tok.toLowerCase() || v.indexOf(tok.toLowerCase()) >= 0);
+            });
+        }
         function isEpiCase(rec) {
             if (epiCaseDef === 'tb') return String((rec.answers || {}).currentTb || '').trim() === 'เป็น';
             if (epiCaseDef === 'sym') return symptomsArr(rec).length > 0;
+            if (epiCaseDef === 'igra') return labKeyPositive(rec, 'igra');
             return labIsPositive(rec); // default 'lab'
         }
         function epiCaseDefLabel(mode) {
-            return { lab: 'ผลตรวจเป็นบวกอย่างน้อย 1 รายการ', tb: 'ระบุว่ากำลังป่วยเป็นวัณโรค (currentTb = เป็น)', sym: 'มีอาการอย่างน้อย 1 อาการ' }[mode || epiCaseDef];
+            return { lab: 'ผลตรวจเป็นบวกอย่างน้อย 1 รายการ', tb: 'ระบุว่ากำลังป่วยเป็นวัณโรค (currentTb = เป็น)', sym: 'มีอาการอย่างน้อย 1 อาการ', igra: 'ผล IGRA เป็นบวก (Positive)' }[mode || epiCaseDef];
         }
         // สร้างตารางมาตรวัดความเสี่ยง 2×2 ต่อปัจจัยสัมผัส
         function buildEpiMeasures(recs) {
@@ -2767,7 +2775,7 @@
                     <div class="flex items-center gap-2 text-sm">
                         <span class="font-medium text-slate-700">นิยามผู้ป่วย (case):</span>
                         <select id="epi-casedef" class="text-sm rounded-lg border border-slate-300 bg-white px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-rose-400 cursor-pointer">
-                            ${caseOpt('lab', 'ผลตรวจเป็นบวก ≥ 1 รายการ')}${caseOpt('tb', 'ระบุว่ากำลังป่วยวัณโรค')}${caseOpt('sym', 'มีอาการ ≥ 1 อาการ')}
+                            ${caseOpt('lab', 'ผลตรวจเป็นบวก ≥ 1 รายการ')}${caseOpt('tb', 'ระบุว่ากำลังป่วยวัณโรค')}${caseOpt('sym', 'มีอาการ ≥ 1 อาการ')}${caseOpt('igra', 'ผล IGRA เป็นบวก')}
                         </select>
                     </div>
                     <div class="flex flex-wrap gap-2">

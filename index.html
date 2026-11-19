@@ -3704,6 +3704,51 @@
             setTimeout(waitImgs, 400);
         }
 
+        // ชุดคอลัมน์ Contact List สำหรับส่งออก/พิมพ์ — ยึดตามคอลัมน์ที่เลือกแสดง (ปุ่ม "คอลัมน์")
+        function contactListColDefs() {
+            const hidden = (typeof getHiddenCols === 'function') ? getHiddenCols() : new Set();
+            const all = [
+                { key: 'seq', h: 'ลำดับ', c: 1, v: (r, i) => i + 1 },
+                { key: 'date', h: 'วันที่บันทึก', c: 1, v: (r) => r.date || '' },
+                { key: 'name', h: 'ชื่อ-นามสกุล', v: (r) => r.name || '-' },
+                { key: 'hn', h: 'HN', c: 1, v: (r) => r.hn || '-' },
+                { key: 'gender', h: 'เพศ', c: 1, v: (r, i, x) => x.gender },
+                { key: 'age', h: 'อายุ', c: 1, v: (r, i, x) => x.age },
+                { key: 'group', h: 'กลุ่ม/ตำแหน่ง', v: (r) => r.group || '-' },
+                { key: 'unit', h: 'หน่วยงาน', v: (r, i, x) => x.unit },
+                { key: 'activity', h: 'กิจกรรม', c: 1, v: (r, i, x) => x.actCode },
+                { key: 'mask', h: 'หน้ากาก', v: (r, i, x) => x.masks },
+                { key: 'duration', h: 'ระยะเวลา', v: (r, i, x) => x.durations },
+                { key: 'room', h: 'ขนาดห้อง', c: 1, v: (r, i, x) => x.roomCode },
+                { key: 'symptom', h: 'อาการ', v: (r) => symptomsOf(r) },
+                { key: 'disease', h: 'โรคประจำตัว', v: (r, i, x) => x.disease },
+                { key: 'hours', h: 'ชม./เดือน', c: 1, v: (r, i, x) => x.hours },
+                { key: 'risk', h: 'ระดับความเสี่ยง', c: 1, v: (r, i, x) => x.riskText, html: (r, i, x) => x.riskHtml },
+                { key: 'cxr', h: 'Chest X-ray', v: (r) => labCellText(r, 'cxr') },
+                { key: 'afb', h: 'Sputum AFB', v: (r) => labCellText(r, 'afb') },
+                { key: 'tst', h: 'TST', v: (r) => labCellText(r, 'tst') },
+                { key: 'lab', h: 'LAB', v: (r) => labCellText(r, 'lab') },
+                { key: 'igra', h: 'IGRA', v: (r) => labCellText(r, 'igra') }
+            ];
+            return all.filter(c => !hidden.has(c.key));
+        }
+        function contactRowCtx(r) {
+            const a = r.answers || {};
+            const cset = contactSets(r);
+            const ri = computeRecordRisk(r);
+            let disease = Array.isArray(a.disease) ? a.disease.filter(Boolean).join(', ') : (a.disease || '');
+            if (a.diseaseOther && String(a.diseaseOther).trim()) disease = (disease ? disease + ', ' : '') + String(a.diseaseOther).trim();
+            return {
+                gender: a.gender || '', age: (a.age != null && String(a.age).trim() !== '') ? a.age : '',
+                unit: (a.unit || a.ward) || '-', actCode: cset.activities.map(x => ACT_CODE[x] || x).join(', ') || '-',
+                masks: cset.masks.join(', ') || '-', durations: cset.durations.join(', ') || '-',
+                roomCode: cset.rooms.map(x => ROOM_CODE[x] || x).join(', ') || '-',
+                disease: disease || '-', hours: ri.hasData ? ri.hours : '-',
+                riskText: !ri.hasData ? '-' : (ri.isClose ? 'เสี่ยงสูง (Close Contact)' : 'เสี่ยงทั่วไป'),
+                riskHtml: !ri.hasData ? '-' : (ri.isClose ? '<span class="badge-hi">เสี่ยงสูง</span>' : '<span class="badge-lo">เสี่ยงทั่วไป</span>')
+            };
+        }
+
         // พิมพ์ / PDF ข้อความ ของรายชื่อผู้สัมผัส (Contact List) ตามที่กรองไว้
         function printContactList() {
             buildContactCodes();
@@ -3722,20 +3767,12 @@
             if (chartFilter) { const kl = { unit: 'หน่วยงาน', activity: 'กิจกรรม', duration: 'ระยะเวลา', date: 'วันที่' }[chartFilter.kind] || chartFilter.kind; fparts.push(`จากกราฟ ${kl}: ${esc(chartFilter.kind === 'date' ? fmtThaiDate(chartFilter.value) : chartFilter.value)}`); }
             const filterLine = fparts.length ? `ตัวกรอง: ${fparts.join(' · ')}` : 'ตัวกรอง: แสดงทั้งหมด (ไม่ได้กรอง)';
 
+            const cols = contactListColDefs();
             const body = rows.map((r, i) => {
-                const unitVal = (r.answers && (r.answers.unit || r.answers.ward)) || '-';
-                const cset = contactSets(r);
-                const actCode = cset.activities.map(a => ACT_CODE[a] || a).join(', ') || '-';
-                const roomCode = cset.rooms.map(x => ROOM_CODE[x] || x).join(', ') || '-';
-                const ri = computeRecordRisk(r);
-                const risk = !ri.hasData ? '-' : (ri.isClose ? '<span class="badge-hi">เสี่ยงสูง</span>' : '<span class="badge-lo">เสี่ยงทั่วไป</span>');
-                return `<tr>
-                    <td class="c">${i + 1}</td><td class="c">${esc(r.date)}</td><td>${esc(r.name || '-')}</td>
-                    <td class="c">${esc(r.hn || '-')}</td><td>${esc(r.group || '-')}</td><td>${esc(unitVal)}</td>
-                    <td class="c">${esc(actCode)}</td><td>${esc(cset.masks.join(', ') || '-')}</td><td>${esc(cset.durations.join(', ') || '-')}</td>
-                    <td class="c">${esc(roomCode)}</td><td>${esc(symptomsOf(r))}</td><td class="c">${ri.hasData ? ri.hours : '-'}</td><td class="c">${risk}</td>
-                </tr>`;
-            }).join('') || `<tr><td class="c" colspan="13" style="padding:20px;color:#64748b">ไม่พบข้อมูลตามตัวกรอง</td></tr>`;
+                const x = contactRowCtx(r);
+                return '<tr>' + cols.map(c => `<td class="${c.c ? 'c' : ''}">${c.html ? c.html(r, i, x) : esc(c.v(r, i, x))}</td>`).join('') + '</tr>';
+            }).join('') || `<tr><td class="c" colspan="${cols.length}" style="padding:20px;color:#64748b">ไม่พบข้อมูลตามตัวกรอง</td></tr>`;
+            const theadRow = '<tr>' + cols.map(c => `<th>${esc(c.h)}</th>`).join('') + '</tr>';
 
             const legRow = (map, title) => { const ks = Object.keys(map); if (!ks.length) return ''; return `<div class="leg"><b>${title}:</b> ${ks.map(k => `${esc(map[k])} = ${esc(k)}`).join(' &nbsp;·&nbsp; ')}</div>`; };
             const legend = legRow(ACT_CODE, 'รหัสกิจกรรม (ก)') + legRow(ROOM_CODE, 'รหัสขนาดห้อง (ห)');
@@ -3767,12 +3804,7 @@
                 <div class="rt"><div class="t">รายชื่อผู้สัมผัส (Contact List)</div><div class="s">รพ.ศรีสังวรสุโขทัย · กลุ่มงานการพยาบาลด้านการควบคุมและป้องกันการติดเชื้อ</div></div>
                 <div class="meta"><span class="cnt">จำนวน ${rows.length} ราย</span> &nbsp;|&nbsp; ${filterLine}</div>
                 <table>
-                    <thead><tr>
-                        <th style="width:34px">ลำดับ</th><th style="width:70px">วันที่บันทึก</th><th>ชื่อ-นามสกุล</th>
-                        <th style="width:58px">HN</th><th>กลุ่ม/ตำแหน่ง</th><th>หน่วยงาน</th>
-                        <th style="width:64px">กิจกรรม</th><th style="width:64px">หน้ากาก</th><th style="width:64px">ระยะเวลา</th>
-                        <th style="width:48px">ขนาดห้อง</th><th>อาการ</th><th style="width:40px">ชม.</th><th style="width:70px">ความเสี่ยง</th>
-                    </tr></thead>
+                    <thead>${theadRow}</thead>
                     <tbody>${body}</tbody>
                 </table>
                 ${legend}
@@ -3909,22 +3941,9 @@
         function exportContactListExcel() {
             buildContactCodes();
             const rows = records.filter(passAdminFilters);
-            const headers = ['ลำดับ', 'วันที่บันทึก', 'ชื่อ-นามสกุล', 'HN', 'เพศ', 'อายุ', 'กลุ่ม/ตำแหน่ง', 'หน่วยงาน', 'กิจกรรม', 'หน้ากาก', 'ระยะเวลา', 'ขนาดห้อง', 'อาการ', 'โรคประจำตัว', 'ชั่วโมงรวม', 'ระดับความเสี่ยง', 'Chest X-ray', 'Sputum AFB', 'TST', 'LAB', 'IGRA'];
-            const data = rows.map((r, i) => {
-                const a = r.answers || {};
-                const unitVal = (a.unit || a.ward) || '';
-                const gender = a.gender || '';
-                const age = (a.age !== undefined && a.age !== null && String(a.age).trim() !== '') ? a.age : '';
-                let disease = Array.isArray(a.disease) ? a.disease.filter(Boolean).join(', ') : (a.disease || '');
-                if (a.diseaseOther && String(a.diseaseOther).trim()) disease = (disease ? disease + ', ' : '') + String(a.diseaseOther).trim();
-                const cset = contactSets(r);
-                const ri = computeRecordRisk(r);
-                const risk = !ri.hasData ? '-' : (ri.isClose ? 'เสี่ยงสูง (Close Contact)' : 'เสี่ยงทั่วไป');
-                return [i + 1, r.date || '', r.name || '', r.hn || '', gender, age, r.group || '', unitVal,
-                    cset.activities.join(', '), cset.masks.join(', '), cset.durations.join(', '),
-                    cset.rooms.join(', '), symptomsOf(r), disease, ri.hasData ? ri.hours : '-', risk,
-                    labCellText(r, 'cxr'), labCellText(r, 'afb'), labCellText(r, 'tst'), labCellText(r, 'lab'), labCellText(r, 'igra')];
-            });
+            const cols = contactListColDefs();
+            const headers = cols.map(c => c.h);
+            const data = rows.map((r, i) => { const x = contactRowCtx(r); return cols.map(c => c.v(r, i, x)); });
             exportToExcel(`ContactList-${isoToday()}.xls`, headers, data, `รายชื่อผู้สัมผัส (Contact List) — จำนวน ${rows.length} ราย`);
         }
 
